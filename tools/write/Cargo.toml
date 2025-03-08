@@ -1,0 +1,43 @@
+[package]
+name = "write"
+version = "0.1.0"
+edition = "2021"
+description = "Interactive CLI for the writing management system"
+
+[dependencies]
+clap = { workspace = true }
+anyhow = { workspace = true }
+colored = { workspace = true }
+dialoguer = { workspace = true, features = ["fuzzy-select"] }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+walkdir = { workspace = true }
+chrono = { workspace = true }
+indicatif = "0.17"
+console = "0.15"
+tui = { package = "ratatui", version = "0.24.0" }
+crossterm = "0.27"
+
+# Common libraries
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+
+# Direct library dependencies for refactored tools
+content_new = { package = "content-new", path = "../content-new" }
+content_stats = { package = "content-stats", path = "../content-stats" }
+
+# Legacy tool binary dependencies - these will be replaced as they are refactored
+content-build = { path = "../content-build" }
+content-delete = { path = "../content-delete" }
+content-edit = { path = "../content-edit" }
+content-move = { path = "../content-move" }
+image-build = { path = "../image-build" }
+image-optimize = { path = "../image-optimize" }
+llms-generate = { path = "../llms-generate" }
+toc-generate = { path = "../toc-generate" }
+topic-add = { path = "../topic-add" }
+topic-edit = { path = "../topic-edit" }
+topic-rename = { path = "../topic-rename" }
+topic-delete = { path = "../topic-delete" }

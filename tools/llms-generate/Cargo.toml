@@ -1,0 +1,16 @@
+[package]
+name = "llms-generate"
+version = "0.1.0"
+edition = "2021"
+description = "Generate llms.txt and llms-full.txt files according to the llmstxt.org standard"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true
+colored.workspace = true
+chrono.workspace = true
+comrak.workspace = true
+regex.workspace = true 

@@ -1,0 +1,10 @@
+[package]
+name = "common-fs"
+version = "0.1.0"
+edition = "2021"
+description = "Common filesystem operations for the writing project"
+
+[dependencies]
+anyhow = { workspace = true }
+walkdir = { workspace = true }
+fs_extra = { workspace = true } 

@@ -1,0 +1,15 @@
+[package]
+name = "content-move"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+colored.workspace = true
+walkdir.workspace = true
+slug.workspace = true
+dialoguer.workspace = true
+fs_extra.workspace = true 

@@ -1,0 +1,276 @@
+use anyhow::{Context, Result};
+use chrono::NaiveDate;
+use common_config;
+use common_fs;
+use common_markdown;
+use common_models::{Frontmatter, TopicConfig};
+use comrak::{markdown_to_html, ComrakOptions};
+use regex::Regex;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+/// Structure to hold content statistics for an article
+#[derive(Clone, Debug)]
+pub struct ContentStats {
+    pub title: String,
+    pub published: String,
+    pub word_count: usize,
+    pub reading_time: usize, // in minutes
+    pub character_count: usize,
+    pub paragraph_count: usize,
+    pub sentence_count: usize,
+    pub topic: String,
+    pub slug: String,
+    pub tags: Vec<String>,
+    pub is_draft: bool,
+}
+
+/// Options for content statistics generation
+pub struct StatsOptions {
+    pub slug: Option<String>,
+    pub topic: Option<String>,
+    pub include_drafts: bool,
+    pub sort_by: String,
+    pub detailed: bool,
+}
+
+/// Calculate statistics for a single content file
+pub fn calculate_stats(content: &str, frontmatter: &Frontmatter, topic: &str, slug: &str) -> ContentStats {
+    // Strip HTML tags for accurate word count
+    let options = ComrakOptions::default();
+    let html = markdown_to_html(content, &options);
+    
+    // Use regex to remove HTML tags
+    let re = Regex::new(r"<[^>]*>").unwrap();
+    let text = re.replace_all(&html, "").to_string();
+    
+    let word_count = common_markdown::calculate_word_count(&text);
+    let character_count = text.chars().count();
+    
+    // Count paragraphs (non-empty lines)
+    let paragraph_count = content.lines()
+        .filter(|line| !line.trim().is_empty())
+        .count();
+    
+    // Count sentences (roughly)
+    let sentence_re = Regex::new(r"[.!?]+").unwrap();
+    let sentence_count = sentence_re.find_iter(&text).count();
+    
+    // Calculate reading time
+    let reading_time = common_markdown::calculate_reading_time(word_count) as usize;
+    
+    // Extract tags
+    let tags = frontmatter.tags.clone().unwrap_or_default();
+    
+    // Check if draft
+    let is_draft = frontmatter.draft.unwrap_or(false) || 
+                  frontmatter.published.as_ref().map_or(false, |p| p == "DRAFT");
+    
+    // Get published date or default
+    let published = frontmatter.published.clone().unwrap_or_else(|| "DRAFT".to_string());
+    
+    ContentStats {
+        title: frontmatter.title.clone(),
+        published,
+        word_count,
+        reading_time,
+        character_count,
+        paragraph_count,
+        sentence_count,
+        topic: topic.to_string(),
+        slug: slug.to_string(),
+        tags,
+        is_draft,
+    }
+}
+
+/// Format a date string for display
+pub fn format_date(date_str: &str) -> String {
+    if date_str == "DRAFT" {
+        return "DRAFT".to_string();
+    }
+    
+    if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+        date.format("%b %d, %Y").to_string()
+    } else {
+        date_str.to_string()
+    }
+}
+
+/// Generate statistics for content files based on the provided options
+pub fn generate_stats(options: &StatsOptions) -> Result<(Vec<ContentStats>, HashMap<String, usize>, usize, usize, usize)> {
+    // Read configuration
+    let config = common_config::load_config()?;
+    
+    // Validate topic if provided
+    if let Some(ref topic) = options.topic {
+        if !config.content.topics.contains_key(topic) {
+            let valid_topics: Vec<String> = config.content.topics.keys()
+                .map(|k| k.to_string())
+                .collect();
+            return Err(anyhow::anyhow!(
+                "Invalid topic: {}. Valid topics are: {}", 
+                topic, 
+                valid_topics.join(", ")
+            ));
+        }
+    }
+    
+    let mut all_stats: Vec<ContentStats> = Vec::new();
+    let mut total_words = 0;
+    let mut total_articles = 0;
+    let mut total_drafts = 0;
+    let mut tag_counts: HashMap<String, usize> = HashMap::new();
+    
+    // Get the content base directory
+    let content_base_dir = PathBuf::from(&config.content.base_dir);
+    
+    // Process content for specific slug if provided
+    if let Some(ref slug) = options.slug {
+        // Find the article with the given slug in any topic
+        let mut found = false;
+        
+        for (topic_key, topic_config) in &config.content.topics {
+            // Skip if a specific topic is requested and it's not this one
+            if options.topic.is_some() && options.topic.as_ref() != Some(topic_key) {
+                continue;
+            }
+            
+            let topic_path = &topic_config.path;
+            let article_path = content_base_dir.join(topic_path).join(slug);
+            
+            if article_path.exists() {
+                let index_path = article_path.join("index.mdx");
+                if index_path.exists() {
+                    process_article(&index_path, topic_key, slug, &options, &mut all_stats, 
+                                   &mut total_words, &mut total_articles, &mut total_drafts, 
+                                   &mut tag_counts)?;
+                    found = true;
+                }
+            }
+        }
+        
+        if !found {
+            return Err(anyhow::anyhow!("No article found with slug: {}", slug));
+        }
+    } else {
+        // Process all content
+        for (topic_key, topic_config) in &config.content.topics {
+            // Skip if a specific topic is requested and it's not this one
+            if options.topic.is_some() && options.topic.as_ref() != Some(topic_key) {
+                continue;
+            }
+            
+            let topic_path = &topic_config.path;
+            let topic_dir = content_base_dir.join(topic_path);
+            
+            // Skip if the topic directory doesn't exist
+            if !topic_dir.exists() {
+                continue;
+            }
+            
+            // Find all subdirectories in the topic directory (article directories)
+            let dirs = common_fs::find_dirs_with_depth(&topic_dir, 1, 1)?;
+            
+            for article_dir in dirs {
+                let slug = article_dir.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("");
+                
+                let index_path = article_dir.join("index.mdx");
+                if index_path.exists() {
+                    process_article(&index_path, topic_key, slug, &options, &mut all_stats, 
+                                   &mut total_words, &mut total_articles, &mut total_drafts, 
+                                   &mut tag_counts)?;
+                }
+            }
+        }
+    }
+    
+    // Sort the statistics
+    match options.sort_by.as_str() {
+        "date" => {
+            all_stats.sort_by(|a, b| {
+                if a.published == "DRAFT" && b.published == "DRAFT" {
+                    a.title.cmp(&b.title)
+                } else if a.published == "DRAFT" {
+                    std::cmp::Ordering::Less
+                } else if b.published == "DRAFT" {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.published.cmp(&a.published)
+                }
+            });
+        },
+        "words" => {
+            all_stats.sort_by(|a, b| b.word_count.cmp(&a.word_count));
+        },
+        "reading_time" => {
+            all_stats.sort_by(|a, b| b.reading_time.cmp(&a.reading_time));
+        },
+        _ => {
+            // Default to sorting by date
+            all_stats.sort_by(|a, b| {
+                if a.published == "DRAFT" && b.published == "DRAFT" {
+                    a.title.cmp(&b.title)
+                } else if a.published == "DRAFT" {
+                    std::cmp::Ordering::Less
+                } else if b.published == "DRAFT" {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.published.cmp(&a.published)
+                }
+            });
+        }
+    }
+    
+    Ok((all_stats, tag_counts, total_words, total_articles, total_drafts))
+}
+
+/// Process a single article file and extract statistics
+fn process_article(
+    index_path: &Path, 
+    topic_key: &str, 
+    slug: &str, 
+    options: &StatsOptions,
+    all_stats: &mut Vec<ContentStats>,
+    total_words: &mut usize,
+    total_articles: &mut usize,
+    total_drafts: &mut usize,
+    tag_counts: &mut HashMap<String, usize>
+) -> Result<()> {
+    // Read the content file
+    let content = common_fs::read_file(&index_path)?;
+    
+    // Extract frontmatter and content
+    let (frontmatter, content_text) = common_markdown::extract_frontmatter_and_content(&content)?;
+    
+    // Check if draft and skip if not including drafts
+    let is_draft = frontmatter.draft.unwrap_or(false) || 
+                  frontmatter.published.as_ref().map_or(false, |p| p == "DRAFT");
+    
+    if is_draft && !options.include_drafts {
+        return Ok(());
+    }
+    
+    // Calculate statistics
+    let stats = calculate_stats(&content_text, &frontmatter, topic_key, slug);
+    
+    // Update totals
+    *total_words += stats.word_count;
+    *total_articles += 1;
+    
+    if is_draft {
+        *total_drafts += 1;
+    }
+    
+    // Update tag counts
+    for tag in &stats.tags {
+        *tag_counts.entry(tag.clone()).or_insert(0) += 1;
+    }
+    
+    // Add to list of stats
+    all_stats.push(stats);
+    
+    Ok(())
+} 

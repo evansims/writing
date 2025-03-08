@@ -1,0 +1,10 @@
+[package]
+name = "common-models"
+version = "0.1.0"
+edition = "2021"
+description = "Common data models for the writing project"
+
+[dependencies]
+serde = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true } 

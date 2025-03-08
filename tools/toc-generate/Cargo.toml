@@ -1,0 +1,13 @@
+[package]
+name = "toc-generate"
+version = "0.1.0"
+edition = "2021"
+description = "Generate table of contents for the writing collection"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+walkdir.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+colored.workspace = true 

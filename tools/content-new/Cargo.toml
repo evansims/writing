@@ -1,0 +1,27 @@
+[package]
+name = "content-new"
+version = "0.1.0"
+edition = "2021"
+description = "Tool for creating new content"
+
+[lib]
+name = "content_new"
+path = "src/lib.rs"
+
+[[bin]]
+name = "content-new"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+colored.workspace = true
+slug.workspace = true
+chrono.workspace = true
+dialoguer.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" } 

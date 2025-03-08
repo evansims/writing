@@ -1,0 +1,14 @@
+[package]
+name = "topic-delete"
+version = "0.1.0"
+edition = "2021"
+description = "Delete a topic and migrate its content in the writing collection"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+colored.workspace = true
+walkdir.workspace = true
+dialoguer.workspace = true 

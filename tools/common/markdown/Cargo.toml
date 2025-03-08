@@ -1,0 +1,14 @@
+[package]
+name = "common-markdown"
+version = "0.1.0"
+edition = "2021"
+description = "Markdown processing utilities for the writing project"
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+markdown = "1.0.0-alpha.14"
+pulldown-cmark = { workspace = true }
+regex = { workspace = true }
+common-models = { path = "../models" } 

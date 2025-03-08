@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+WRITE_CLI_PATH="$SCRIPT_DIR/tools/target/release/write"
+
+# Check if the CLI has been built
+if [ ! -f "$WRITE_CLI_PATH" ]; then
+    echo "Building write..."
+    (cd "$SCRIPT_DIR/tools" && cargo build --release)
+fi
+
+# Execute the CLI with all arguments passed to this script
+"$WRITE_CLI_PATH" "$@" 

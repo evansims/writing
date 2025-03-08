@@ -1,0 +1,125 @@
+# Writing Repository Configuration
+
+# Content Settings
+content:
+  base_dir: "content"
+  topics:
+    creativity:
+      name: "Creativity"
+      description: "The role of simplicity, aesthetics, and clarity in design and problem-solving."
+      path: "creativity"
+    engineering:
+      name: "Engineering"
+      description: "Exploring the principles of software design, system architecture, and problem-solving."
+      path: "engineering"
+    focus:
+      name: "Focus"
+      description: "Strategies for working efficiently, prioritization, and deep work."
+      path: "focus"
+    mindset:
+      name: "Mindset"
+      description: "Exploring Stoicism, mindfulness, essentialism, and practical wisdom."
+      path: "mindset"
+    strategy:
+      name: "Strategy"
+      description: "How to choose what matters, avoid distractions, and think critically."
+      path: "strategy"
+    tools:
+      name: "Tools"
+      description: "Software and systems that enhance productivity and simplify life."
+      path: "tools"
+  
+  # Tag taxonomy - organized by category
+  tags:
+    mindfulness:
+      - meditation
+      - mindfulness
+      - self-care
+      - mental health
+      - presence
+      - stoicism
+      - essentialism
+    
+    productivity:
+      - time management
+      - focus
+      - deep work
+      - systems
+      - habits
+      - tiny changes
+      - strategy
+      - prioritization
+    
+    design:
+      - simplicity
+      - aesthetics
+      - clarity
+      - minimalism
+    
+    technology:
+      - digital detox
+      - engineering
+      - software development
+      - tools
+      - systems
+    
+    relationships:
+      - communication
+      - connection
+      - community
+      - leadership
+
+# Image Settings
+images:
+  formats:
+    - "avif"
+    - "webp"
+    - "jpg"
+  
+  format_descriptions:
+    avif: "Next-generation AV1 format with superior compression"
+    webp: "Primary format for all images"
+    jpg: "Fallback format for browsers without WebP support"
+  
+  sizes:
+    featured:
+      width: 1200
+      height: 630
+      description: "Standard featured image for articles"
+    featured_2x:
+      width: 2400
+      height: 1260
+      description: "High-resolution featured image for retina displays"
+    thumbnail:
+      width: 400
+      height: 300
+      description: "Thumbnail image for article listings"
+    square:
+      width: 800
+      height: 800
+      description: "Square cropped image for social media"
+  
+  naming:
+    pattern: "{slug}-{type}-{width}x{height}.{format}"
+    examples:
+      - "article-slug-featured-1200x630.avif"
+      - "article-slug-featured-1200x630.webp"
+      - "article-slug-featured-1200x630.jpg"
+      - "article-slug-thumbnail-400x300.webp"
+  
+  quality:
+    avif:
+      standard: 70
+      thumbnail: 65
+    webp:
+      standard: 80
+      thumbnail: 75
+    jpg:
+      standard: 85
+      thumbnail: 80
+
+# Publication Settings
+publication:
+  author: "Evan Sims"
+  copyright: "Creative Commons Attribution 4.0 International (CC BY 4.0)"
+  site: "https://evansims.com" 

@@ -1,0 +1,13 @@
+[package]
+name = "topic-edit"
+version = "0.1.0"
+edition = "2021"
+description = "Edit an existing topic in the writing collection"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+colored.workspace = true
+dialoguer.workspace = true 

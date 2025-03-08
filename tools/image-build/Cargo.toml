@@ -1,0 +1,14 @@
+[package]
+name = "image-build"
+version = "0.1.0"
+edition = "2021"
+description = "Generate optimized images from source images for the build process"
+
+[dependencies]
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true
+colored.workspace = true
+image.workspace = true 

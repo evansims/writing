@@ -1,0 +1,11 @@
+[package]
+name = "common-config"
+version = "0.1.0"
+edition = "2021"
+description = "Configuration handling for the writing project"
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+common-models = { path = "../models" } 
