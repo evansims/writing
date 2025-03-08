@@ -91,16 +91,16 @@ You can run the CLI directly from the repository root without installing it:
 
 ```bash
 # From the repository root
-./writing --help
+./write --help
 
 # Run interactive mode
-./writing interactive
+./write interactive
 
 # Create new content
-./writing new --title "My Article" --topic "mindset" --tagline "My tagline" --tags "tag1,tag2" --content-type "article"
+./write new --title "My Article" --topic "mindset" --tagline "My tagline" --tags "tag1,tag2" --content-type "article"
 ```
 
-The `./writing` script is a wrapper that automatically builds the CLI if needed and executes it directly from its build location.
+The `./write` script is a wrapper that automatically builds the CLI if needed and executes it directly from its build location.
 
 ## Building from Source
 
@@ -132,5 +132,5 @@ Each command in the CLI maps to a specific tool binary in the `tools/target/rele
 For more details on each command, use `--help`:
 
 ```bash
-./writing new --help
+./write new --help
 ``` 

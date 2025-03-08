@@ -16,18 +16,18 @@ if ! command -v cargo &> /dev/null; then
 fi
 
 # Build the CLI tool
-echo -e "${YELLOW}Building writing-cli...${RESET}"
+echo -e "${YELLOW}Building write CLI...${RESET}"
 cargo build --release
 
 # Create ~/.local/bin directory if it doesn't exist
 mkdir -p ~/.local/bin
 
 # Copy the binary to ~/.local/bin
-echo -e "${YELLOW}Installing writing-cli to ~/.local/bin...${RESET}"
-cp target/release/writing-cli ~/.local/bin/writing
+echo -e "${YELLOW}Installing write CLI to ~/.local/bin...${RESET}"
+cp target/release/write ~/.local/bin/write
 
 # Make it executable
-chmod +x ~/.local/bin/writing
+chmod +x ~/.local/bin/write
 
 # Check if ~/.local/bin is in PATH
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
@@ -48,6 +48,6 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 fi
 
 echo -e "${GREEN}Installation complete!${RESET}"
-echo -e "You can now use the writing CLI by running: ${YELLOW}writing${RESET}"
-echo -e "For help, run: ${YELLOW}writing --help${RESET}"
-echo -e "To launch the interactive CLI, run: ${YELLOW}writing interactive${RESET}" 
+echo -e "You can now use the write CLI by running: ${YELLOW}write${RESET}"
+echo -e "For help, run: ${YELLOW}write --help${RESET}"
+echo -e "To launch the interactive CLI, run: ${YELLOW}write interactive${RESET}" 

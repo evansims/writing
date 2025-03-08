@@ -21,7 +21,7 @@ cd tools
 
 This will:
 1. Build the CLI tool
-2. Install it to `~/.local/bin/writing`
+2. Install it to `~/.local/bin/write`
 3. Add `~/.local/bin` to your PATH (if needed)
 
 ## Usage
@@ -31,7 +31,7 @@ This will:
 To launch the interactive TUI:
 
 ```bash
-writing interactive
+write interactive
 ```
 
 This will open a beautiful, interactive interface where you can:
@@ -47,10 +47,10 @@ You can also use the CLI in command-line mode for scripting and automation:
 
 ```bash
 # Create new content
-writing new --title "My New Article" --topic "strategy" --tagline "A great article" --tags "productivity,focus" --content-type "article"
+write new --title "My New Article" --topic "strategy" --tagline "A great article" --tags "productivity,focus" --content-type "article"
 
 # Get help
-writing --help
+write --help
 ```
 
 ## Development
@@ -62,7 +62,7 @@ cd tools
 cargo build --release
 ```
 
-The binary will be available at `tools/target/release/writing-cli`.
+The binary will be available at `tools/target/release/write`.
 
 ## License
 

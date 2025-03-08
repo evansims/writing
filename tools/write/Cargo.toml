@@ -27,11 +27,11 @@ common-markdown = { path = "../common/markdown" }
 # Direct library dependencies for refactored tools
 content_new = { package = "content-new", path = "../content-new" }
 content_stats = { package = "content-stats", path = "../content-stats" }
+content_edit = { package = "content-edit", path = "../content-edit" }
 
 # Legacy tool binary dependencies - these will be replaced as they are refactored
 content-build = { path = "../content-build" }
 content-delete = { path = "../content-delete" }
-content-edit = { path = "../content-edit" }
 content-move = { path = "../content-move" }
 image-build = { path = "../image-build" }
 image-optimize = { path = "../image-optimize" }

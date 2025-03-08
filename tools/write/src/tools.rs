@@ -5,6 +5,8 @@ use std::path::PathBuf;
 // Import refactored tool libraries
 use content_new::{ContentOptions, create_content as lib_create_content, get_available_topics};
 use content_stats::{StatsOptions, generate_stats, format_date};
+use content_edit::{EditOptions, edit_content as lib_edit_content, save_edited_content};
+use dialoguer::Editor;
 
 // Define the release directory path
 const TOOLS_DIR: &str = "tools";
@@ -109,28 +111,63 @@ pub fn create_content(
     }
 }
 
-pub fn edit_content(slug: Option<String>, topic: Option<String>, frontmatter: bool, content: bool) -> Result<()> {
-    let mut args = Vec::new();
+pub fn edit_content(
+    slug: Option<String>,
+    topic: Option<String>,
+    frontmatter: bool,
+    content: bool,
+) -> Result<()> {
+    // Create options for editing
+    let options = EditOptions {
+        slug,
+        topic: topic.clone(),
+        frontmatter_only: frontmatter,
+        content_only: content,
+    };
     
-    if let Some(slug) = slug {
-        args.push(String::from("--slug"));
-        args.push(slug);
+    // If slug is not provided, we need to fall back to the binary for interactive selection
+    if options.slug.is_none() {
+        let mut args = Vec::new();
+        
+        if let Some(topic_val) = topic {
+            args.push(String::from("--topic"));
+            args.push(topic_val);
+        }
+        
+        if frontmatter {
+            args.push(String::from("--frontmatter"));
+        }
+        
+        if content {
+            args.push(String::from("--content"));
+        }
+        
+        return run_tool_command("content-edit", &args);
     }
     
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
-    }
+    // Use direct library call for editing
+    println!("Editing content using direct library call...");
     
-    if frontmatter {
-        args.push(String::from("--frontmatter"));
-    }
+    // Get the content to edit
+    let (content_path, content_to_edit) = match lib_edit_content(&options) {
+        Ok(result) => result,
+        Err(e) => {
+            // If we get an error, show the error and return
+            eprintln!("Error: {}", e);
+            return Err(e);
+        }
+    };
     
-    if content {
-        args.push(String::from("--content"));
+    // Open the content in an editor
+    if let Some(edited_content) = Editor::new().edit(&content_to_edit)? {
+        // Save the edited content
+        save_edited_content(&content_path, &edited_content)?;
+        println!("Content updated successfully");
+        Ok(())
+    } else {
+        println!("Edit cancelled");
+        Ok(())
     }
-    
-    run_tool_command("content-edit", &args)
 }
 
 pub fn move_content(
