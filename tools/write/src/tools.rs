@@ -3,7 +3,6 @@ use std::process::Command;
 use std::path::PathBuf;
 
 // Import refactored tool libraries
-use content_new::{ContentOptions, get_available_topics};
 use content_stats::{StatsOptions, generate_stats, format_date};
 use content_edit::{EditOptions, edit_content as lib_edit_content, save_edited_content};
 use content_delete::{DeleteOptions, delete_content as lib_delete_content};
@@ -15,22 +14,37 @@ use topic_add::{TopicAddOptions, add_topic as lib_add_topic};
 use topic_edit::{TopicEditOptions, edit_topic as lib_edit_topic};
 use topic_rename::{TopicRenameOptions, rename_topic as lib_rename_topic};
 use topic_delete::{TopicDeleteOptions, delete_topic as lib_delete_topic};
-use common_config::load_config;
 use dialoguer::Editor;
 use toc_generate::{TocOptions, generate_toc as lib_generate_toc};
 use common_templates;
 use llms_generate::{LlmsOptions, generate_llms as lib_generate_llms};
 
-// Define the release directory path
-const TOOLS_DIR: &str = "tools";
+// Define the default release directory paths
+const DEFAULT_TOOLS_DIR: &str = "tools";
 const BIN_DIR: &str = "target/release";
 
 // Function to run a tool directly via binary
 pub fn run_tool_command(tool_name: &str, args: &[String]) -> Result<()> {
+    run_tool_command_with_dir(tool_name, args, None)
+}
+
+// Function to run a tool with a specific tools directory
+pub fn run_tool_command_with_dir(tool_name: &str, args: &[String], tools_dir: Option<&str>) -> Result<()> {
+    // Determine the tools directory to use
+    let tools_dir = tools_dir.unwrap_or(DEFAULT_TOOLS_DIR);
+    
     // Construct the path to the tool binary
-    let mut tool_path = PathBuf::from(TOOLS_DIR);
+    let mut tool_path = PathBuf::from(tools_dir);
     tool_path.push(BIN_DIR);
     tool_path.push(tool_name);
+    
+    // Check if the tool binary exists
+    if !tool_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Tool binary not found: {}. Make sure the project is built correctly.",
+            tool_path.display()
+        ));
+    }
     
     // Print a message indicating what tool is being run
     println!("Running tool: {}", tool_name);
@@ -40,9 +54,10 @@ pub fn run_tool_command(tool_name: &str, args: &[String]) -> Result<()> {
     println!("Full command: {} {}", tool_path.display(), args_display);
     
     // Execute the tool directly
-    let output = Command::new(&tool_path)
-        .args(args)
-        .output()?;
+    let output = match Command::new(&tool_path).args(args).output() {
+        Ok(output) => output,
+        Err(e) => return Err(anyhow::anyhow!("Failed to execute command: {}", e)),
+    };
     
     // Print the command output
     if !output.stdout.is_empty() {
@@ -54,7 +69,16 @@ pub fn run_tool_command(tool_name: &str, args: &[String]) -> Result<()> {
     }
     
     if !output.status.success() {
-        anyhow::bail!("Tool execution failed: {}", tool_name);
+        let error_code = output.status.code().map_or_else(
+            || "Unknown".to_string(),
+            |code| code.to_string()
+        );
+        
+        return Err(anyhow::anyhow!(
+            "Tool execution failed: {} (exit code: {})",
+            tool_name,
+            error_code
+        ));
     }
     
     println!("Command completed successfully.");
@@ -115,6 +139,132 @@ pub fn create_content(
     }
 
     run_tool_command("content-new", &args)
+}
+
+/// Creates a new content item with the provided parameters
+///
+/// This function creates a new content item (article, note, etc.) with the given
+/// metadata. It validates the inputs and then passes them to the content-new tool.
+///
+/// # Arguments
+///
+/// * `title` - Optional title for the content
+/// * `topic` - Optional topic for the content
+/// * `tagline` - Optional tagline for the content
+/// * `tags` - Optional comma-separated list of tags
+/// * `content_type` - Optional content type (article, note, tutorial)
+/// * `draft` - Whether the content should be created as a draft
+/// * `template` - Optional template to use for the content
+/// * `introduction` - Optional introduction text
+///
+/// # Returns
+///
+/// Returns Ok(()) if the content was created successfully, or an error if something went wrong.
+pub fn create_content(
+    title: Option<String>,
+    topic: Option<String>,
+    tagline: Option<String>,
+    tags: Option<String>,
+    content_type: Option<String>,
+    draft: bool,
+    template: Option<String>,
+    introduction: Option<String>,
+) -> Result<()> {
+    // Log what we're doing
+    println!("Creating new content with title: {:?}", title);
+
+    // Validate content type if provided
+    if let Some(ref ct) = content_type {
+        let valid_types = ["article", "note", "tutorial"];
+        if !valid_types.contains(&ct.as_str()) {
+            return Err(anyhow::anyhow!(
+                "Invalid content type: {}. Must be one of: {}",
+                ct,
+                valid_types.join(", ")
+            ));
+        }
+    }
+
+    // Validate template if provided
+    if let Some(ref tmpl) = template {
+        // Get list of available templates
+        match common_templates::list_templates() {
+            Ok(templates) => {
+                let template_names: Vec<String> = templates.iter().map(|t| t.name.clone()).collect();
+                if !template_names.contains(tmpl) {
+                    return Err(anyhow::anyhow!(
+                        "Template '{}' not found. Available templates: {}",
+                        tmpl,
+                        template_names.join(", ")
+                    ));
+                }
+            },
+            Err(e) => {
+                eprintln!("Warning: Could not validate template: {}", e);
+                // Continue anyway, as the template might still be valid
+            }
+        }
+    }
+
+    // Build arguments for the command
+    let mut args = Vec::new();
+
+    if let Some(title_val) = title {
+        if title_val.trim().is_empty() {
+            return Err(anyhow::anyhow!("Title cannot be empty"));
+        }
+        args.push(String::from("--title"));
+        args.push(title_val);
+    }
+
+    if let Some(topic_val) = topic {
+        if topic_val.trim().is_empty() {
+            return Err(anyhow::anyhow!("Topic cannot be empty"));
+        }
+        args.push(String::from("--topic"));
+        args.push(topic_val);
+    }
+
+    if let Some(tagline_val) = tagline {
+        args.push(String::from("--tagline"));
+        args.push(tagline_val);
+    }
+
+    if let Some(tags_val) = tags {
+        args.push(String::from("--tags"));
+        args.push(tags_val);
+    }
+
+    if let Some(content_type_val) = content_type {
+        args.push(String::from("--content-type"));
+        args.push(content_type_val);
+    }
+
+    if draft {
+        args.push(String::from("--draft"));
+    }
+
+    if let Some(template_val) = template {
+        args.push(String::from("--template"));
+        args.push(template_val);
+    }
+
+    if let Some(intro_val) = introduction {
+        args.push(String::from("--introduction"));
+        args.push(intro_val);
+    }
+
+    // Run the command and handle possible errors
+    match run_tool_command("content-new", &args) {
+        Ok(_) => {
+            println!("Content created successfully!");
+            Ok(())
+        },
+        Err(e) => {
+            eprintln!("Error creating content: {}", e);
+            Err(anyhow::anyhow!("Failed to create content: {}", e))
+        }
+    }
 }
 
 pub fn edit_content(
@@ -210,6 +360,22 @@ pub fn move_content(
         return run_tool_command("content-move", &args);
     }
     
+    // Validate that we have either a new slug or a new topic
+    if new_slug.is_none() && new_topic.is_none() {
+        return Err(anyhow::anyhow!(
+            "Either a new slug or a new topic must be provided to move content"
+        ));
+    }
+    
+    // Validate that topic is provided if we're moving to a new topic
+    if new_topic.is_some() && topic.is_none() {
+        return Err(anyhow::anyhow!(
+            "Current topic must be provided when moving to a new topic"
+        ));
+    }
+    
+    println!("Moving content with slug: {:?}", slug);
+    
     // Create options for content movement
     let options = MoveOptions {
         slug: slug.clone(),
@@ -227,15 +393,27 @@ pub fn move_content(
             );
             Ok(())
         },
-        Err(e) => Err(e.into())
+        Err(e) => {
+            eprintln!("Error moving content: {}", e);
+            Err(anyhow::anyhow!("Failed to move content: {}", e))
+        }
     }
 }
 
 pub fn delete_content(slug: Option<String>, topic: Option<String>, force: bool) -> Result<()> {
+    // Validate inputs
+    if slug.is_none() && topic.is_none() {
+        // If neither slug nor topic is provided, we need interactive mode
+        println!("No slug or topic provided. Using interactive mode...");
+        return run_tool_command("content-delete", &[]);
+    }
+    
+    println!("Deleting content with slug: {:?} in topic: {:?}", slug, topic);
+    
     // Create options for content deletion
     let options = DeleteOptions {
-        slug,
-        topic,
+        slug: slug.clone(),
+        topic: topic.clone(),
         force,
     };
     
@@ -243,12 +421,12 @@ pub fn delete_content(slug: Option<String>, topic: Option<String>, force: bool) 
     if options.slug.is_none() {
         let mut args = Vec::new();
         
-        if let Some(topic) = options.topic.clone() {
+        if let Some(topic_val) = topic {
             args.push(String::from("--topic"));
-            args.push(topic);
+            args.push(topic_val);
         }
         
-        if options.force {
+        if force {
             args.push(String::from("--force"));
         }
         
@@ -261,24 +439,30 @@ pub fn delete_content(slug: Option<String>, topic: Option<String>, force: bool) 
             println!("Content deleted: {}/{} ({})", topic, slug, title);
             Ok(())
         },
-        Err(_) => {
-            // If there's an error, fall back to the binary
+        Err(e) => {
+            eprintln!("Error deleting content: {}", e);
+            
+            // If specific errors occur, we can handle them differently
+            // For example, if the content doesn't exist, we might want to return a specific error
+            // For now, we'll fall back to the binary for any error
+            
             let mut args = Vec::new();
             
-            if let Some(slug) = options.slug {
+            if let Some(slug_val) = slug {
                 args.push(String::from("--slug"));
-                args.push(slug);
+                args.push(slug_val);
             }
             
-            if let Some(topic) = options.topic {
+            if let Some(topic_val) = topic {
                 args.push(String::from("--topic"));
-                args.push(topic);
+                args.push(topic_val);
             }
             
-            if options.force {
+            if force {
                 args.push(String::from("--force"));
             }
             
+            eprintln!("Falling back to binary execution...");
             run_tool_command("content-delete", &args)
         }
     }
@@ -670,22 +854,55 @@ pub fn list_templates() -> Result<()> {
 }
 
 /// Create a new template
+///
+/// This function creates a new template with the given name and content type.
+/// Both parameters are optional - if not provided, the content-template binary
+/// will prompt the user for input.
+///
+/// # Arguments
+///
+/// * `name` - Optional name for the template
+/// * `content_type` - Optional content type for the template (article, note, etc.)
+///
+/// # Returns
+///
+/// Returns Ok(()) if the template was created successfully, or an error if something went wrong.
 pub fn create_template(
     name: Option<String>,
     content_type: Option<String>,
 ) -> Result<()> {
+    // Log what we're doing
+    println!("Creating a new template with name: {:?}, content type: {:?}", name, content_type);
+    
+    // Validate content type if provided
+    if let Some(ref ct) = content_type {
+        let valid_types = ["article", "note", "tutorial"];
+        if !valid_types.contains(&ct.as_str()) {
+            return Err(anyhow::anyhow!(
+                "Invalid content type: {}. Must be one of: {}",
+                ct,
+                valid_types.join(", ")
+            ));
+        }
+    }
+    
+    // Build arguments for the command
     let mut args = Vec::new();
 
-    if let Some(name) = name {
+    if let Some(name_val) = name {
+        if name_val.trim().is_empty() {
+            return Err(anyhow::anyhow!("Template name cannot be empty"));
+        }
         args.push(String::from("--name"));
-        args.push(name);
+        args.push(name_val);
     }
 
-    if let Some(content_type) = content_type {
+    if let Some(content_type_val) = content_type {
         args.push(String::from("--content-type"));
-        args.push(content_type);
+        args.push(content_type_val);
     }
 
+    // Run the command
     run_tool_command("content-template", &args)
 }
 
@@ -711,5 +928,268 @@ pub fn generate_llms(
             Ok(())
         },
         Err(e) => Err(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::fs;
+    use std::path::Path;
+    
+    // Helper function to create a temporary test environment
+    fn setup_test_env() -> (String, String) {
+        // Create a temporary directory for tests
+        let temp_dir = env::temp_dir().join("writing_cli_test");
+        let temp_dir_str = temp_dir.to_string_lossy().to_string();
+        
+        // Create test directories
+        let content_dir = temp_dir.join("content");
+        let source_topic_dir = content_dir.join("topic1");
+        let target_topic_dir = content_dir.join("topic2");
+        
+        fs::create_dir_all(&source_topic_dir).expect("Failed to create source topic directory");
+        fs::create_dir_all(&target_topic_dir).expect("Failed to create target topic directory");
+        
+        // Create a test article
+        let article_dir = source_topic_dir.join("test-article");
+        fs::create_dir_all(&article_dir).expect("Failed to create article directory");
+        
+        // Create a test markdown file
+        let markdown_file = article_dir.join("index.md");
+        fs::write(&markdown_file, "---\ntitle: Test Article\n---\n\nTest content").expect("Failed to write test file");
+        
+        (temp_dir_str, "test-article".to_string())
+    }
+    
+    // Helper function to clean up the test environment
+    fn teardown_test_env(temp_dir: &str) {
+        let path = Path::new(temp_dir);
+        if path.exists() {
+            fs::remove_dir_all(path).expect("Failed to remove test directory");
+        }
+    }
+    
+    #[test]
+    fn test_move_content_validation() {
+        // Test case: Missing both new_slug and new_topic
+        let result = move_content(
+            Some("test-article".to_string()),
+            None,
+            Some("topic1".to_string()),
+            None
+        );
+        
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Either a new slug or a new topic must be provided"));
+        
+        // Test case: Missing topic when new_topic is provided
+        let result = move_content(
+            Some("test-article".to_string()),
+            None,
+            None,
+            Some("topic2".to_string())
+        );
+        
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Current topic must be provided"));
+    }
+    
+    // Note: We can't easily test the actual move_content functionality in a unit test
+    // because it depends on the content-move binary and filesystem operations.
+    // This would be better suited for an integration test.
+
+    #[test]
+    fn test_delete_content_validation() {
+        // Create a mock for run_tool_command to test the interactive fallback
+        // This is a simple test to verify that we handle the case where no slug or topic is provided
+        
+        // Set up a test directory
+        let (temp_dir, _article_slug) = setup_test_env();
+        
+        // Test the validation logic - providing neither slug nor topic should trigger 
+        // an interactive mode that runs the binary
+        let result = delete_content(None, None, false);
+        
+        // We expect this to fail in the test environment because the binary won't exist
+        // But we can verify that the function attempted to run the binary
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Tool binary not found") || err.contains("execute command"), 
+               "Expected error about missing tool binary, got: {}", err);
+        
+        // Clean up
+        teardown_test_env(&temp_dir);
+    }
+
+    #[test]
+    fn test_run_tool_command() {
+        // Test with a non-existent tool in the default directory
+        let result = run_tool_command("non-existent-tool", &[]);
+        
+        // The function should return an error because the tool doesn't exist
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Tool binary not found"), 
+               "Expected error about missing tool binary, got: {}", err);
+        
+        // Now test with a custom directory
+        let temp_dir = env::temp_dir().join("test_tool_cmd");
+        let temp_dir_str = temp_dir.to_string_lossy().to_string();
+        
+        // Create the directory structure expected by the function
+        let bin_dir = temp_dir.join(BIN_DIR);
+        fs::create_dir_all(&bin_dir).unwrap();
+        
+        // Test with a non-existent tool in the custom directory
+        let result = run_tool_command_with_dir("non-existent-tool", &[], Some(&temp_dir_str));
+        
+        // The function should return an error because the tool doesn't exist
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Tool binary not found"), 
+               "Expected error about missing tool binary, got: {}", err);
+        
+        // Create a mock tool in the custom directory
+        #[cfg(unix)]
+        {
+            let mock_tool_name = "mock-tool";
+            let mock_tool_path = bin_dir.join(mock_tool_name);
+            
+            // Create a simple shell script that echoes its arguments
+            fs::write(&mock_tool_path, "#!/bin/sh\necho \"Mock tool executed with args: $@\"\nexit 0\n").unwrap();
+            fs::set_permissions(&mock_tool_path, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+            
+            // Run the mock tool
+            let args = vec!["arg1".to_string(), "arg2".to_string()];
+            let result = run_tool_command_with_dir(mock_tool_name, &args, Some(&temp_dir_str));
+            
+            // This should succeed now
+            assert!(result.is_ok(), "Expected successful execution, got error: {:?}", result.err());
+        }
+        
+        // Clean up
+        fs::remove_dir_all(temp_dir).unwrap();
+    }
+
+    #[test]
+    fn test_create_template() {
+        // Test validation of content type
+        let result = create_template(
+            Some("test-template".to_string()),
+            Some("invalid-type".to_string())
+        );
+        
+        // Should fail with an error about invalid content type
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Invalid content type"), 
+               "Expected error about invalid content type, got: {}", err);
+        
+        // Test validation of empty name
+        let result = create_template(
+            Some("".to_string()),
+            Some("article".to_string())
+        );
+        
+        // Should fail with an error about empty name
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Template name cannot be empty"), 
+               "Expected error about empty name, got: {}", err);
+        
+        // Test with valid arguments
+        // This will fail in the test environment because the content-template binary won't exist
+        // But we can verify that validation passes and the function tries to run the binary
+        let result = create_template(
+            Some("valid-template".to_string()),
+            Some("article".to_string())
+        );
+        
+        // Should try to run the binary and fail because it doesn't exist
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Tool binary not found") || err.contains("Failed to execute"), 
+               "Expected error about missing binary or execution failure, got: {}", err);
+    }
+
+    #[test]
+    fn test_create_content() {
+        // Test validation of content type
+        let result = create_content(
+            Some("Test Content".to_string()),
+            Some("test-topic".to_string()),
+            None,
+            None,
+            Some("invalid-type".to_string()),
+            false,
+            None,
+            None
+        );
+        
+        // Should fail with an error about invalid content type
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Invalid content type"), 
+               "Expected error about invalid content type, got: {}", err);
+        
+        // Test validation of empty title
+        let result = create_content(
+            Some("".to_string()),
+            Some("test-topic".to_string()),
+            None,
+            None,
+            Some("article".to_string()),
+            false,
+            None,
+            None
+        );
+        
+        // Should fail with an error about empty title
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Title cannot be empty"), 
+               "Expected error about empty title, got: {}", err);
+        
+        // Test validation of empty topic
+        let result = create_content(
+            Some("Test Content".to_string()),
+            Some("".to_string()),
+            None,
+            None,
+            Some("article".to_string()),
+            false,
+            None,
+            None
+        );
+        
+        // Should fail with an error about empty topic
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Topic cannot be empty"), 
+               "Expected error about empty topic, got: {}", err);
+        
+        // Test with valid arguments
+        // This will fail in the test environment because the content-new binary won't exist
+        // But we can verify that validation passes and the function tries to run the binary
+        let result = create_content(
+            Some("Test Content".to_string()),
+            Some("test-topic".to_string()),
+            None,
+            None,
+            Some("article".to_string()),
+            false,
+            None,
+            None
+        );
+        
+        // Should try to run the binary and fail because it doesn't exist
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Tool binary not found") || err.contains("Failed to execute"), 
+               "Expected error about missing binary or execution failure, got: {}", err);
     }
 } 

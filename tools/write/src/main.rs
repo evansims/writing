@@ -15,7 +15,7 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, List, ListItem, Paragraph},
-    Frame, Terminal,
+    Terminal,
 };
 
 mod tools;
@@ -1314,7 +1314,7 @@ fn content_menu() -> Result<()> {
                 .items(&topics)
                 .interact_on_opt(&term)?;
 
-            let topic = match topic_selection {
+            let _topic = match topic_selection {
                 Some(index) => Some(topics[index].to_string()),
                 None => None,
             };
@@ -1341,7 +1341,7 @@ fn content_menu() -> Result<()> {
             pb.enable_steady_tick(Duration::from_millis(100));
 
             // Call the content edit function
-            tools::edit_content(slug_opt, topic, frontmatter, content)?;
+            tools::edit_content(slug_opt, _topic, frontmatter, content)?;
 
             pb.finish_with_message("Content edited successfully!");
             std::thread::sleep(Duration::from_secs(1));

@@ -23,7 +23,7 @@ members = [
     "topic-rename",
     "topic-delete",
     "write"
-]
+, "content-template"]
 
 [workspace.dependencies]
 clap = { version = "4.4", features = ["derive"] }
