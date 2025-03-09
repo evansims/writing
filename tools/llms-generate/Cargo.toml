@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Generate llms.txt and llms-full.txt files according to the llmstxt.org standard"
 
+[lib]
+name = "llms_generate"
+path = "src/lib.rs"
+
+[[bin]]
+name = "llms-generate"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
@@ -13,4 +21,11 @@ walkdir.workspace = true
 colored.workspace = true
 chrono.workspace = true
 comrak.workspace = true
-regex.workspace = true 
+regex.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+
+[dev-dependencies]
+tempfile.workspace = true 

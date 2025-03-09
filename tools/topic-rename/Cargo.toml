@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Rename a topic and move its content in the writing collection"
 
+[lib]
+name = "topic_rename"
+path = "src/lib.rs"
+
+[[bin]]
+name = "topic-rename"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
@@ -12,4 +20,10 @@ serde_yaml.workspace = true
 colored.workspace = true
 slug.workspace = true
 walkdir.workspace = true
-dialoguer.workspace = true 
+dialoguer.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+
+[dev-dependencies]
+tempfile.workspace = true 

@@ -5,10 +5,13 @@ edition = "2021"
 description = "Markdown processing utilities for the writing project"
 
 [dependencies]
-serde = { workspace = true }
-serde_yaml = { workspace = true }
-anyhow = { workspace = true }
-markdown = "1.0.0-alpha.14"
-pulldown-cmark = { workspace = true }
-regex = { workspace = true }
-common-models = { path = "../models" } 
+common-models = { path = "../models" }
+common-errors = { path = "../errors" }
+anyhow.workspace = true
+pulldown-cmark.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true 

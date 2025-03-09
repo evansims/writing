@@ -1,13 +1,40 @@
-use anyhow::{Context, Result};
+//! # Common Markdown Operations
+//! 
+//! This module provides common markdown operations for the writing tools.
+//! 
+//! ## Features
+//! 
+//! - Frontmatter extraction and generation
+//! - Markdown to HTML conversion
+//! - Word count and reading time calculation
+//! - Paragraph extraction
+//! 
+//! ## Example
+//! 
+//! ```rust
+//! use common_markdown::{extract_frontmatter_and_content, markdown_to_html, calculate_word_count};
+//! 
+//! fn process_markdown(content: &str) -> common_errors::Result<String> {
+//!     let (frontmatter, markdown) = extract_frontmatter_and_content(content)?;
+//!     
+//!     let word_count = calculate_word_count(&markdown);
+//!     println!("Word count: {}", word_count);
+//!     
+//!     let html = markdown_to_html(&markdown);
+//!     Ok(html)
+//! }
+//! ```
+
+use common_errors::{Result, WritingError, ResultExt};
 use common_models::Frontmatter;
 use pulldown_cmark::{html, Event, Options, Parser, Tag};
 use regex::Regex;
-use std::path::Path;
 
 /// Extract frontmatter and content from a markdown file
 pub fn extract_frontmatter_and_content(content: &str) -> Result<(Frontmatter, String)> {
     // Look for frontmatter between --- markers
-    let re = Regex::new(r"(?s)^---\s*\n(.*?)\n---\s*\n(.*)$")?;
+    let re = Regex::new(r"(?s)^---\s*\n(.*?)\n---\s*\n(.*)$")
+        .map_err(|e| WritingError::format_error(format!("Failed to compile regex: {}", e)))?;
     
     if let Some(captures) = re.captures(content) {
         let frontmatter_yaml = captures.get(1).unwrap().as_str();
@@ -18,7 +45,7 @@ pub fn extract_frontmatter_and_content(content: &str) -> Result<(Frontmatter, St
         
         Ok((frontmatter, markdown_content.to_string()))
     } else {
-        Err(anyhow::anyhow!("No frontmatter found in content"))
+        Err(WritingError::format_error("No frontmatter found in content"))
     }
 }
 
@@ -116,4 +143,162 @@ pub fn generate_frontmatter(
     frontmatter.push_str("---\n\n");
     
     frontmatter
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_frontmatter_and_content() {
+        let content = r#"---
+title: "Test Title"
+published: 2023-01-01
+tagline: "Test Tagline"
+tags:
+  - test
+  - markdown
+draft: true
+---
+
+# Test Content
+
+This is a test paragraph."#;
+
+        let result = extract_frontmatter_and_content(content);
+        assert!(result.is_ok());
+        
+        let (frontmatter, markdown) = result.unwrap();
+        assert_eq!(frontmatter.title, "Test Title");
+        assert_eq!(frontmatter.published, Some("2023-01-01".to_string()));
+        assert_eq!(frontmatter.tagline, Some("Test Tagline".to_string()));
+        assert_eq!(frontmatter.tags, Some(vec!["test".to_string(), "markdown".to_string()]));
+        assert_eq!(frontmatter.draft, Some(true));
+        
+        assert!(markdown.contains("# Test Content"));
+        assert!(markdown.contains("This is a test paragraph."));
+    }
+
+    #[test]
+    fn test_extract_frontmatter_and_content_missing_frontmatter() {
+        let content = "# Test Content\n\nThis is a test paragraph.";
+        
+        let result = extract_frontmatter_and_content(content);
+        assert!(result.is_err());
+        
+        let err = result.unwrap_err();
+        let err_msg = format!("{}", err);
+        assert!(err_msg.contains("No frontmatter found"));
+    }
+
+    #[test]
+    fn test_extract_frontmatter_and_content_invalid_yaml() {
+        let content = r#"---
+title: "Test Title
+invalid yaml
+---
+
+# Test Content"#;
+        
+        let result = extract_frontmatter_and_content(content);
+        assert!(result.is_err());
+        
+        let err = result.unwrap_err();
+        let err_msg = format!("{}", err);
+        assert!(err_msg.contains("Failed to parse frontmatter"));
+    }
+
+    #[test]
+    fn test_calculate_word_count() {
+        let content = "This is a test paragraph with 8 words.";
+        assert_eq!(calculate_word_count(content), 8);
+        
+        let content = "";
+        assert_eq!(calculate_word_count(content), 0);
+        
+        let content = "One";
+        assert_eq!(calculate_word_count(content), 1);
+    }
+
+    #[test]
+    fn test_calculate_reading_time() {
+        // 200 words per minute, so 200 words should be 1 minute
+        assert_eq!(calculate_reading_time(200), 1);
+        
+        // 300 words should be 2 minutes
+        assert_eq!(calculate_reading_time(300), 2);
+        
+        // 50 words should be 1 minute (minimum)
+        assert_eq!(calculate_reading_time(50), 1);
+        
+        // 0 words should be 1 minute (minimum)
+        assert_eq!(calculate_reading_time(0), 1);
+    }
+
+    #[test]
+    fn test_extract_first_paragraph() {
+        let content = "# Heading\n\nThis is the first paragraph.\n\nThis is the second paragraph.";
+        let result = extract_first_paragraph(content);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), "This is the first paragraph.");
+        
+        // Test with no paragraphs
+        let content = "# Heading\n\n";
+        let result = extract_first_paragraph(content);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_markdown_to_html() {
+        let content = "# Heading\n\nThis is a paragraph with **bold** text.";
+        let html = markdown_to_html(content);
+        
+        assert!(html.contains("<h1>Heading</h1>"));
+        assert!(html.contains("<p>This is a paragraph with <strong>bold</strong> text.</p>"));
+        
+        // Test with more complex markdown
+        let content = "# Heading\n\n- List item 1\n- List item 2\n\n> Blockquote\n\n```\nCode block\n```";
+        let html = markdown_to_html(content);
+        
+        assert!(html.contains("<h1>Heading</h1>"));
+        assert!(html.contains("<li>List item 1</li>"));
+        assert!(html.contains("<li>List item 2</li>"));
+        assert!(html.contains("<blockquote>\n<p>Blockquote</p>\n</blockquote>"));
+        assert!(html.contains("<pre><code>Code block\n</code></pre>"));
+    }
+
+    #[test]
+    fn test_generate_frontmatter() {
+        // Test with all fields
+        let frontmatter = generate_frontmatter(
+            "Test Title",
+            Some("2023-01-01"),
+            Some("Test Tagline"),
+            Some(vec!["test", "markdown"]),
+            true
+        );
+        
+        assert!(frontmatter.contains("title: \"Test Title\""));
+        assert!(frontmatter.contains("published: 2023-01-01"));
+        assert!(frontmatter.contains("tagline: \"Test Tagline\""));
+        assert!(frontmatter.contains("tags:"));
+        assert!(frontmatter.contains("  - test"));
+        assert!(frontmatter.contains("  - markdown"));
+        assert!(frontmatter.contains("draft: true"));
+        
+        // Test with minimal fields
+        let frontmatter = generate_frontmatter(
+            "Test Title",
+            None,
+            None,
+            None,
+            false
+        );
+        
+        assert!(frontmatter.contains("title: \"Test Title\""));
+        assert!(!frontmatter.contains("published:"));
+        assert!(!frontmatter.contains("tagline:"));
+        assert!(!frontmatter.contains("tags:"));
+        assert!(!frontmatter.contains("draft:"));
+    }
 } 

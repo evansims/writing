@@ -5,6 +5,10 @@ edition = "2021"
 description = "Common filesystem operations for the writing project"
 
 [dependencies]
+common-errors = { path = "../errors" }
 anyhow = { workspace = true }
 walkdir = { workspace = true }
-fs_extra = { workspace = true } 
+fs_extra = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true } 

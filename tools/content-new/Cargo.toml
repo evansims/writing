@@ -24,4 +24,6 @@ dialoguer.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
-common-markdown = { path = "../common/markdown" } 
+common-markdown = { path = "../common/markdown" }
+common-errors = { path = "../common/errors" }
+common-templates = { path = "../common/templates" } 

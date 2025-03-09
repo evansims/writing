@@ -1,0 +1,24 @@
+{
+  "frontmatter": {
+    "title": "Direct Execution Test",
+    "published": "2025-03-08",
+    "updated": null,
+    "slug": "direct-execution-test",
+    "tagline": "Testing direct tool execution",
+    "tags": [
+      "test",
+      "direct"
+    ],
+    "topics": [
+      "mindset"
+    ],
+    "draft": null,
+    "featured_image": null
+  },
+  "content": "## Introduction\n\nStart with a compelling introduction that hooks the reader and outlines what they'll learn.\n\n## Main Section 1\n\nYour first main point or section.\n\n## Main Section 2\n\nYour second main point or section.\n\n## Main Section 3\n\nYour third main point or section.\n\n## Conclusion\n\nSummarize the key takeaways and provide a call to action or final thought.\n",
+  "slug": "direct-execution-test",
+  "topic": "mindset",
+  "path": "content/mindset/direct-execution-test/index.mdx",
+  "word_count": 61,
+  "reading_time": 1
+}

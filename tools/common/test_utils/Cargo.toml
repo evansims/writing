@@ -1,0 +1,13 @@
+[package]
+name = "common-test-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common-models = { path = "../models" }
+common-errors = { path = "../errors" }
+common-config = { path = "../config" }
+common-fs = { path = "../fs" }
+tempfile.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true 

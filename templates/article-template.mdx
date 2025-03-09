@@ -1,15 +1,14 @@
 ---
-title: "Article Title"
-tagline: "A compelling single-sentence description of the article."
-slug: "article-slug"
-topics: ["primary-topic", "secondary-topic"]
+title: "{{ title }}"
+tagline: "{{ tagline }}"
+slug: "{{ slug }}"
+topics: ["{{ topic }}"]
 tags:
   [
-    "tag1",
-    "tag2",
-    "tag3",
+    {{ tags }}
   ]
-published: "YYYY-MM-DD"
+published: "{{ date }}"
+draft: {{ draft }}
 references:
   - title: "Reference Title"
     author: Author Name
@@ -18,7 +17,7 @@ references:
 
 ## Introduction
 
-Start with a compelling introduction that hooks the reader and outlines what they'll learn.
+{{ introduction }}
 
 ## Main Section 1
 

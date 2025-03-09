@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 description = "Optimize images for an article"
 
+[lib]
+name = "image_optimize"
+path = "src/lib.rs"
+
+[[bin]]
+name = "image-optimize"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
@@ -12,4 +20,10 @@ serde_yaml.workspace = true
 walkdir.workspace = true
 colored.workspace = true
 image.workspace = true
-ravif = "0.11.1"  # For AVIF encoding 
+ravif = "0.11.1"  # For AVIF encoding
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+
+[dev-dependencies]
+tempfile.workspace = true 

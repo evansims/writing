@@ -4,10 +4,24 @@ version = "0.1.0"
 edition = "2021"
 description = "Edit an existing topic in the writing collection"
 
+[lib]
+name = "topic_edit"
+path = "src/lib.rs"
+
+[[bin]]
+name = "topic-edit"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 colored.workspace = true
-dialoguer.workspace = true 
+dialoguer.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+
+[dev-dependencies]
+tempfile.workspace = true 

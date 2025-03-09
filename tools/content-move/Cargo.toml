@@ -2,6 +2,15 @@
 name = "content-move"
 version = "0.1.0"
 edition = "2021"
+description = "Tool for moving content between topics and changing slugs"
+
+[lib]
+name = "content_move"
+path = "src/lib.rs"
+
+[[bin]]
+name = "content-move"
+path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
@@ -12,4 +21,11 @@ colored.workspace = true
 walkdir.workspace = true
 slug.workspace = true
 dialoguer.workspace = true
-fs_extra.workspace = true 
+fs_extra.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+
+[dev-dependencies]
+tempfile.workspace = true 

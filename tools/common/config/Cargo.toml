@@ -5,7 +5,11 @@ edition = "2021"
 description = "Configuration handling for the writing project"
 
 [dependencies]
-serde = { workspace = true }
-serde_yaml = { workspace = true }
-anyhow = { workspace = true }
-common-models = { path = "../models" } 
+common-models = { path = "../models" }
+common-errors = { path = "../errors" }
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true 

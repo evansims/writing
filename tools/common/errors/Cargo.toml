@@ -1,0 +1,8 @@
+[package]
+name = "common-errors"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0"
+serde_yaml.workspace = true 

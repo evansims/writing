@@ -2,6 +2,15 @@
 name = "content-build"
 version = "0.1.0"
 edition = "2021"
+description = "Tool for building content into static files (JSON, HTML, RSS, sitemap)"
+
+[lib]
+name = "content_build"
+path = "src/lib.rs"
+
+[[bin]]
+name = "content-build"
+path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
@@ -17,4 +26,11 @@ chrono.workspace = true
 fs_extra.workspace = true
 rss = "2.0"
 quick-xml = { version = "0.30", features = ["serialize"] }
-regex = "1.10.2" 
+regex = "1.10.2"
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+
+[dev-dependencies]
+tempfile.workspace = true 

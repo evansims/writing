@@ -1,0 +1,19 @@
+[package]
+name = "common-templates"
+version = "0.1.0"
+edition = "2021"
+description = "Templates management for the writing project"
+
+[dependencies]
+common-models = { path = "../models" }
+common-errors = { path = "../errors" }
+common-fs = { path = "../fs" }
+common-config = { path = "../config" }
+anyhow.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+slug.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true 

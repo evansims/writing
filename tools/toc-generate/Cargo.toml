@@ -4,10 +4,25 @@ version = "0.1.0"
 edition = "2021"
 description = "Generate table of contents for the writing collection"
 
+[lib]
+name = "toc_generate"
+path = "src/lib.rs"
+
+[[bin]]
+name = "toc-generate"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
 walkdir.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
-colored.workspace = true 
+colored.workspace = true
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+
+[dev-dependencies]
+tempfile.workspace = true 

@@ -3,10 +3,23 @@ use std::process::Command;
 use std::path::PathBuf;
 
 // Import refactored tool libraries
-use content_new::{ContentOptions, create_content as lib_create_content, get_available_topics};
+use content_new::{ContentOptions, get_available_topics};
 use content_stats::{StatsOptions, generate_stats, format_date};
 use content_edit::{EditOptions, edit_content as lib_edit_content, save_edited_content};
+use content_delete::{DeleteOptions, delete_content as lib_delete_content};
+use content_move::{MoveOptions, move_content as lib_move_content};
+use content_build::{BuildOptions, build_content as lib_build_content};
+use image_optimize::{OptimizeOptions, optimize_image as lib_optimize_image};
+use image_build::{BuildImagesOptions, build_images as lib_build_images};
+use topic_add::{TopicAddOptions, add_topic as lib_add_topic};
+use topic_edit::{TopicEditOptions, edit_topic as lib_edit_topic};
+use topic_rename::{TopicRenameOptions, rename_topic as lib_rename_topic};
+use topic_delete::{TopicDeleteOptions, delete_topic as lib_delete_topic};
+use common_config::load_config;
 use dialoguer::Editor;
+use toc_generate::{TocOptions, generate_toc as lib_generate_toc};
+use common_templates;
+use llms_generate::{LlmsOptions, generate_llms as lib_generate_llms};
 
 // Define the release directory path
 const TOOLS_DIR: &str = "tools";
@@ -57,58 +70,51 @@ pub fn create_content(
     tags: Option<String>,
     content_type: Option<String>,
     draft: bool,
+    template: Option<String>,
+    introduction: Option<String>,
 ) -> Result<()> {
-    // If any required parameter is missing, fall back to the binary
-    if title.is_none() || topic.is_none() || tagline.is_none() || tags.is_none() {
-        println!("Using interactive mode via binary...");
-        let mut args = Vec::new();
-        
-        if let Some(title) = title {
-            args.push(String::from("--title"));
-            args.push(title);
-        }
-        
-        if let Some(topic) = topic {
-            args.push(String::from("--topic"));
-            args.push(topic);
-        }
-        
-        if let Some(tagline) = tagline {
-            args.push(String::from("--tagline"));
-            args.push(tagline);
-        }
-        
-        if let Some(tags) = tags {
-            args.push(String::from("--tags"));
-            args.push(tags);
-        }
-        
-        if let Some(content_type) = content_type {
-            args.push(String::from("--content-type"));
-            args.push(content_type);
-        }
-        
-        if draft {
-            args.push(String::from("--draft"));
-        }
-        
-        run_tool_command("content-new", &args)
-    } else {
-        // Use direct library call
-        println!("Creating content using direct library call...");
-        let options = ContentOptions {
-            title: title.unwrap(),
-            topic: topic.unwrap(),
-            tagline: tagline.unwrap(),
-            tags: tags.unwrap(),
-            content_type: content_type.unwrap_or_else(|| "article".to_string()),
-            draft,
-        };
-        
-        let result = lib_create_content(options)?;
-        println!("Content created at: {}", result);
-        Ok(())
+    let mut args = Vec::new();
+
+    if let Some(title) = title {
+        args.push(String::from("--title"));
+        args.push(title);
     }
+
+    if let Some(topic) = topic {
+        args.push(String::from("--topic"));
+        args.push(topic);
+    }
+
+    if let Some(tagline) = tagline {
+        args.push(String::from("--tagline"));
+        args.push(tagline);
+    }
+
+    if let Some(tags) = tags {
+        args.push(String::from("--tags"));
+        args.push(tags);
+    }
+
+    if let Some(content_type) = content_type {
+        args.push(String::from("--content-type"));
+        args.push(content_type);
+    }
+
+    if draft {
+        args.push(String::from("--draft"));
+    }
+
+    if let Some(template) = template {
+        args.push(String::from("--template"));
+        args.push(template);
+    }
+
+    if let Some(intro) = introduction {
+        args.push(String::from("--introduction"));
+        args.push(intro);
+    }
+
+    run_tool_command("content-new", &args)
 }
 
 pub fn edit_content(
@@ -176,49 +182,106 @@ pub fn move_content(
     topic: Option<String>,
     new_topic: Option<String>,
 ) -> Result<()> {
-    let mut args = Vec::new();
-    
-    if let Some(slug) = slug {
-        args.push(String::from("--slug"));
-        args.push(slug);
+    // If any required parameter is missing, fall back to the binary
+    if slug.is_none() {
+        println!("Using interactive mode via binary...");
+        let mut args = Vec::new();
+        
+        if let Some(s) = slug {
+            args.push(String::from("--slug"));
+            args.push(s);
+        }
+        
+        if let Some(ns) = new_slug {
+            args.push(String::from("--new-slug"));
+            args.push(ns);
+        }
+        
+        if let Some(t) = topic {
+            args.push(String::from("--topic"));
+            args.push(t);
+        }
+        
+        if let Some(nt) = new_topic {
+            args.push(String::from("--new-topic"));
+            args.push(nt);
+        }
+        
+        return run_tool_command("content-move", &args);
     }
     
-    if let Some(new_slug) = new_slug {
-        args.push(String::from("--new-slug"));
-        args.push(new_slug);
-    }
+    // Create options for content movement
+    let options = MoveOptions {
+        slug: slug.clone(),
+        new_slug: new_slug.clone(),
+        topic: topic.clone(),
+        new_topic: new_topic.clone(),
+    };
     
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
+    // Call the library function and handle the result
+    match lib_move_content(&options) {
+        Ok((current_topic, current_slug, new_topic, new_slug)) => {
+            println!("Content moved from '{}/{}' to '{}/{}'", 
+                current_topic, current_slug, 
+                new_topic, new_slug
+            );
+            Ok(())
+        },
+        Err(e) => Err(e.into())
     }
-    
-    if let Some(new_topic) = new_topic {
-        args.push(String::from("--new-topic"));
-        args.push(new_topic);
-    }
-    
-    run_tool_command("content-move", &args)
 }
 
 pub fn delete_content(slug: Option<String>, topic: Option<String>, force: bool) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options for content deletion
+    let options = DeleteOptions {
+        slug,
+        topic,
+        force,
+    };
     
-    if let Some(slug) = slug {
-        args.push(String::from("--slug"));
-        args.push(slug);
+    // If slug is not provided, we need to fall back to the binary for interactive selection
+    if options.slug.is_none() {
+        let mut args = Vec::new();
+        
+        if let Some(topic) = options.topic.clone() {
+            args.push(String::from("--topic"));
+            args.push(topic);
+        }
+        
+        if options.force {
+            args.push(String::from("--force"));
+        }
+        
+        return run_tool_command("content-delete", &args);
     }
     
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
+    // Otherwise, use the library function
+    match lib_delete_content(&options) {
+        Ok((topic, slug, title)) => {
+            println!("Content deleted: {}/{} ({})", topic, slug, title);
+            Ok(())
+        },
+        Err(_) => {
+            // If there's an error, fall back to the binary
+            let mut args = Vec::new();
+            
+            if let Some(slug) = options.slug {
+                args.push(String::from("--slug"));
+                args.push(slug);
+            }
+            
+            if let Some(topic) = options.topic {
+                args.push(String::from("--topic"));
+                args.push(topic);
+            }
+            
+            if options.force {
+                args.push(String::from("--force"));
+            }
+            
+            run_tool_command("content-delete", &args)
+        }
     }
-    
-    if force {
-        args.push(String::from("--force"));
-    }
-    
-    run_tool_command("content-delete", &args)
 }
 
 pub fn list_content() -> Result<()> {
@@ -315,50 +378,40 @@ pub fn list_topics() -> Result<()> {
 }
 
 pub fn add_topic(key: Option<String>, name: Option<String>, description: Option<String>, path: Option<String>) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options and add topic using the library function
+    let options = TopicAddOptions {
+        key,
+        name,
+        description,
+        path,
+    };
     
-    if let Some(key) = key {
-        args.push(String::from("--key"));
-        args.push(key);
+    // Call the library function and handle the result
+    match lib_add_topic(&options) {
+        Ok(topic_key) => {
+            println!("Topic '{}' added successfully", topic_key);
+            Ok(())
+        },
+        Err(e) => Err(e)
     }
-    
-    if let Some(name) = name {
-        args.push(String::from("--name"));
-        args.push(name);
-    }
-    
-    if let Some(description) = description {
-        args.push(String::from("--description"));
-        args.push(description);
-    }
-    
-    if let Some(path) = path {
-        args.push(String::from("--path"));
-        args.push(path);
-    }
-    
-    run_tool_command("topic-add", &args)
 }
 
 pub fn edit_topic(key: Option<String>, name: Option<String>, description: Option<String>) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options and edit topic using the library function
+    let options = TopicEditOptions {
+        key,
+        name,
+        description,
+    };
     
-    if let Some(key) = key {
-        args.push(String::from("--key"));
-        args.push(key);
+    // Call the library function and handle the result
+    match lib_edit_topic(&options) {
+        Ok(topic_key) => {
+            println!("Topic '{}' updated successfully", topic_key);
+            Ok(())
+        },
+        Err(e) => Err(e)
     }
-    
-    if let Some(name) = name {
-        args.push(String::from("--name"));
-        args.push(name);
-    }
-    
-    if let Some(description) = description {
-        args.push(String::from("--description"));
-        args.push(description);
-    }
-    
-    run_tool_command("topic-edit", &args)
 }
 
 pub fn rename_topic(
@@ -367,66 +420,59 @@ pub fn rename_topic(
     new_name: Option<String>,
     new_path: Option<String>,
 ) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options and rename topic using the library function
+    let options = TopicRenameOptions {
+        key,
+        new_key,
+        new_name,
+        new_path,
+    };
     
-    if let Some(key) = key {
-        args.push(String::from("--key"));
-        args.push(key);
+    // Call the library function and handle the result
+    match lib_rename_topic(&options) {
+        Ok(topic_key) => {
+            println!("Topic renamed to '{}' successfully", topic_key);
+            Ok(())
+        },
+        Err(e) => Err(e)
     }
-    
-    if let Some(new_key) = new_key {
-        args.push(String::from("--new-key"));
-        args.push(new_key);
-    }
-    
-    if let Some(new_name) = new_name {
-        args.push(String::from("--new-name"));
-        args.push(new_name);
-    }
-    
-    if let Some(new_path) = new_path {
-        args.push(String::from("--new-path"));
-        args.push(new_path);
-    }
-    
-    run_tool_command("topic-rename", &args)
 }
 
 pub fn delete_topic(key: Option<String>, target: Option<String>, force: bool) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options and delete topic using the library function
+    let options = TopicDeleteOptions {
+        key,
+        target,
+        force,
+    };
     
-    if let Some(key) = key {
-        args.push(String::from("--key"));
-        args.push(key);
+    // Call the library function and handle the result
+    match lib_delete_topic(&options) {
+        Ok(topic_key) => {
+            println!("Topic '{}' deleted successfully", topic_key);
+            Ok(())
+        },
+        Err(e) => Err(e)
     }
-    
-    if let Some(target) = target {
-        args.push(String::from("--target"));
-        args.push(target);
-    }
-    
-    if force {
-        args.push(String::from("--force"));
-    }
-    
-    run_tool_command("topic-delete", &args)
 }
 
 pub fn optimize_image(source: String, article: String, topic: Option<String>) -> Result<()> {
-    let mut args = Vec::new();
+    println!("Optimizing image using direct library call...");
     
-    args.push(String::from("--source"));
-    args.push(source);
+    // Convert parameters to an OptimizeOptions struct
+    let options = OptimizeOptions {
+        source: PathBuf::from(source),
+        article,
+        topic,
+    };
     
-    args.push(String::from("--article"));
-    args.push(article);
+    // Call the library function
+    let target_path = lib_optimize_image(&options)?;
     
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
-    }
+    println!("Image optimized successfully and saved to: {}", target_path.display());
+    println!("To generate all image formats, run: build images --article={}", options.article);
     
-    run_tool_command("image-optimize", &args)
+    Ok(())
 }
 
 pub fn build_images(
@@ -434,27 +480,30 @@ pub fn build_images(
     topic: Option<String>,
     source_filename: Option<String>,
 ) -> Result<()> {
-    let mut args = Vec::new();
+    println!("Building images using direct library call...");
     
-    args.push(String::from("--output-dir"));
-    args.push(String::from("build/images"));
+    // Create options
+    let options = BuildImagesOptions {
+        output_dir: PathBuf::from("build/images"),
+        source_dir: PathBuf::from("content"),
+        source_filename: source_filename.unwrap_or_else(|| "index.jpg".to_string()),
+        article,
+        topic,
+    };
     
-    if let Some(article) = article {
-        args.push(String::from("--article"));
-        args.push(article);
+    // Call the library function
+    match lib_build_images(&options) {
+        Ok((total_articles, total_images, processed_images, skipped_articles)) => {
+            println!("Image build complete!");
+            println!("Articles scanned: {}, Images found: {}, Processed: {}, Skipped: {}", 
+                total_articles, total_images, processed_images, skipped_articles);
+            Ok(())
+        },
+        Err(e) => {
+            eprintln!("Error building images: {}", e);
+            Err(e)
+        }
     }
-    
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
-    }
-    
-    if let Some(source_filename) = source_filename {
-        args.push(String::from("--source-filename"));
-        args.push(source_filename);
-    }
-    
-    run_tool_command("image-build", &args)
 }
 
 pub fn build_content(
@@ -462,82 +511,45 @@ pub fn build_content(
     slug: Option<String>,
     topic: Option<String>,
     include_drafts: bool,
-    template_dir: Option<String>,
-    site_url: Option<String>,
+    skip_html: bool,
+    skip_json: bool,
+    skip_rss: bool,
+    skip_sitemap: bool,
+    verbose: bool,
 ) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options and build content using the library function
+    let options = BuildOptions {
+        output_dir,
+        slug,
+        topic,
+        include_drafts,
+        skip_html,
+        skip_json,
+        skip_rss,
+        skip_sitemap,
+        verbose,
+    };
     
-    if let Some(output_dir) = output_dir {
-        args.push(String::from("--output-dir"));
-        args.push(output_dir);
-    }
-    
-    if let Some(slug) = slug {
-        args.push(String::from("--slug"));
-        args.push(slug);
-    }
-    
-    if let Some(topic) = topic {
-        args.push(String::from("--topic"));
-        args.push(topic);
-    }
-    
-    if include_drafts {
-        args.push(String::from("--include-drafts"));
-    }
-    
-    if let Some(template_dir) = template_dir {
-        args.push(String::from("--template-dir"));
-        args.push(template_dir);
-    }
-    
-    if let Some(site_url) = site_url {
-        args.push(String::from("--site-url"));
-        args.push(site_url);
-    }
-    
-    run_tool_command("content-build", &args)
+    lib_build_content(&options)
 }
 
 pub fn generate_toc(output: Option<String>) -> Result<()> {
-    let mut args = Vec::new();
+    // Create options for TOC generation
+    let output_path = output.unwrap_or_else(|| "build/index.md".to_string());
+    let options = TocOptions {
+        output: std::path::PathBuf::from(output_path),
+        title: None, // Use default title
+        description: None, // Use default description
+    };
     
-    if let Some(output) = output {
-        args.push(String::from("--output"));
-        args.push(output);
-    } else {
-        args.push(String::from("--output"));
-        args.push(String::from("build/index.md"));
+    // Call the library function and handle the result
+    match lib_generate_toc(&options) {
+        Ok(output_path) => {
+            println!("Table of contents generated at: {:?}", output_path);
+            Ok(())
+        },
+        Err(e) => Err(e)
     }
-    
-    run_tool_command("toc-generate", &args)
-}
-
-pub fn generate_llms(
-    site_url: Option<String>,
-    output_dir: Option<String>,
-    include_drafts: bool,
-) -> Result<()> {
-    let mut args = Vec::new();
-    
-    if let Some(site_url) = site_url {
-        args.push(String::from("--site-url"));
-        args.push(site_url);
-    }
-    
-    if let Some(output_dir) = output_dir {
-        args.push(String::from("--output-dir"));
-        args.push(output_dir);
-    } else {
-        args.push(String::from("--output-dir"));
-        args.push(String::from("build"));
-    }
-    
-    if include_drafts {
-        args.push(String::from("--include-drafts"));
-    }
-    
-    run_tool_command("llms-generate", &args)
 }
 
 pub fn generate_content_stats(
@@ -637,4 +649,67 @@ pub fn generate_content_stats(
     }
     
     Ok(())
+}
+
+/// List available templates
+pub fn list_templates() -> Result<()> {
+    // Use the common_templates crate directly
+    let templates = common_templates::list_templates()?;
+    
+    if templates.is_empty() {
+        println!("No templates found.");
+        return Ok(());
+    }
+    
+    println!("Available templates:");
+    for template in templates {
+        println!("  - {} ({})", template.name, template.content_type);
+    }
+    
+    Ok(())
+}
+
+/// Create a new template
+pub fn create_template(
+    name: Option<String>,
+    content_type: Option<String>,
+) -> Result<()> {
+    let mut args = Vec::new();
+
+    if let Some(name) = name {
+        args.push(String::from("--name"));
+        args.push(name);
+    }
+
+    if let Some(content_type) = content_type {
+        args.push(String::from("--content-type"));
+        args.push(content_type);
+    }
+
+    run_tool_command("content-template", &args)
+}
+
+pub fn generate_llms(
+    site_url: Option<String>,
+    output_dir: Option<String>,
+    include_drafts: bool,
+) -> Result<()> {
+    // Create options for LLMS generation
+    let output_path = output_dir.unwrap_or_else(|| "build".to_string());
+    let options = LlmsOptions {
+        output_dir: std::path::PathBuf::from(output_path),
+        site_url,
+        include_drafts,
+    };
+    
+    // Call the library function and handle the result
+    match lib_generate_llms(&options) {
+        Ok((llms_txt_path, llms_full_txt_path)) => {
+            println!("Generated LLMS files: {} and {}", 
+                llms_txt_path.display(), 
+                llms_full_txt_path.display());
+            Ok(())
+        },
+        Err(e) => Err(e)
+    }
 } 
