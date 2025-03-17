@@ -4,7 +4,19 @@ version = "0.1.0"
 edition = "2021"
 description = "Common data models for the writing project"
 
+[features]
+default = ["content"]
+# Core features
+content = []
+# Optional features
+images = ["image"]
+llm = []
+advanced-markdown = ["pulldown-cmark"]
+
 [dependencies]
 serde = { workspace = true }
 chrono = { workspace = true }
-anyhow = { workspace = true } 
+anyhow = { workspace = true }
+# Optional dependencies
+image = { workspace = true, optional = true }
+pulldown-cmark = { workspace = true, optional = true } 

@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use colored::*;
 use dialoguer::{Input, Confirm};
-use topic_add::{TopicAddOptions, add_topic, add_tags_to_topic, generate_key_from_name};
+use topic_add::{AddOptions, add_topic, add_tags_to_topic, generate_key_from_name};
 
 #[derive(Parser)]
 #[command(author, version, about = "Add a new topic to the writing collection")]
@@ -86,11 +86,11 @@ fn main() -> Result<()> {
     };
     
     // Create options for adding a topic
-    let options = TopicAddOptions {
-        key: Some(key),
-        name: Some(name),
-        description: Some(description),
-        path: Some(path),
+    let options = AddOptions {
+        key: key,
+        name: name,
+        description: description,
+        directory: path,
     };
     
     // Add the topic

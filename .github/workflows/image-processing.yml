@@ -1,0 +1,167 @@
+name: Image Processing Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tools/image-optimize/**'
+      - 'tools/image-build/**'
+      - 'tools/common/models/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tools/image-optimize/**'
+      - 'tools/image-build/**'
+      - 'tools/common/models/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-feature-combinations:
+    name: Test Feature Combinations
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature-set:
+          # Test image-optimize feature combinations
+          - crate: image-optimize
+            features: ""
+            description: "JPEG only"
+          - crate: image-optimize
+            features: "webp"
+            description: "JPEG + WebP"
+          - crate: image-optimize
+            features: "avif"
+            description: "JPEG + AVIF"
+          - crate: image-optimize
+            features: "webp,avif"
+            description: "All formats"
+          # Test image-build feature combinations
+          - crate: image-build
+            features: ""
+            description: "Basic build"
+          - crate: image-build
+            features: "basic-formats"
+            description: "With basic formats"
+          - crate: image-build
+            features: "basic-formats,avif"
+            description: "All formats"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install ImageMagick
+        if: contains(matrix.feature-set.features, 'avif')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.feature-set.crate }}-${{ matrix.feature-set.features }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests (${{ matrix.feature-set.description }})
+        working-directory: tools/${{ matrix.feature-set.crate }}
+        run: |
+          if [ -n "${{ matrix.feature-set.features }}" ]; then
+            cargo test --no-default-features --features "${{ matrix.feature-set.features }}"
+          else
+            cargo test --no-default-features
+          fi
+
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy
+
+      - name: Run Clippy (image-optimize)
+        working-directory: tools/image-optimize
+        run: cargo clippy --all-features -- -D warnings
+
+      - name: Run Clippy (image-build)
+        working-directory: tools/image-build
+        run: cargo clippy --all-features -- -D warnings
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate coverage report
+        run: |
+          cd tools/image-optimize
+          cargo llvm-cov --all-features --lcov --output-path optimize-coverage.lcov
+          cd ../image-build
+          cargo llvm-cov --all-features --lcov --output-path build-coverage.lcov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: |
+            tools/image-optimize/optimize-coverage.lcov
+            tools/image-build/build-coverage.lcov
+          fail_ci_if_error: true
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Run benchmarks
+        run: |
+          cd tools/image-optimize
+          cargo bench --all-features
+          cd ../image-build
+          cargo bench --all-features 

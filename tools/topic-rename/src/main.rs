@@ -96,13 +96,13 @@ fn main() -> Result<()> {
     let new_path = match args.new_path {
         Some(p) => p,
         None => {
-            let prompt = format!("Enter new topic path (current: '{}')", current_topic.path);
+            let prompt = format!("Enter new topic path (current: '{}')", current_topic.directory);
             let input = Input::<String>::new()
                 .with_prompt(&prompt)
                 .allow_empty(true)
                 .interact_text()?;
             
-            if input.is_empty() { current_topic.path.clone() } else { input }
+            if input.is_empty() { current_topic.directory.clone() } else { input }
         }
     };
     
@@ -111,7 +111,7 @@ fn main() -> Result<()> {
         "Topic:\n- Key: {} → {}\n- Name: {} → {}\n- Path: {} → {}",
         key.yellow(), new_key.yellow(),
         current_topic.name.yellow(), new_name.yellow(),
-        current_topic.path.yellow(), new_path.yellow()
+        current_topic.directory.yellow(), new_path.yellow()
     );
     
     println!("{}", summary);
@@ -130,6 +130,7 @@ fn main() -> Result<()> {
         key: Some(key),
         new_key: Some(new_key),
         new_name: Some(new_name),
+        new_description: None,
         new_path: Some(new_path),
     };
     

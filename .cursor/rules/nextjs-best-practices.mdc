@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+---
+name: nextjs-best-practices.mdc
+description: Best practices for Next.js applications using the App Router
+globs: **/*.{ts,tsx}
+---
+
+- Leverage Server Components for improved performance and SEO
+- Use the `use client` directive sparingly, only for client-specific logic
+- Implement route groups for better organization of related routes
+- Utilize `generateStaticParams` for dynamic routes to optimize build times
+- Implement proper error handling with `error.tsx` and `not-found.tsx`

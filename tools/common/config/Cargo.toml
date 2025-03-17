@@ -10,6 +10,11 @@ common-errors = { path = "../errors" }
 anyhow.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
+once_cell.workspace = true
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile.workspace = true
+
+[features]
+default = ["cache"]
+cache = [] 

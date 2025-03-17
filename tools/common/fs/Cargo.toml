@@ -4,11 +4,30 @@ version = "0.1.0"
 edition = "2021"
 description = "Common filesystem operations for the writing project"
 
+# Define features
+[features]
+default = ["content", "copy", "find"]
+content = []
+copy = ["fs_extra"]
+find = ["walkdir"]
+# New feature that includes all directory operations
+directory_ops = ["copy", "find"]
+
 [dependencies]
 common-errors = { path = "../errors" }
+common-models = { path = "../models" }
 anyhow = { workspace = true }
-walkdir = { workspace = true }
-fs_extra = { workspace = true }
+walkdir = { workspace = true, optional = true }
+fs_extra = { workspace = true, optional = true }
 
 [dev-dependencies]
-tempfile = { workspace = true } 
+tempfile = { workspace = true }
+common-test-utils = { path = "../test_utils" }
+
+[[test]]
+name = "file_operations_tests"
+path = "tests/file_operations_tests.rs"
+
+[[test]]
+name = "directory_operations_tests"
+path = "tests/directory_operations_tests.rs" 

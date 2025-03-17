@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+---
+name: tonic-best-practices.mdc
+description: Best practices for gRPC with async support using Tonic
+globs: **/*.rs
+---
+
+- Use `tonic::transport::Server` for creating gRPC servers
+- Implement gRPC clients with `tonic::transport::Channel`
+- Use `prost` for Protocol Buffers compilation and integration
+- Implement streaming with `tonic::Streaming`
+- Use `tonic::Status` for error handling and gRPC status codes

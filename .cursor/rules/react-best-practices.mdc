@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.ts,*.tsx,*.js,*.jsx
+alwaysApply: false
+---
+---
+name: react-best-practices.mdc
+description: Best practices for React development
+globs: **/*.{ts,tsx,js,jsx}
+---
+
+- Use functional components with hooks instead of class components
+- Implement proper state management using `useState` or external libraries like Redux
+- Utilize `useMemo` and `useCallback` for performance optimization
+- Implement error boundaries to catch and handle errors in components
+- Use `React.lazy` and `Suspense` for code-splitting and lazy loading

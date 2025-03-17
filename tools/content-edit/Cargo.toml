@@ -21,7 +21,12 @@ colored.workspace = true
 walkdir.workspace = true
 dialoguer.workspace = true
 fs_extra.workspace = true
+tempfile.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
-common-fs = { path = "../common/fs" }
-common-markdown = { path = "../common/markdown" } 
+common-fs = { path = "../common/fs", features = ["find"] }
+common-markdown = { path = "../common/markdown" }
+common-errors = { path = "../common/errors" }
+
+[dev-dependencies]
+common-test-utils = { path = "../common/test_utils" } 

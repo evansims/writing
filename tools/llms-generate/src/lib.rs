@@ -3,7 +3,7 @@ use chrono::Utc;
 use comrak::{markdown_to_html, ComrakOptions};
 use common_config::load_config;
 use common_markdown::extract_frontmatter_and_content;
-use common_models::{Config, Frontmatter};
+use common_models::Config;
 use common_fs::write_file;
 use regex::Regex;
 use std::fs;

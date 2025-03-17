@@ -2,51 +2,40 @@
 name = "write"
 version = "0.1.0"
 edition = "2021"
-description = "Interactive CLI for the writing management system"
+description = "Writing toolkit for managing content"
 
-[[bin]]
-name = "writing"
-path = "src/main.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { workspace = true, features = ["derive"] }
-anyhow = { workspace = true }
-colored = { workspace = true }
-serde = { workspace = true }
-serde_yaml = { workspace = true }
-walkdir = { workspace = true }
-chrono = { workspace = true }
-dialoguer = { workspace = true }
-
-# Non-workspace dependencies
-console = "0.15"
-similar = "2.2"
+anyhow = "1.0"
+chrono = "0.4"
+clap = { version = "4.1", features = ["derive"] }
+colored = "2.0"
+dialoguer = "0.10"
 indicatif = "0.17"
-tui = { package = "ratatui", version = "0.23" }
-crossterm = "0.27"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
 
-# Common libraries
-common-models = { path = "../common/models" }
-common-config = { path = "../common/config" }
-common-fs = { path = "../common/fs" }
-common-markdown = { path = "../common/markdown" }
-common-errors = { path = "../common/errors" }
-common-templates = { path = "../common/templates" }
+[dev-dependencies]
+tempfile = "3.6"
+proptest = "1.2"
+mockall = "0.11"
+criterion = "0.5"
+uuid = { version = "1.4", features = ["v4"] }
 
-# Individual tool libraries
-content-new = { path = "../content-new" }
-content-move = { path = "../content-move" }
-content-delete = { path = "../content-delete" }
-content-edit = { path = "../content-edit" }
-content-build = { path = "../content-build" }
-content-stats = { path = "../content-stats" }
-topic-add = { path = "../topic-add" }
-topic-edit = { path = "../topic-edit" }
-topic-rename = { path = "../topic-rename" }
-topic-delete = { path = "../topic-delete" }
-image-optimize = { path = "../image-optimize" }
-image-build = { path = "../image-build" }
-llms-generate = { path = "../llms-generate" }
-toc-generate = { path = "../toc-generate" }
+[lib]
+name = "write"
+path = "src/lib.rs"
 
-# Legacy tool binary dependencies - these will be replaced as they are refactored
+[[bin]]
+name = "write"
+path = "src/main.rs"
+
+[[bench]]
+name = "performance_benchmarks"
+harness = false
+
+[features]
+default = []
+directory_ops = []

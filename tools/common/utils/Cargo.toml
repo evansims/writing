@@ -1,0 +1,20 @@
+[package]
+name = "common_utils"
+version = "0.1.0"
+edition = "2021"
+description = "Common utilities for the writing tools"
+
+[dependencies]
+anyhow = "1.0"
+colored = "2.0"
+regex = "1.9"
+chrono = "0.4"
+lazy_static = "1.4"
+common_errors = { path = "../errors" }
+common_config = { path = "../config" }
+common_fs = { path = "../fs" }
+
+[dev-dependencies]
+tempfile = "3.7"
+proptest = "1.2"
+common_test_utils = { path = "../test_utils" } 

@@ -55,7 +55,7 @@ fn main() -> Result<()> {
     let topic_config = config.content.topics.get(&key).unwrap().clone();
     
     // Check if the topic has content
-    let topic_has_content = has_content(&config.content.base_dir, &topic_config.path);
+    let topic_has_content = has_content(&config.content.base_dir, &topic_config.directory);
     
     // Initialize target variable for possible content migration
     let mut target = args.target.clone();
@@ -91,8 +91,8 @@ fn main() -> Result<()> {
         
         // Show migration summary
         println!("Will migrate content from topic '{}' to '{}'", key.yellow(), target_key.yellow());
-        println!("From directory: {}", topic_config.path.yellow());
-        println!("To directory: {}", target_config.path.yellow());
+        println!("From directory: {}", topic_config.directory.yellow());
+        println!("To directory: {}", target_config.directory.yellow());
     }
     
     // Confirm deletion unless force flag is set

@@ -1,15 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
-    "common/models",
+    "common/cli",
     "common/config",
+    "common/errors",
     "common/fs",
     "common/markdown",
-    "common/errors",
+    "common/models",
     "common/test_utils",
-    "common/templates",
-    "content-new",
+    "common/validation",
     "content-edit",
+    "content-new",
     "content-move",
     "content-delete",
     "content-stats",
@@ -22,29 +23,43 @@ members = [
     "topic-edit",
     "topic-rename",
     "topic-delete",
-    "write"
-, "content-template"]
+    "write",
+    "content-template",
+    "content-validate",
+    "content-search"
+]
 
 [workspace.dependencies]
-clap = { version = "4.4", features = ["derive"] }
-anyhow = "1.0"
-thiserror = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-serde_json = "1.0"
-walkdir = "2.3"
-colored = "2.0"
-slug = "0.1"
-chrono = "0.4"
-image = "0.24"
-comrak = "0.18"
-regex = "1.11"
-dialoguer = "0.11"
-ravif = "0.11.1"
-markdown = "1.0"
-pulldown-cmark = "0.9"
-handlebars = "4.3"
-fs_extra = "1.3"
-rss = "2.0"
+anyhow = "1.0.75"
+chrono = "0.4.31"
+clap = { version = "4.4.6", features = ["derive"] }
+colored = "2.0.4"
+comrak = { version = "0.18" }
+dialoguer = "0.11.0"
+dirs = "5.0.1"
+image = { version = "0.24" }
+markdown = { version = "1.0" }
+pulldown-cmark = { version = "0.9" }
 quick-xml = { version = "0.30", features = ["serialize"] }
-tempfile = "3.8" 
+ravif = { version = "0.11.1" }
+regex = "1.10.2"
+rss = { version = "2.0" }
+serde = { version = "1.0.189", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9.25"
+slug = "0.1.4"
+tempfile = "3.8"
+thiserror = "1.0.49"
+walkdir = "2.3"
+fs_extra = "1.3"
+handlebars = "4.3"
+once_cell = "1.18.0"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Evan Sims <hello@evansims.com>"]
+description = "Writing tools for managing content"
+license = "MIT"
+# Default features for workspace members
+# Feature flag definitions

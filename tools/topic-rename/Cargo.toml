@@ -24,6 +24,7 @@ dialoguer.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
+common-errors = { path = "../common/errors" }
 
 [dev-dependencies]
 tempfile.workspace = true 

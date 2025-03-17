@@ -1,11 +1,56 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use colored::*;
-use image_optimize::{OptimizeOptions, optimize_image, optimize_source_image};
+use image_optimize::{
+    OptimizeOptions, OutputFormat, SizeVariant,
+    optimize_image, default_formats, default_size_variants
+};
 use std::path::PathBuf;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum FormatOption {
+    Jpeg,
+    WebP,
+    // Avif, // Temporarily removed
+    All,
+}
+
+impl FormatOption {
+    fn to_output_formats(&self) -> Vec<OutputFormat> {
+        match self {
+            FormatOption::Jpeg => vec![OutputFormat::Jpeg],
+            FormatOption::WebP => vec![OutputFormat::WebP],
+            // FormatOption::Avif => vec![OutputFormat::Avif], // Temporarily removed
+            FormatOption::All => default_formats(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum SizeOption {
+    Original,
+    Large,
+    Medium,
+    Small,
+    Thumbnail,
+    All,
+}
+
+impl SizeOption {
+    fn to_size_variants(&self) -> Vec<SizeVariant> {
+        match self {
+            SizeOption::Original => vec![SizeVariant::Original],
+            SizeOption::Large => vec![SizeVariant::Large(1200)],
+            SizeOption::Medium => vec![SizeVariant::Medium(800)],
+            SizeOption::Small => vec![SizeVariant::Small(400)],
+            SizeOption::Thumbnail => vec![SizeVariant::Thumbnail(200)],
+            SizeOption::All => default_size_variants(),
+        }
+    }
+}
+
 #[derive(Parser)]
-#[command(author, version, about = "Optimize source images for articles")]
+#[command(author, version, about = "Optimize source images for articles with multiple format support")]
 struct Args {
     /// Source image path
     #[arg(short, long)]
@@ -18,6 +63,22 @@ struct Args {
     /// Topic (optional, will search if not provided)
     #[arg(short, long)]
     topic: Option<String>,
+    
+    /// Output formats to generate
+    #[arg(short, long, value_enum, default_value = "all")]
+    formats: FormatOption,
+    
+    /// Size variants to generate
+    #[arg(short, long, value_enum, default_value = "all")]
+    sizes: SizeOption,
+    
+    /// Quality level (0-100)
+    #[arg(short, long, default_value = "85")]
+    quality: u8,
+    
+    /// Preserve original image metadata
+    #[arg(long, default_value = "false")]
+    preserve_metadata: bool,
 }
 
 fn main() -> Result<()> {
@@ -25,42 +86,64 @@ fn main() -> Result<()> {
     
     // Convert args to library options
     let options = OptimizeOptions {
-        source: args.source,
-        article: args.article,
-        topic: args.topic,
+        source: PathBuf::from(&args.source),
+        article: Some(args.article.clone()),
+        topic: args.topic.clone(),
+        formats: args.formats.to_output_formats(),
+        sizes: args.sizes.to_size_variants(),
+        quality: args.quality,
+        preserve_metadata: args.preserve_metadata,
     };
     
-    println!("{} {}", "Optimizing source image for article:".yellow().bold(), options.article);
+    println!("{} {}", "Optimizing image for article:".yellow().bold(), options.article.as_ref().unwrap_or(&"all".to_string()));
+    println!("  {} {}", "Source:".green().bold(), options.source.display());
+    
+    // Generate formats string for display
+    let formats_str = options.formats.iter()
+        .map(|f| format!("{:?}", f))
+        .collect::<Vec<_>>()
+        .join(", ");
+    println!("  {} {}", "Formats:".cyan().bold(), formats_str);
+    
+    // Generate sizes string for display
+    let sizes_str = options.sizes.iter()
+        .map(|s| s.name())
+        .collect::<Vec<_>>()
+        .join(", ");
+    println!("  {} {}", "Sizes:".cyan().bold(), sizes_str);
+    
+    println!("  {} {}%", "Quality:".cyan().bold(), options.quality);
     
     // Optimize the image using the library function
-    let target_path = optimize_image(&options)?;
+    let result = optimize_image(&options)?;
     
-    // Get image details for display
-    let ((width, height), source_size, target_size) = 
-        optimize_source_image(&options.source, &target_path)?;
+    // Print summary of results
+    println!("\n{} Image optimized successfully", "Success:".green().bold());
+    println!("  {} {:.2} MB", "Original size:".cyan().bold(), result.original_size as f64 / 1_048_576.0);
     
-    // Print details
-    println!("  {} {}", "Source:".green().bold(), options.source.display());
-    println!("  {} {}", "Target:".green().bold(), target_path.display());
-    println!("  {} {}x{}", "Dimensions:".cyan().bold(), width, height);
-    
-    // Check if the image is large enough for high-quality source
-    if width < 2400 || height < 1260 {
-        println!("  {} The source image is smaller than the recommended size (2400x1260).", "Warning:".yellow().bold());
-        println!("  This may result in lower quality images when scaled up.");
+    // Display results for each format
+    for format_result in &result.format_results {
+        println!("\n  {} {:?}", "Format:".yellow().bold(), format_result.format);
+        
+        for size_result in &format_result.size_results {
+            let ratio = if result.original_size > 0 {
+                (size_result.file_size as f64 / result.original_size as f64) * 100.0
+            } else {
+                0.0
+            };
+            
+            println!("    {} {}: {}x{}, {:.2} MB ({:.1}%)",
+                size_result.variant.name().cyan().bold(),
+                size_result.path.display(),
+                size_result.dimensions.0,
+                size_result.dimensions.1,
+                size_result.file_size as f64 / 1_048_576.0,
+                ratio
+            );
+        }
     }
     
-    println!("  {} {:.2} MB → {:.2} MB", 
-        "Size:".cyan().bold(), 
-        source_size as f64 / 1_048_576.0,
-        target_size as f64 / 1_048_576.0
-    );
-    
-    println!("{} Source image optimized and saved as {}", 
-        "Success:".green().bold(), 
-        target_path.display()
-    );
-    println!("Run './writing images build --article={}' to generate all optimized versions.", options.article);
+    println!("\nRun './writing images build --article={}' to generate HTML references for these images.", options.article.as_ref().unwrap_or(&"all".to_string()));
     
     Ok(())
 } 

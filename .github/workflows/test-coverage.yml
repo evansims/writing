@@ -1,0 +1,55 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-C instrument-coverage"
+  LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: llvm-tools-preview
+    
+    - name: Install grcov
+      run: cargo install grcov
+    
+    - name: Build
+      run: cargo build --workspace
+    
+    - name: Run tests
+      run: cargo test --workspace
+    
+    - name: Generate coverage
+      run: |
+        grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+    
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./lcov.info
+        name: code-coverage
+        fail_ci_if_error: true
+        verbose: true
+    
+    - name: Check coverage threshold
+      run: |
+        COVERAGE_PCT=$(lcov --summary lcov.info | grep "lines" | cut -d ":" -f 2 | cut -d "%" -f 1 | xargs)
+        echo "Current coverage: $COVERAGE_PCT%"
+        if (( $(echo "$COVERAGE_PCT < 80" | bc -l) )); then
+          echo "Coverage below threshold of 80%"
+          exit 1
+        fi 

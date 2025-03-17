@@ -1,115 +1,101 @@
 use anyhow::Result;
-use clap::Parser;
 use colored::*;
-use content_delete::{DeleteOptions, delete_content, list_all_content, extract_title_from_content};
+use content_delete::{DeleteCommand, DeleteArgs, list_all_content, extract_title_from_content};
+use common_cli::Command;
+use clap::Parser;
 use dialoguer::{Confirm, Select};
-
-#[derive(Parser)]
-#[command(author, version, about = "Delete existing content")]
-struct Args {
-    /// Content slug to delete
-    #[arg(short, long)]
-    slug: Option<String>,
-
-    /// Topic (optional, will search if not provided)
-    #[arg(short, long)]
-    topic: Option<String>,
-
-    /// Force delete without confirmation
-    #[arg(short, long)]
-    force: bool,
-}
+use common_errors::WritingError;
 
 fn main() -> Result<()> {
-    let args = Args::parse();
-    
-    // Create delete options
-    let options = DeleteOptions {
-        slug: args.slug.clone(),
-        topic: args.topic.clone(),
-        force: args.force,
-    };
-    
-    // If no slug is provided, show a selection menu
-    if options.slug.is_none() {
-        let content_list = list_all_content()?;
-        
-        if content_list.is_empty() {
-            return Err(anyhow::anyhow!("No content found"));
-        }
-        
-        let content_display: Vec<String> = content_list.iter()
-            .map(|(topic, slug, _)| format!("{}/{}", topic, slug))
-            .collect();
-        
-        let selection = Select::new()
-            .with_prompt("Select content to delete")
-            .items(&content_display)
-            .default(0)
-            .interact()?;
-        
-        let (topic, slug, content_dir) = &content_list[selection];
-        
-        // Get content title for confirmation
-        let content_file = content_dir.join("index.mdx");
-        let title = extract_title_from_content(&content_file)?;
-        
-        // Confirm deletion
-        if !options.force {
-            let confirm_message = format!("Delete content '{}/{}' ({})?", topic, slug, title);
-            if !Confirm::new().with_prompt(confirm_message).interact()? {
-                println!("Operation cancelled");
-                return Ok(());
-            }
-        }
-        
-        // Create a DeleteOptions with the selected slug
-        let selected_options = DeleteOptions {
-            slug: Some(slug.clone()),
-            topic: Some(topic.clone()),
-            force: options.force,
-        };
-        
-        // Delete the content
-        let (topic, slug, title) = delete_content(&selected_options)?;
-        
-        println!("{} Content deleted: {}/{} ({})", 
-            "SUCCESS:".green().bold(), 
-            topic, slug, title
-        );
+    // Parse command line arguments directly
+    let args = DeleteArgs::parse();
+
+    // If no slug is provided, handle interactive selection
+    if args.slug.is_none() {
+        handle_interactive_selection(args)
     } else {
-        // Delete using provided slug
-        // Confirm deletion if not forced
-        if !options.force {
-            if let Some(slug) = &options.slug {
-                // Since we don't have the title yet, we need to find the content first
-                let content_list = list_all_content()?;
-                let matching_content = content_list.iter().find(|(t, s, _)| {
-                    s == slug && options.topic.as_ref().map_or(true, |topic| t == topic)
-                });
+        // Create and execute command with provided arguments
+        if !args.force {
+            // Confirm deletion
+            let slug = args.slug.as_ref().unwrap();
+            let _topic_str = args.topic.as_ref().map_or("any topic", |t| t);
+            
+            let content_list = list_all_content()?;
+            let matching_content = content_list.iter().find(|(t, s, _)| {
+                s == slug && args.topic.as_ref().map_or(true, |topic| t == topic)
+            });
+            
+            if let Some((topic, slug, content_dir)) = matching_content {
+                // Get content title for confirmation
+                let content_file = content_dir.join("index.mdx");
+                let title = extract_title_from_content(&content_file)?;
                 
-                if let Some((topic, slug, content_dir)) = matching_content {
-                    // Get content title for confirmation
-                    let content_file = content_dir.join("index.mdx");
-                    let title = extract_title_from_content(&content_file)?;
-                    
-                    let confirm_message = format!("Delete content '{}/{}' ({})?", topic, slug, title);
-                    if !Confirm::new().with_prompt(confirm_message).interact()? {
-                        println!("Operation cancelled");
-                        return Ok(());
-                    }
+                let confirm_message = format!("Delete content '{}/{}' ({})?", topic, slug, title);
+                if !Confirm::new().with_prompt(confirm_message).interact()? {
+                    println!("Operation cancelled");
+                    return Ok(());
+                }
+            } else {
+                println!("{} Warning: Unable to find matching content for confirmation", "⚠".yellow());
+                let confirm_message = format!("Are you sure you want to delete '{}'?", slug);
+                if !Confirm::new().with_prompt(confirm_message).interact()? {
+                    println!("Operation cancelled");
+                    return Ok(());
                 }
             }
         }
         
-        // Delete the content
-        let (topic, slug, title) = delete_content(&options)?;
-        
-        println!("{} Content deleted: {}/{} ({})", 
-            "SUCCESS:".green().bold(), 
-            topic, slug, title
-        );
+        // Execute the command
+        let cmd = DeleteCommand::new(args);
+        let result = cmd.execute()?;
+        DeleteCommand::handle_result(result);
+        Ok(())
+    }
+}
+
+/// Handle interactive content selection
+fn handle_interactive_selection(args: DeleteArgs) -> Result<()> {
+    let content_list = list_all_content()?;
+    
+    if content_list.is_empty() {
+        return Err(WritingError::content_not_found("No content found").into());
     }
     
+    let content_display: Vec<String> = content_list.iter()
+        .map(|(topic, slug, _)| format!("{}/{}", topic, slug))
+        .collect();
+    
+    let selection = Select::new()
+        .with_prompt("Select content to delete")
+        .items(&content_display)
+        .default(0)
+        .interact()?;
+    
+    let (topic, slug, content_dir) = &content_list[selection];
+    
+    // Get content title for confirmation
+    let content_file = content_dir.join("index.mdx");
+    let title = extract_title_from_content(&content_file)?;
+    
+    // Confirm deletion
+    if !args.force {
+        let confirm_message = format!("Delete content '{}/{}' ({})?", topic, slug, title);
+        if !Confirm::new().with_prompt(confirm_message).interact()? {
+            println!("Operation cancelled");
+            return Ok(());
+        }
+    }
+    
+    // Create updated args with the selected item
+    let selected_args = DeleteArgs {
+        slug: Some(slug.clone()),
+        topic: Some(topic.clone()),
+        force: args.force,
+    };
+    
+    // Execute the command with selected item
+    let cmd = DeleteCommand::new(selected_args);
+    let result = cmd.execute()?;
+    DeleteCommand::handle_result(result);
     Ok(())
 } 

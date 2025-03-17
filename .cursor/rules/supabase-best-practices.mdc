@@ -1,0 +1,18 @@
+---
+description: 
+globs: *.ts,*.tsx,*.py
+alwaysApply: false
+---
+---
+name: supabase-best-practices.mdc
+description: Best practices for using Supabase in your application
+globs: **/*.{ts,tsx,py}
+---
+
+- Use Supabase client libraries for type-safe database operations
+- Implement proper authentication and authorization using Supabase Auth
+- Utilize Supabase Realtime for real-time updates
+- Implement proper error handling for database operations
+- Use Supabase Storage for file management and serving
+
+These best practices provide a concise overview of key considerations for each major library and framework in your project. Remember to adapt these guidelines to your specific use case and project requirements.

@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc d44f47a429ac0e6b4486647504bdcf0f6faf433ab070ed53bb90b96f03fa5667 # shrinks to title = "￼"
+cc c7b110a819ab797a100f346f2a7aa05dafb0e42ac79d15d12bbfa1ae9624d1bc # shrinks to slug = "a--a"
+cc 6e42cbe93b89044f248d5edcebfeaf7072f7df9b13d1fbdcf9ac7d50edf24d84 # shrinks to slug = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+cc b4f7edfe40ff66e48cc5fa4177bd1956d4566220b796b0942aaba0dfdc7100d8 # shrinks to slug = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

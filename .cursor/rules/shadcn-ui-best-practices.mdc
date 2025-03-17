@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+---
+name: shadcn-ui-best-practices.mdc
+description: Best practices for using Shadcn UI components
+globs: **/*.{ts,tsx}
+---
+
+- Follow the component naming conventions provided by Shadcn UI
+- Customize components using the provided props and utility classes
+- Use the `cn` utility function for conditional class name composition
+- Implement dark mode support using the built-in dark mode classes
+- Utilize the provided hooks like `useToast` for consistent UI behavior

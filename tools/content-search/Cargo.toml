@@ -1,0 +1,35 @@
+[package]
+name = "content-search"
+version = "0.1.0"
+edition = "2021"
+description = "Full-text and metadata search for content"
+
+[lib]
+name = "content_search"
+path = "src/lib.rs"
+
+[[bin]]
+name = "content-search"
+path = "src/bin/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true
+regex.workspace = true
+chrono.workspace = true
+colored.workspace = true
+pulldown-cmark = "0.9.3"
+
+# Common libraries
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs", features = ["find"] }
+common-markdown = { path = "../common/markdown" }
+common-errors = { path = "../common/errors" }
+
+[dev-dependencies]
+tempfile.workspace = true 

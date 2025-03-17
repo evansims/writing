@@ -1,132 +1,141 @@
-use common_errors::{Result, WritingError, ResultExt};
-use chrono::Local;
-use common_config;
-use common_fs;
-use common_templates;
-use common_models::{Config, TopicConfig};
-use slug::slugify;
-use std::path::{Path, PathBuf};
+use anyhow::Result;
+use common_config::load_config;
+use common_fs::{create_dir_all, write_file};
+use common_models::{Frontmatter, TopicConfig};
+use std::path::PathBuf;
 
-/// Configuration for creating new content
-pub struct ContentOptions {
-    pub title: String,
-    pub topic: String,
-    pub tagline: String,
-    pub tags: String,
-    pub content_type: String,
-    pub draft: bool,
+pub struct NewOptions {
+    pub slug: Option<String>,
+    pub title: Option<String>,
+    pub topic: Option<String>,
+    pub description: Option<String>,
     pub template: Option<String>,
-    pub introduction: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub draft: Option<bool>,
 }
 
-/// Create new content with the given options
-pub fn create_content(options: ContentOptions) -> Result<String> {
-    // Load configuration
-    let config = common_config::load_config()?;
+/// Create new content
+///
+/// This function creates new content in the specified topic.
+///
+/// # Parameters
+///
+/// * `options` - New content options
+///
+/// # Returns
+///
+/// Returns the path to the created content
+///
+/// # Errors
+///
+/// Returns an error if the content cannot be created
+pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
+    // Validate options
+    let slug = options.slug.as_ref().ok_or_else(|| anyhow::anyhow!("Content slug is required"))?;
+    let topic = options.topic.as_ref().ok_or_else(|| anyhow::anyhow!("Topic is required"))?;
+    let title = options.title.as_ref().ok_or_else(|| anyhow::anyhow!("Title is required"))?;
     
-    // Validate topic
-    if !config.content.topics.contains_key(&options.topic) {
-        let valid_topics: Vec<String> = config.content.topics.keys()
-            .map(|k| k.to_string())
-            .collect();
-        return Err(WritingError::topic_error(format!(
-            "Invalid topic: {}. Valid topics are: {}", 
-            options.topic, 
-            valid_topics.join(", ")
-        )));
-    }
+    // Load config
+    let config = load_config()?;
     
-    // Generate slug from title
-    let slug = slugify(&options.title);
-    
-    // Get topic path from config
-    let topic_path = &config.content.topics[&options.topic].path;
+    // Check if topic exists
+    let topic_config = config.content.topics.get(topic)
+        .ok_or_else(|| anyhow::anyhow!("Topic not found: {}", topic))?;
     
     // Create content directory
-    let content_dir = format!("{}/{}/{}", config.content.base_dir, topic_path, slug);
-    let content_dir_path = Path::new(&content_dir);
-    common_fs::create_dir_all(content_dir_path)?;
+    let content_dir = PathBuf::from(&config.content.base_dir)
+        .join(&topic_config.directory)
+        .join(slug);
     
-    // Load template
-    let mut template = match &options.template {
-        Some(template_name) => {
-            common_templates::load_template(template_name)
-                .with_context(|| format!("Failed to load template: {}", template_name))?
-        },
-        None => {
-            common_templates::load_template_for_content_type(&options.content_type)
-                .with_context(|| format!("Failed to load template for content type: {}", options.content_type))?
-        }
+    if content_dir.exists() {
+        return Err(anyhow::anyhow!("Content already exists: {}", slug));
+    }
+    
+    create_dir_all(&content_dir)?;
+    
+    // Create content file
+    let default_template = String::from("default");
+    let template_name = options.template.as_ref().unwrap_or(&default_template);
+    let mut template = common_templates::load_template(template_name)?;
+    
+    // Create frontmatter
+    let topics = vec![topic.clone()];
+    
+    let frontmatter = Frontmatter {
+        title: title.clone(),
+        published: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
+        updated: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
+        slug: Some(slug.clone()),
+        tagline: options.description.clone(),
+        tags: options.tags.clone(),
+        topics: Some(topics),
+        draft: options.draft,
+        featured_image: None,
     };
     
-    // Format tags
-    let formatted_tags = if options.tags.is_empty() {
-        "".to_string()
-    } else {
-        options.tags
-            .split(',')
-            .map(|t| t.trim())
-            .filter(|t| !t.is_empty())
-            .map(|t| format!("    \"{}\",", t))
-            .collect::<Vec<_>>()
-            .join("\n")
-    };
+    // Convert frontmatter to YAML
+    let frontmatter_yaml = serde_yaml::to_string(&frontmatter)?;
     
-    // Prepare variables for template
-    let today = if options.draft {
-        "DRAFT".to_string()
-    } else {
-        Local::now().format("%Y-%m-%d").to_string()
-    };
+    // Create content with frontmatter
+    let template_content = template.get_content()?;
+    let content = format!("---\n{}---\n\n{}", frontmatter_yaml, template_content);
     
-    let draft_value = if options.draft { "true" } else { "false" };
+    // Write content to file
+    let content_file = content_dir.join("index.md");
+    write_file(&content_file, &content)?;
     
-    let introduction = options.introduction.unwrap_or_else(|| 
-        "Start with a compelling introduction that hooks the reader and outlines what they'll learn.".to_string()
-    );
-    
-    let variables = [
-        ("title", options.title.as_str()),
-        ("tagline", options.tagline.as_str()),
-        ("slug", slug.as_str()),
-        ("topic", options.topic.as_str()),
-        ("tags", formatted_tags.as_str()),
-        ("date", today.as_str()),
-        ("draft", draft_value),
-        ("introduction", introduction.as_str()),
-        ("content_type", options.content_type.as_str()),
-    ];
-    
-    // Render the template with variables
-    let content = template.render(&variables)
-        .with_context(|| "Failed to render template")?;
-    
-    // Write content file
-    let content_path = format!("{}/index.mdx", content_dir);
-    let content_path_obj = Path::new(&content_path);
-    common_fs::write_file(content_path_obj, &content)?;
-    
-    Ok(content_path)
+    Ok(content_file)
 }
 
 /// List available templates
+///
+/// This function lists all available templates.
+///
+/// # Returns
+///
+/// Returns a list of templates
+///
+/// # Errors
+///
+/// Returns an error if the templates cannot be listed
 pub fn list_templates() -> Result<Vec<common_templates::Template>> {
-    common_templates::list_templates()
+    Ok(common_templates::list_templates()?)
 }
 
-/// Get all available topics from the configuration
+/// Get available topics
+///
+/// This function lists all available topics.
+///
+/// # Returns
+///
+/// Returns a list of topics
+///
+/// # Errors
+///
+/// Returns an error if the topics cannot be listed
 pub fn get_available_topics() -> Result<Vec<(String, TopicConfig)>> {
-    let config = common_config::load_config()?;
+    let config = load_config()?;
     
     let topics: Vec<(String, TopicConfig)> = config.content.topics
         .iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
+        .map(|(key, config)| (key.clone(), config.clone()))
         .collect();
     
     Ok(topics)
 }
 
-/// Create a new template
-pub fn create_template(name: &str, content_type: &str, content: &str) -> Result<common_templates::Template> {
-    common_templates::create_template(name, content_type, content)
-} 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_available_topics() -> Result<()> {
+        // This test just verifies that the function doesn't panic
+        let topics = get_available_topics()?;
+        
+        // We should have at least one topic
+        assert!(!topics.is_empty());
+        
+        Ok(())
+    }
+}

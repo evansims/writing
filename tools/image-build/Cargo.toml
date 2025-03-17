@@ -12,6 +12,14 @@ path = "src/lib.rs"
 name = "image-build"
 path = "src/main.rs"
 
+[features]
+default = ["basic-formats"]
+# Support for basic image formats (PNG, JPEG, GIF)
+basic-formats = []
+# Support for AVIF format
+avif = []
+# Support for additional formats can be added here in the future
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
@@ -20,9 +28,20 @@ serde_yaml.workspace = true
 walkdir.workspace = true
 colored.workspace = true
 image.workspace = true
-common-models = { path = "../common/models" }
+common-models = { path = "../common/models", features = ["images"] }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile = "3.8"
+criterion = "0.5"
+rand = "0.8"
+chrono = "0.4"
+
+[[bench]]
+name = "build_processing"
+harness = false
+
+[[bench]]
+name = "advanced_scenarios"
+harness = false 

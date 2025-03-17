@@ -24,7 +24,7 @@ dialoguer.workspace = true
 fs_extra.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
-common-fs = { path = "../common/fs" }
+common-fs = { path = "../common/fs", features = ["find"] }
 common-markdown = { path = "../common/markdown" }
 
 [dev-dependencies]

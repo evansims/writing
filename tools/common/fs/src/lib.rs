@@ -1,41 +1,23 @@
-//! # Common Filesystem Operations
-//! 
-//! This module provides common filesystem operations for the writing tools.
-//! 
-//! ## Features
-//! 
-//! - File and directory existence checks
-//! - File reading and writing
-//! - Directory creation and deletion
-//! - File searching and filtering
-//! - Error handling with detailed context
-//! 
-//! ## Example
-//! 
-//! ```rust
-//! use common_fs::{path_exists, read_file, write_file};
-//! use std::path::Path;
-//! 
-//! fn update_file(path: &Path, content: &str) -> common_errors::Result<()> {
-//!     if path_exists(path) {
-//!         let existing = read_file(path)?;
-//!         if existing != content {
-//!             write_file(path, content)?;
-//!             println!("File updated");
-//!         } else {
-//!             println!("No changes needed");
-//!         }
-//!     } else {
-//!         write_file(path, content)?;
-//!         println!("File created");
-//!     }
-//!     Ok(())
-//! }
-//! ```
+#[cfg(feature = "content")]
+mod content_path;
 
-use common_errors::{Result, WritingError, ResultExt};
+// Add the normalize module
+pub mod normalize;
+pub mod cleanup;
+// Add the directory module for directory operations
+pub mod directory;
+
+#[cfg(feature = "content")]
+pub use content_path::find_content_path;
+
+// Re-export key directory operations for convenience
+pub use directory::{move_dir, copy_dir_all, has_content, copy_content, move_content};
+
+use common_errors::{Result, WritingError, ResultExt, ErrorContext, IoResultExt};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+#[cfg(feature = "find")]
 use walkdir::WalkDir;
 
 /// Check if a path exists
@@ -46,7 +28,11 @@ pub fn path_exists(path: &Path) -> bool {
 /// Create a directory and all parent directories if they don't exist
 pub fn create_dir_all(path: &Path) -> Result<()> {
     fs::create_dir_all(path)
-        .with_context(|| format!("Failed to create directory: {}", path.display()))
+        .with_enhanced_context(|| {
+            ErrorContext::new("create directory")
+                .with_file(path)
+                .with_details("Unable to create directory and parent directories")
+        })
 }
 
 /// Write content to a file, creating the parent directory if it doesn't exist
@@ -55,8 +41,8 @@ pub fn write_file(path: &Path, content: &str) -> Result<()> {
         create_dir_all(parent)?;
     }
     
-    fs::write(path, content)
-        .with_context(|| format!("Failed to write to file: {}", path.display()))
+    // Use the SafeFile wrapper to ensure proper cleanup
+    cleanup::write_string(path, content)
 }
 
 /// Read content from a file
@@ -65,8 +51,8 @@ pub fn read_file(path: &Path) -> Result<String> {
         return Err(WritingError::file_not_found(path));
     }
     
-    fs::read_to_string(path)
-        .with_context(|| format!("Failed to read file: {}", path.display()))
+    // Use the SafeFile wrapper to ensure proper cleanup
+    cleanup::read_to_string(path)
 }
 
 /// Read content from a file if it exists, return None otherwise
@@ -75,16 +61,19 @@ pub fn read_file_if_exists(path: &Path) -> Result<Option<String>> {
         return Ok(None);
     }
     
-    fs::read_to_string(path)
-        .map(Some)
-        .with_context(|| format!("Failed to read file: {}", path.display()))
+    // Use the SafeFile wrapper to ensure proper cleanup
+    cleanup::read_to_string(path).map(Some)
 }
 
 /// Delete a file
 pub fn delete_file(path: &Path) -> Result<()> {
     if path.exists() {
         fs::remove_file(path)
-            .with_context(|| format!("Failed to delete file: {}", path.display()))
+            .with_enhanced_context(|| {
+                ErrorContext::new("delete file")
+                    .with_file(path)
+                    .with_details("Unable to remove file")
+            })
     } else {
         Ok(())
     }
@@ -94,13 +83,18 @@ pub fn delete_file(path: &Path) -> Result<()> {
 pub fn delete_dir_all(path: &Path) -> Result<()> {
     if path.exists() {
         fs::remove_dir_all(path)
-            .with_context(|| format!("Failed to delete directory: {}", path.display()))
+            .with_enhanced_context(|| {
+                ErrorContext::new("delete directory")
+                    .with_file(path)
+                    .with_details("Unable to remove directory and its contents")
+            })
     } else {
         Ok(())
     }
 }
 
 /// Find all directories in a path that match a specific depth
+#[cfg(feature = "find")]
 pub fn find_dirs_with_depth(base_path: &Path, min_depth: usize, max_depth: usize) -> Result<Vec<PathBuf>> {
     if !base_path.exists() {
         return Err(WritingError::directory_not_found(base_path));
@@ -124,6 +118,7 @@ pub fn find_dirs_with_depth(base_path: &Path, min_depth: usize, max_depth: usize
 }
 
 /// Find all files in a path with a specific extension
+#[cfg(feature = "find")]
 pub fn find_files_with_extension(base_path: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     if !base_path.exists() {
         return Err(WritingError::directory_not_found(base_path));
@@ -148,6 +143,7 @@ pub fn find_files_with_extension(base_path: &Path, extension: &str) -> Result<Ve
 }
 
 /// Copy a file from source to destination, creating parent directories if needed
+#[cfg(feature = "copy")]
 pub fn copy_file(source: &Path, destination: &Path) -> Result<()> {
     if !source.exists() {
         return Err(WritingError::file_not_found(source));
@@ -161,6 +157,30 @@ pub fn copy_file(source: &Path, destination: &Path) -> Result<()> {
         .with_context(|| format!("Failed to copy from {} to {}", source.display(), destination.display()))?;
     
     Ok(())
+}
+
+/// Copy a file to a new location using the standard library (no fs_extra dependency)
+pub fn copy_file_std(source: &Path, destination: &Path) -> Result<()> {
+    if let Some(parent) = destination.parent() {
+        create_dir_all(parent)?;
+    }
+    
+    if source.is_file() {
+        fs::copy(source, destination)
+            .map(|_| ())
+            .with_context(|| {
+                format!(
+                    "Failed to copy file from {} to {}", 
+                    source.display(), 
+                    destination.display()
+                )
+            })
+    } else {
+        Err(WritingError::other(format!(
+            "Source path is not a file: {}", 
+            source.display()
+        )))
+    }
 }
 
 #[cfg(test)]
@@ -347,5 +367,27 @@ mod tests {
         assert!(result.is_err());
         let err_msg = format!("{}", result.unwrap_err());
         assert!(err_msg.contains("File not found"));
+    }
+
+    #[test]
+    fn test_copy_file_std() {
+        let temp_dir = tempdir().unwrap();
+        let source_file = temp_dir.path().join("source.txt");
+        let dest_file = temp_dir.path().join("dest.txt");
+        
+        let content = "Hello, world!";
+        fs::write(&source_file, content).unwrap();
+        
+        copy_file_std(&source_file, &dest_file).unwrap();
+        assert!(dest_file.exists());
+        
+        let dest_content = fs::read_to_string(&dest_file).unwrap();
+        assert_eq!(dest_content, content);
+        
+        // Copying from non-existent source should error
+        let result = copy_file_std(Path::new("/path/to/nonexistent"), &dest_file);
+        assert!(result.is_err());
+        // Just check that it's an error, don't check the specific message
+        // as it might vary depending on the implementation
     }
 } 

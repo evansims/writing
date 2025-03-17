@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+---
+name: fastapi-best-practices.mdc
+description: Best practices for FastAPI development
+globs: **/*.{py}
+---
+
+- Use `async def` for routes that perform I/O operations
+- Implement proper input validation using Pydantic models
+- Use dependency injection for shared resources and authentication
+- Implement proper error handling with custom exception handlers
+- Utilize background tasks for long-running operations

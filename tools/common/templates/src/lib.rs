@@ -25,7 +25,7 @@
 //! }
 //! ```
 
-use common_errors::{Result, WritingError, ResultExt};
+use common_errors::{Result, WritingError};
 use common_fs;
 use common_config;
 use regex::Regex;
@@ -33,6 +33,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use common_fs::normalize::{normalize_path, join_paths};
 
 /// Template structure representing a content template
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,34 +94,30 @@ impl Template {
         // Create a variable map for easier lookups
         let var_map: HashMap<&str, &str> = variables.iter().cloned().collect();
         
-        // Simple variable substitution
-        let mut result = content.to_string();
-        
         // Replace variables in the format {{ variable_name }}
         let re = Regex::new(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}")
             .map_err(|e| WritingError::format_error(format!("Failed to compile regex: {}", e)))?;
             
-        let mut last_end = 0;
-        let mut output = String::new();
+        // Functional approach using fold instead of imperative loop with mutable state
+        let result = re.captures_iter(content)
+            .fold((String::new(), 0), |(mut output, last_end), cap| {
+                let whole_match = cap.get(0).unwrap();
+                let var_name = cap.get(1).unwrap().as_str();
+                
+                // Add everything up to this match
+                output.push_str(&content[last_end..whole_match.start()]);
+                
+                // Add the variable replacement or the original if not found
+                let replacement = var_map.get(var_name)
+                    .map(|val| *val)
+                    .unwrap_or(whole_match.as_str());
+                output.push_str(replacement);
+                
+                (output, whole_match.end())
+            });
         
-        for cap in re.captures_iter(content) {
-            let whole_match = cap.get(0).unwrap();
-            let var_name = cap.get(1).unwrap().as_str();
-            
-            // Add everything up to this match
-            output.push_str(&content[last_end..whole_match.start()]);
-            
-            // Add the variable replacement or the original if not found
-            if let Some(value) = var_map.get(var_name) {
-                output.push_str(value);
-            } else {
-                output.push_str(whole_match.as_str()); // Keep original if variable not found
-            }
-            
-            last_end = whole_match.end();
-        }
-        
-        // Add the remainder
+        // Add any remaining content after the last match
+        let (mut output, last_end) = result;
         output.push_str(&content[last_end..]);
         
         Ok(output)
@@ -134,7 +131,8 @@ pub fn get_templates_dir() -> Result<PathBuf> {
         Ok(config) => {
             // First check if a templates directory is specified in the config
             // For now, we'll just use a default location relative to content
-            let templates_dir = PathBuf::from(&config.content.base_dir).join("../templates");
+            let base_dir = PathBuf::from(&config.content.base_dir);
+            let templates_dir = normalize_path(join_paths(&base_dir, "../templates"));
             Ok(templates_dir)
         },
         Err(_) => {

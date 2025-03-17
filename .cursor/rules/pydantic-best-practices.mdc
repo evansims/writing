@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+---
+name: pydantic-best-practices.mdc
+description: Best practices for using Pydantic in Python
+globs: **/*.{py}
+---
+
+- Use Pydantic models for data validation and serialization
+- Implement custom validators for complex validation logic
+- Use `Field` to add additional configuration to model fields
+- Implement proper error handling with custom error messages
+- Use `BaseSettings` for configuration management

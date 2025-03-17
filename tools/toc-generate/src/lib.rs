@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use common_config::load_config;
 use common_markdown::extract_frontmatter_and_content;
-use common_models::{Config, Frontmatter};
+use common_models::Config;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -54,47 +54,53 @@ pub fn to_title_case(s: &str) -> String {
 
 /// Collect all articles from the content directory, organized by topic
 pub fn collect_articles(config: &Config) -> Result<HashMap<String, Vec<ArticleInfo>>> {
-    let mut articles: HashMap<String, Vec<ArticleInfo>> = HashMap::new();
+    // Initialize articles map with all topics from config using a more functional approach
+    let mut articles: HashMap<String, Vec<ArticleInfo>> = config.content.topics.keys()
+        .map(|topic_key| (topic_key.clone(), Vec::new()))
+        .collect();
     
-    // Initialize articles map with all topics from config
-    for (topic_key, _) in &config.content.topics {
-        articles.insert(topic_key.clone(), Vec::new());
-    }
+    // Process content directory and collect articles
+    let walkdir_iter = WalkDir::new(&config.content.base_dir)
+        .min_depth(3)
+        .max_depth(3)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_name() == "index.mdx");
     
-    // Walk through content directory
-    for entry in WalkDir::new(&config.content.base_dir).min_depth(3).max_depth(3) {
-        let entry = entry?;
+    for entry in walkdir_iter {
         let path = entry.path();
         
-        if path.file_name().unwrap_or_default() == "index.mdx" {
-            let content = fs::read_to_string(path)
-                .context(format!("Failed to read file: {:?}", path))?;
-            
-            // Extract frontmatter
-            let (frontmatter, _) = match extract_frontmatter_and_content(&content) {
-                Ok(result) => result,
-                Err(e) => {
-                    eprintln!("Warning: Failed to parse frontmatter in {:?}: {}", path, e);
-                    continue;
-                }
-            };
-            
-            let article_path = path.parent().unwrap();
-            let relative_path = article_path.strip_prefix(Path::new("."))?;
-            
-            // Check each topic in the article's frontmatter if topics are present
-            if let Some(topics) = &frontmatter.topics {
-                for topic_key in topics {
-                    // Add the article to the appropriate topic collection
-                    if let Some(articles_for_topic) = articles.get_mut(topic_key) {
-                        articles_for_topic.push(ArticleInfo {
-                            title: frontmatter.title.clone(),
-                            tagline: frontmatter.tagline.clone().unwrap_or_default(),
-                            path: relative_path.to_path_buf(),
-                        });
-                    }
-                }
-            }
+        // Use functional error handling with and_then
+        if let Err(e) = fs::read_to_string(path)
+            .context(format!("Failed to read file: {:?}", path))
+            .and_then(|content| {
+                // Extract frontmatter and add to appropriate topics
+                extract_frontmatter_and_content(&content)
+                    .map_err(|e| {
+                        anyhow::anyhow!("Failed to parse frontmatter in {:?}: {}", path, e)
+                    })
+                    .and_then(|(frontmatter, _)| {
+                        let article_path = path.parent().unwrap();
+                        let relative_path = article_path.strip_prefix(Path::new("."))?;
+                        
+                        // Process topic references if present
+                        if let Some(topics) = &frontmatter.topics {
+                            for topic_key in topics {
+                                if let Some(articles_for_topic) = articles.get_mut(topic_key) {
+                                    articles_for_topic.push(ArticleInfo {
+                                        title: frontmatter.title.clone(),
+                                        tagline: frontmatter.tagline.clone().unwrap_or_default(),
+                                        path: relative_path.to_path_buf(),
+                                    });
+                                }
+                            }
+                        }
+                        
+                        Ok(())
+                    })
+            })
+        {
+            eprintln!("Warning: {}", e);
         }
     }
     

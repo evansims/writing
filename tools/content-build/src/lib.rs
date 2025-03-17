@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use common_config::load_config;
-use common_fs::{create_dir_all, path_exists, read_file, write_file};
+use common_fs::{create_dir_all, write_file};
 use common_markdown::extract_frontmatter_and_content;
-use common_models::{Article, Frontmatter};
+use common_models::Article;
 use handlebars::Handlebars;
 use pulldown_cmark::{html, Options, Parser};
 use quick_xml::se::to_string;
@@ -182,7 +182,7 @@ pub fn find_content_files(
         }
     } else {
         // No topic specified, check all topics
-        for topic_key in config.content.topics.keys() {
+        for (topic_key, _topic_config) in &config.content.topics {
             let topic_dir = base_dir.join(topic_key);
             if !topic_dir.exists() {
                 continue;
@@ -407,7 +407,7 @@ pub fn generate_sitemap(
     });
 
     // Add topic pages
-    for (topic_key, topic_config) in &config.content.topics {
+    for (topic_key, _topic_config) in &config.content.topics {
         urls.push(SitemapUrl {
             loc: format!("{}/{}", site_url, topic_key),
             lastmod: Utc::now().format("%Y-%m-%d").to_string(),

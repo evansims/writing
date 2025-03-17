@@ -2,7 +2,7 @@
 name = "image-optimize"
 version = "0.1.0"
 edition = "2021"
-description = "Optimize images for an article"
+description = "Optimize images for an article with multiple format support"
 
 [lib]
 name = "image_optimize"
@@ -12,6 +12,11 @@ path = "src/lib.rs"
 name = "image-optimize"
 path = "src/main.rs"
 
+[features]
+default = ["avif", "webp"]
+avif = ["ravif"]
+webp = ["dep:webp"]
+
 [dependencies]
 clap.workspace = true
 anyhow.workspace = true
@@ -20,10 +25,23 @@ serde_yaml.workspace = true
 walkdir.workspace = true
 colored.workspace = true
 image.workspace = true
-ravif = "0.11.1"  # For AVIF encoding
-common-models = { path = "../common/models" }
+ravif = { workspace = true, optional = true }
+webp = { version = "0.2", optional = true }
+common-models = { path = "../common/models", features = ["images"] }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
+common-errors = { path = "../common/errors" }
+thiserror.workspace = true
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile = "3.8"
+criterion = "0.5"
+rand = "0.8"
+
+[[bench]]
+name = "image_processing"
+harness = false
+
+[[bench]]
+name = "advanced_scenarios"
+harness = false 

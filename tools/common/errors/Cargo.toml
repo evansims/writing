@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1.0"
-serde_yaml.workspace = true 
+serde_yaml.workspace = true
+anyhow.workspace = true 

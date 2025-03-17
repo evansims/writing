@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+---
+name: radix-ui-best-practices.mdc
+description: Best practices for using Radix UI primitives
+globs: **/*.{ts,tsx}
+---
+
+- Use Radix primitives as building blocks for custom components
+- Implement accessibility features using the built-in ARIA attributes
+- Customize the look and feel using CSS or styled-components
+- Utilize the provided hooks like `useSelect` for managing component state
+- Follow the composition patterns recommended by Radix for complex components

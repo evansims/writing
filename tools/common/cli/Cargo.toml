@@ -1,0 +1,26 @@
+[package]
+name = "common-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Common CLI interface components for writing tools"
+
+# Define features
+[features]
+default = ["command", "content-commands", "colored-output"]
+command = ["clap"]
+content-commands = ["common-config", "common-fs"]
+colored-output = ["colored"]
+
+[dependencies]
+common-errors = { path = "../errors" }
+common-config = { path = "../config", optional = true }
+common-fs = { path = "../fs", optional = true, features = ["content"] }
+common-models = { path = "../models" }
+anyhow = { workspace = true }
+clap = { workspace = true, optional = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+colored = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true } 

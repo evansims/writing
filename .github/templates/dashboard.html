@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Processing Performance Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      background-color: #f8f9fa;
+      padding-bottom: 50px;
+    }
+    .header {
+      background-color: #343a40;
+      color: white;
+      padding: 20px 0;
+      margin-bottom: 30px;
+    }
+    .card {
+      margin-bottom: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .card-header {
+      background-color: #495057;
+      color: white;
+      font-weight: 600;
+      padding: 12px 20px;
+    }
+    .chart-container {
+      height: 350px;
+      padding: 15px;
+      background-color: white;
+    }
+    .metric-card {
+      text-align: center;
+      padding: 15px;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .metric-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    .feature-badge {
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    .regression-alert {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .improvement-alert {
+      background-color: #d4edda;
+      color: #155724;
+      border-color: #c3e6cb;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .tab-content {
+      padding-top: 20px;
+    }
+    .nav-tabs .nav-link.active {
+      font-weight: bold;
+      border-bottom: 3px solid #007bff;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1>Image Processing Performance Dashboard</h1>
+          <p class="mb-0">Tracking performance metrics across feature combinations</p>
+        </div>
+        <div class="col-md-4 text-end">
+          <span class="badge bg-info">Last updated: <span id="last-updated">Loading...</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Summary Cards -->
+    <div class="row mb-4" id="summary-metrics">
+      <!-- Will be populated by JavaScript -->
+    </div>
+
+    <!-- Alerts for regressions or improvements -->
+    <div id="alerts-container">
+      <!-- Will be populated by JavaScript if regressions are detected -->
+    </div>
+
+    <!-- Main tabs -->
+    <ul class="nav nav-tabs" id="main-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="optimize-tab" data-bs-toggle="tab" data-bs-target="#optimize" type="button" role="tab">image-optimize</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="build-tab" data-bs-toggle="tab" data-bs-target="#build" type="button" role="tab">image-build</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison" type="button" role="tab">Comparisons</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="main-tabs-content">
+      <!-- image-optimize tab -->
+      <div class="tab-pane fade show active" id="optimize" role="tabpanel">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Format Performance Over Time</div>
+              <div class="chart-container" id="optimize-formats-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">Size Variants Impact</div>
+              <div class="chart-container" id="optimize-sizes-chart"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">Quality Settings Impact</div>
+              <div class="chart-container" id="optimize-quality-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Feature Combinations</div>
+              <div class="chart-container" id="optimize-features-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- image-build tab -->
+      <div class="tab-pane fade" id="build" role="tabpanel">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Format Performance Over Time</div>
+              <div class="chart-container" id="build-formats-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">Size Variants Impact</div>
+              <div class="chart-container" id="build-sizes-chart"></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">Quality Settings Impact</div>
+              <div class="chart-container" id="build-quality-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Feature Combinations</div>
+              <div class="chart-container" id="build-features-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparison tab -->
+      <div class="tab-pane fade" id="comparison" role="tabpanel">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Format Comparison</div>
+              <div class="chart-container" id="format-comparison-chart"></div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card">
+              <div class="card-header">Feature Impact Analysis</div>
+              <div class="chart-container" id="feature-impact-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Load performance data
+    fetch('performance-data/latest.json')
+      .then(response => response.json())
+      .then(data => {
+        // Update last updated timestamp
+        const lastUpdated = new Date(Math.max(...Object.values(data['image-optimize'].formats.jpeg.dates.map(d => new Date(d)))));
+        document.getElementById('last-updated').textContent = lastUpdated.toLocaleString();
+        
+        // Populate summary metrics
+        populateSummaryMetrics(data);
+        
+        // Check for regressions and create alerts
+        checkForRegressions(data);
+        
+        // Create charts for image-optimize
+        createFormatTimeSeriesChart('optimize-formats-chart', data['image-optimize'].formats);
+        createSizeVariantsChart('optimize-sizes-chart', data['image-optimize'].sizes);
+        createQualityHeatmap('optimize-quality-chart', data['image-optimize'].quality);
+        createFeatureCombinationsChart('optimize-features-chart', data['image-optimize'].features);
+        
+        // Create charts for image-build
+        createFormatTimeSeriesChart('build-formats-chart', data['image-build'].formats);
+        createSizeVariantsChart('build-sizes-chart', data['image-build'].sizes);
+        createQualityHeatmap('build-quality-chart', data['image-build'].quality);
+        createFeatureCombinationsChart('build-features-chart', data['image-build'].features);
+        
+        // Create comparison charts
+        createFormatComparisonChart('format-comparison-chart', data);
+        createFeatureImpactChart('feature-impact-chart', data);
+      })
+      .catch(error => {
+        console.error('Error loading performance data:', error);
+        document.body.innerHTML += `<div class="container"><div class="alert alert-danger">Error loading performance data: ${error.message}</div></div>`;
+      });
+    
+    function populateSummaryMetrics(data) {
+      const summaryContainer = document.getElementById('summary-metrics');
+      const metrics = [
+        { name: 'JPEG Processing', value: formatTime(data['image-optimize'].statistics.jpeg.mean), unit: 'ms' },
+        { name: 'WebP Processing', value: formatTime(data['image-optimize'].statistics.webp?.mean || 0), unit: 'ms' },
+        { name: 'AVIF Processing', value: formatTime(data['image-optimize'].statistics.avif?.mean || 0), unit: 'ms' },
+        { name: 'Build Time', value: formatTime(data['image-build'].statistics.jpeg.mean), unit: 'ms' }
+      ];
+      
+      metrics.forEach(metric => {
+        const card = document.createElement('div');
+        card.className = 'col-md-3 col-sm-6';
+        card.innerHTML = `
+          <div class="card metric-card">
+            <div class="metric-label">${metric.name}</div>
+            <div class="metric-value">${metric.value} <span class="metric-unit">${metric.unit}</span></div>
+          </div>
+        `;
+        summaryContainer.appendChild(card);
+      });
+    }
+    
+    function checkForRegressions(data) {
+      const alertsContainer = document.getElementById('alerts-container');
+      const regressions = [];
+      const improvements = [];
+      
+      // Check for regressions in each crate and format
+      ['image-optimize', 'image-build'].forEach(crate => {
+        Object.entries(data[crate].formats).forEach(([format, formatData]) => {
+          if (formatData.values.length > 1) {
+            const current = formatData.values[formatData.values.length - 1];
+            const previous = formatData.values[formatData.values.length - 2];
+            const percentChange = ((current - previous) / previous) * 100;
+            
+            if (percentChange > 10) {  // More than 10% slower
+              regressions.push({
+                crate,
+                format,
+                previous: formatTime(previous),
+                current: formatTime(current),
+                change: percentChange.toFixed(1)
+              });
+            } else if (percentChange < -10) {  // More than 10% faster
+              improvements.push({
+                crate,
+                format,
+                previous: formatTime(previous),
+                current: formatTime(current),
+                change: Math.abs(percentChange).toFixed(1)
+              });
+            }
+          }
+        });
+      });
+      
+      // Create regression alerts
+      if (regressions.length > 0) {
+        const alert = document.createElement('div');
+        alert.className = 'regression-alert';
+        alert.innerHTML = `
+          <h4>⚠️ Performance Regressions Detected</h4>
+          <ul>
+            ${regressions.map(r => `<li><strong>${r.crate} ${r.format}:</strong> ${r.previous}ms → ${r.current}ms (${r.change}% slower)</li>`).join('')}
+          </ul>
+        `;
+        alertsContainer.appendChild(alert);
+      }
+      
+      // Create improvement alerts
+      if (improvements.length > 0) {
+        const alert = document.createElement('div');
+        alert.className = 'improvement-alert';
+        alert.innerHTML = `
+          <h4>🎉 Performance Improvements</h4>
+          <ul>
+            ${improvements.map(i => `<li><strong>${i.crate} ${i.format}:</strong> ${i.previous}ms → ${i.current}ms (${i.change}% faster)</li>`).join('')}
+          </ul>
+        `;
+        alertsContainer.appendChild(alert);
+      }
+    }
+    
+    function createFormatTimeSeriesChart(elementId, formatData) {
+      const traces = [];
+      
+      Object.entries(formatData).forEach(([format, data]) => {
+        if (data.values.length > 0) {
+          traces.push({
+            x: data.dates,
+            y: data.values,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: format.toUpperCase()
+          });
+        }
+      });
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 40, l: 60 },
+        yaxis: { title: 'Processing Time (ms)' },
+        xaxis: { title: 'Date' },
+        legend: { orientation: 'h', y: -0.2 },
+        hovermode: 'closest'
+      };
+      
+      Plotly.newPlot(elementId, traces, layout);
+    }
+    
+    function createSizeVariantsChart(elementId, sizeData) {
+      const trace = {
+        x: sizeData.labels,
+        y: sizeData.values,
+        type: 'bar',
+        marker: {
+          color: ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2']
+        }
+      };
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 60, l: 60 },
+        yaxis: { title: 'Processing Time (ms)' },
+        xaxis: { title: 'Size Variant' }
+      };
+      
+      Plotly.newPlot(elementId, [trace], layout);
+    }
+    
+    function createQualityHeatmap(elementId, qualityData) {
+      const trace = {
+        z: qualityData.values,
+        x: qualityData.qualities,
+        y: qualityData.formats,
+        type: 'heatmap',
+        colorscale: 'Viridis'
+      };
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 60, l: 60 },
+        yaxis: { title: 'Format' },
+        xaxis: { title: 'Quality Setting' }
+      };
+      
+      Plotly.newPlot(elementId, [trace], layout);
+    }
+    
+    function createFeatureCombinationsChart(elementId, featureData) {
+      // This is a placeholder - actual implementation would depend on the structure of feature data
+      const trace = {
+        x: ['No Features', 'WebP Only', 'AVIF Only', 'All Features'],
+        y: [100, 120, 150, 180],
+        type: 'bar',
+        marker: {
+          color: ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2']
+        }
+      };
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 60, l: 60 },
+        yaxis: { title: 'Processing Time (ms)' },
+        xaxis: { title: 'Feature Combination' }
+      };
+      
+      Plotly.newPlot(elementId, [trace], layout);
+    }
+    
+    function createFormatComparisonChart(elementId, data) {
+      const optimizeData = data['image-optimize'].statistics;
+      const buildData = data['image-build'].statistics;
+      
+      const formats = ['jpeg', 'webp', 'avif'];
+      const optimizeValues = formats.map(f => optimizeData[f]?.mean || 0);
+      const buildValues = formats.map(f => buildData[f]?.mean || 0);
+      
+      const trace1 = {
+        x: formats.map(f => f.toUpperCase()),
+        y: optimizeValues,
+        type: 'bar',
+        name: 'image-optimize',
+        marker: { color: '#4e79a7' }
+      };
+      
+      const trace2 = {
+        x: formats.map(f => f.toUpperCase()),
+        y: buildValues,
+        type: 'bar',
+        name: 'image-build',
+        marker: { color: '#f28e2c' }
+      };
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 60, l: 60 },
+        yaxis: { title: 'Processing Time (ms)' },
+        xaxis: { title: 'Format' },
+        barmode: 'group',
+        legend: { orientation: 'h', y: -0.2 }
+      };
+      
+      Plotly.newPlot(elementId, [trace1, trace2], layout);
+    }
+    
+    function createFeatureImpactChart(elementId, data) {
+      // This is a placeholder - actual implementation would depend on the structure of feature data
+      const trace = {
+        x: ['Base', 'WebP', 'AVIF', 'Size Variants', 'Quality'],
+        y: [100, 20, 50, 30, 10],
+        type: 'bar',
+        marker: {
+          color: ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f']
+        }
+      };
+      
+      const layout = {
+        margin: { t: 10, r: 10, b: 60, l: 60 },
+        yaxis: { title: 'Performance Impact (%)' },
+        xaxis: { title: 'Feature' }
+      };
+      
+      Plotly.newPlot(elementId, [trace], layout);
+    }
+    
+    function formatTime(ms) {
+      return ms.toFixed(2);
+    }
+  </script>
+</body>
+</html> 

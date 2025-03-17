@@ -4,14 +4,21 @@ version = "0.1.0"
 edition = "2021"
 description = "Markdown processing utilities for the writing project"
 
+# Define features
+[features]
+default = ["html", "frontmatter"]
+html = ["pulldown-cmark"]
+frontmatter = ["serde", "serde_yaml", "regex"]
+syntax-highlight = []
+
 [dependencies]
 common-models = { path = "../models" }
 common-errors = { path = "../errors" }
 anyhow.workspace = true
-pulldown-cmark.workspace = true
-regex.workspace = true
-serde.workspace = true
-serde_yaml.workspace = true
+pulldown-cmark = { workspace = true, optional = true }
+regex = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_yaml = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true 

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
-use common_config::{load_config, get_topic_by_key};
-use common_models::{Config, TopicConfig};
+use common_config::load_config;
+use common_models::Config;
 use serde_yaml;
 use std::fs;
 

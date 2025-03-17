@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+---
+name: serde-best-practices.mdc
+description: Best practices for serialization and deserialization with Serde
+globs: **/*.rs
+---
+
+- Use `#[derive(Serialize, Deserialize)]` for easy serialization/deserialization
+- Implement custom serialization/deserialization with `#[serde(...)]` attributes
+- Use `serde_json` for JSON serialization/deserialization
+- Implement `serde::Serializer` and `serde::Deserializer` for custom formats
+- Use `#[serde(flatten)]` to merge nested structures during serialization

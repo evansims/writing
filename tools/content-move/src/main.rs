@@ -33,6 +33,7 @@ fn main() -> Result<()> {
         new_slug: args.new_slug.clone(),
         topic: args.topic.clone(),
         new_topic: args.new_topic.clone(),
+        update_frontmatter: true,
     };
     
     // If no slug is provided, show a selection menu
@@ -61,6 +62,7 @@ fn main() -> Result<()> {
             new_slug: None,
             topic: Some(topic.clone()),
             new_topic: None,
+            update_frontmatter: true,
         };
         
         // Get new slug
@@ -113,12 +115,11 @@ fn main() -> Result<()> {
         
         // Move the content
         match move_content(&new_options) {
-            Ok((current_topic, current_slug, new_topic, new_slug)) => {
-                println!("{} Content moved from '{}/{}' to '{}/{}'", 
-                    "SUCCESS:".green().bold(), 
-                    current_topic, current_slug, 
-                    new_topic, new_slug
-                );
+            Ok(()) => {
+                println!("{} Content moved successfully", "SUCCESS:".green().bold());
+                println!("From: {}/{}", topic.yellow(), slug.yellow());
+                println!("To: {}/{}", new_options.new_topic.as_ref().unwrap_or(&"".to_string()).yellow(), new_options.new_slug.as_ref().unwrap().yellow());
+                return Ok(());
             },
             Err(err) => {
                 eprintln!("Error moving content: {}", err);
@@ -155,12 +156,11 @@ fn main() -> Result<()> {
         
         // Move the content
         match move_content(&options) {
-            Ok((current_topic, current_slug, new_topic, new_slug)) => {
-                println!("{} Content moved from '{}/{}' to '{}/{}'", 
-                    "SUCCESS:".green().bold(), 
-                    current_topic, current_slug, 
-                    new_topic, new_slug
-                );
+            Ok(()) => {
+                println!("{} Content moved successfully", "SUCCESS:".green().bold());
+                println!("From: {}/{}", options.topic.as_ref().unwrap_or(&"".to_string()).yellow(), options.slug.as_ref().unwrap_or(&"".to_string()).yellow());
+                println!("To: {}/{}", options.new_topic.as_ref().unwrap_or(&"".to_string()).yellow(), options.new_slug.as_ref().unwrap_or(&"".to_string()).yellow());
+                return Ok(());
             },
             Err(err) => {
                 eprintln!("Error moving content: {}", err);
@@ -168,6 +168,4 @@ fn main() -> Result<()> {
             }
         }
     }
-    
-    Ok(())
 } 

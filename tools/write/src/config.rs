@@ -125,18 +125,21 @@ pub fn get_topics() -> Result<Vec<String>> {
     Ok(topics)
 }
 
+#[allow(dead_code)]
 pub fn get_topic_names() -> Result<Vec<String>> {
     let config = load_config()?;
     let topic_names = config.topics.iter().map(|t| t.name.clone()).collect();
     Ok(topic_names)
 }
 
+#[allow(dead_code)]
 pub fn get_topic_by_key(key: &str) -> Result<Option<TopicConfig>> {
     let config = load_config()?;
     let topic = config.topics.iter().find(|t| t.key == key).cloned();
     Ok(topic)
 }
 
+#[allow(dead_code)]
 pub fn get_site_url() -> Result<Option<String>> {
     let config = load_config()?;
     Ok(config.site.url)

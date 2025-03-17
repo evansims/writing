@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+---
+name: hyper-best-practices.mdc
+description: Best practices for async HTTP requests with Hyper
+globs: **/*.rs
+---
+
+- Use `hyper::Client` for making HTTP requests
+- Implement custom headers and authentication with `hyper::header`
+- Use `hyper::Body` for streaming request/response bodies
+- Implement timeouts with `hyper::client::connect::HttpConnector`
+- Use `hyper::server::conn::Http` for creating HTTP servers

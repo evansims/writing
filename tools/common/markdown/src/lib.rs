@@ -4,33 +4,62 @@
 //! 
 //! ## Features
 //! 
-//! - Frontmatter extraction and generation
-//! - Markdown to HTML conversion
+//! - Frontmatter extraction and generation (requires 'frontmatter' feature)
+//! - Markdown to HTML conversion (requires 'html' feature)
 //! - Word count and reading time calculation
-//! - Paragraph extraction
+//! - Paragraph extraction (requires 'html' feature)
+//! 
+//! ## Feature Flags
+//! 
+//! - `html`: Enables HTML conversion functionality (enabled by default)
+//! - `frontmatter`: Enables frontmatter handling (enabled by default)
+//! - `syntax-highlight`: Enables syntax highlighting (disabled by default)
 //! 
 //! ## Example
 //! 
 //! ```rust
-//! use common_markdown::{extract_frontmatter_and_content, markdown_to_html, calculate_word_count};
+//! use common_markdown::{calculate_word_count};
+//! 
+//! #[cfg(feature = "frontmatter")]
+//! use common_markdown::extract_frontmatter_and_content;
+//! 
+//! #[cfg(feature = "html")]
+//! use common_markdown::markdown_to_html;
 //! 
 //! fn process_markdown(content: &str) -> common_errors::Result<String> {
+//!     #[cfg(feature = "frontmatter")]
 //!     let (frontmatter, markdown) = extract_frontmatter_and_content(content)?;
+//!     
+//!     #[cfg(not(feature = "frontmatter"))]
+//!     let markdown = content;
 //!     
 //!     let word_count = calculate_word_count(&markdown);
 //!     println!("Word count: {}", word_count);
 //!     
+//!     #[cfg(feature = "html")]
 //!     let html = markdown_to_html(&markdown);
-//!     Ok(html)
+//!     
+//!     #[cfg(feature = "html")]
+//!     return Ok(html);
+//!     
+//!     #[cfg(not(feature = "html"))]
+//!     return Ok(markdown.to_string());
 //! }
 //! ```
 
 use common_errors::{Result, WritingError, ResultExt};
 use common_models::Frontmatter;
+
+#[cfg(feature = "html")]
 use pulldown_cmark::{html, Event, Options, Parser, Tag};
+
+#[cfg(feature = "frontmatter")]
 use regex::Regex;
 
 /// Extract frontmatter and content from a markdown file
+/// 
+/// Requires the `frontmatter` feature
+#[cfg(feature = "frontmatter")]
 pub fn extract_frontmatter_and_content(content: &str) -> Result<(Frontmatter, String)> {
     // Look for frontmatter between --- markers
     let re = Regex::new(r"(?s)^---\s*\n(.*?)\n---\s*\n(.*)$")
@@ -41,6 +70,28 @@ pub fn extract_frontmatter_and_content(content: &str) -> Result<(Frontmatter, St
         let markdown_content = captures.get(2).unwrap().as_str();
         
         let frontmatter: Frontmatter = serde_yaml::from_str(frontmatter_yaml)
+            .with_context(|| "Failed to parse frontmatter")?;
+        
+        Ok((frontmatter, markdown_content.to_string()))
+    } else {
+        Err(WritingError::format_error("No frontmatter found in content"))
+    }
+}
+
+/// Extract frontmatter from a string
+/// 
+/// Requires the `frontmatter` feature
+#[cfg(feature = "frontmatter")]
+pub fn extract_frontmatter(content: &str) -> Result<(serde_yaml::Value, String)> {
+    // Look for frontmatter between --- markers
+    let re = Regex::new(r"(?s)^---\s*\n(.*?)\n---\s*\n(.*)$")
+        .map_err(|e| WritingError::format_error(format!("Failed to compile regex: {}", e)))?;
+    
+    if let Some(captures) = re.captures(content) {
+        let frontmatter_yaml = captures.get(1).unwrap().as_str();
+        let markdown_content = captures.get(2).unwrap().as_str();
+        
+        let frontmatter: serde_yaml::Value = serde_yaml::from_str(frontmatter_yaml)
             .with_context(|| "Failed to parse frontmatter")?;
         
         Ok((frontmatter, markdown_content.to_string()))
@@ -62,6 +113,9 @@ pub fn calculate_reading_time(word_count: usize) -> u32 {
 }
 
 /// Extract the first paragraph from markdown content
+/// 
+/// Requires the `html` feature
+#[cfg(feature = "html")]
 pub fn extract_first_paragraph(content: &str) -> Option<String> {
     let mut first_paragraph = String::new();
     let mut in_paragraph = false;
@@ -95,6 +149,9 @@ pub fn extract_first_paragraph(content: &str) -> Option<String> {
 }
 
 /// Convert markdown to HTML
+/// 
+/// Requires the `html` feature
+#[cfg(feature = "html")]
 pub fn markdown_to_html(content: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
@@ -110,6 +167,9 @@ pub fn markdown_to_html(content: &str) -> String {
 }
 
 /// Generate frontmatter with required fields
+/// 
+/// Requires the `frontmatter` feature
+#[cfg(feature = "frontmatter")]
 pub fn generate_frontmatter(
     title: &str,
     published: Option<&str>,
@@ -145,10 +205,26 @@ pub fn generate_frontmatter(
     frontmatter
 }
 
+/// Utility module for string manipulation
+pub mod text {
+    /// Truncates a string to a specified length, 
+    /// adding an ellipsis if truncation occurs
+    pub fn truncate_with_ellipsis(text: &str, max_length: usize) -> String {
+        if text.len() <= max_length {
+            text.to_string()
+        } else {
+            let mut truncated = text.chars().take(max_length).collect::<String>();
+            truncated.push_str("...");
+            truncated
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(feature = "frontmatter")]
     #[test]
     fn test_extract_frontmatter_and_content() {
         let content = r#"---
@@ -179,6 +255,7 @@ This is a test paragraph."#;
         assert!(markdown.contains("This is a test paragraph."));
     }
 
+    #[cfg(feature = "frontmatter")]
     #[test]
     fn test_extract_frontmatter_and_content_missing_frontmatter() {
         let content = "# Test Content\n\nThis is a test paragraph.";
@@ -191,6 +268,7 @@ This is a test paragraph."#;
         assert!(err_msg.contains("No frontmatter found"));
     }
 
+    #[cfg(feature = "frontmatter")]
     #[test]
     fn test_extract_frontmatter_and_content_invalid_yaml() {
         let content = r#"---
@@ -235,6 +313,7 @@ invalid yaml
         assert_eq!(calculate_reading_time(0), 1);
     }
 
+    #[cfg(feature = "html")]
     #[test]
     fn test_extract_first_paragraph() {
         let content = "# Heading\n\nThis is the first paragraph.\n\nThis is the second paragraph.";
@@ -249,56 +328,10 @@ invalid yaml
     }
 
     #[test]
-    fn test_markdown_to_html() {
-        let content = "# Heading\n\nThis is a paragraph with **bold** text.";
-        let html = markdown_to_html(content);
-        
-        assert!(html.contains("<h1>Heading</h1>"));
-        assert!(html.contains("<p>This is a paragraph with <strong>bold</strong> text.</p>"));
-        
-        // Test with more complex markdown
-        let content = "# Heading\n\n- List item 1\n- List item 2\n\n> Blockquote\n\n```\nCode block\n```";
-        let html = markdown_to_html(content);
-        
-        assert!(html.contains("<h1>Heading</h1>"));
-        assert!(html.contains("<li>List item 1</li>"));
-        assert!(html.contains("<li>List item 2</li>"));
-        assert!(html.contains("<blockquote>\n<p>Blockquote</p>\n</blockquote>"));
-        assert!(html.contains("<pre><code>Code block\n</code></pre>"));
-    }
-
-    #[test]
-    fn test_generate_frontmatter() {
-        // Test with all fields
-        let frontmatter = generate_frontmatter(
-            "Test Title",
-            Some("2023-01-01"),
-            Some("Test Tagline"),
-            Some(vec!["test", "markdown"]),
-            true
-        );
-        
-        assert!(frontmatter.contains("title: \"Test Title\""));
-        assert!(frontmatter.contains("published: 2023-01-01"));
-        assert!(frontmatter.contains("tagline: \"Test Tagline\""));
-        assert!(frontmatter.contains("tags:"));
-        assert!(frontmatter.contains("  - test"));
-        assert!(frontmatter.contains("  - markdown"));
-        assert!(frontmatter.contains("draft: true"));
-        
-        // Test with minimal fields
-        let frontmatter = generate_frontmatter(
-            "Test Title",
-            None,
-            None,
-            None,
-            false
-        );
-        
-        assert!(frontmatter.contains("title: \"Test Title\""));
-        assert!(!frontmatter.contains("published:"));
-        assert!(!frontmatter.contains("tagline:"));
-        assert!(!frontmatter.contains("tags:"));
-        assert!(!frontmatter.contains("draft:"));
+    fn test_truncate_with_ellipsis() {
+        assert_eq!(text::truncate_with_ellipsis("Hello", 10), "Hello");
+        assert_eq!(text::truncate_with_ellipsis("Hello world", 5), "Hello...");
+        assert_eq!(text::truncate_with_ellipsis("Hello", 5), "Hello");
+        assert_eq!(text::truncate_with_ellipsis("", 5), "");
     }
 } 

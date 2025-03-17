@@ -1,0 +1,46 @@
+[package]
+name = "content-validate"
+version = "0.1.0"
+edition = "2021"
+description = "Content validation tool for checking links, markdown formatting, and spelling"
+
+[lib]
+name = "content_validate"
+path = "src/lib.rs"
+
+[[bin]]
+name = "content-validate"
+path = "src/bin/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true
+regex.workspace = true
+colored = "2.0"
+
+# HTML/Markdown parsing and validation
+pulldown-cmark.workspace = true
+markdown = "0.3"
+html5ever = "0.26"
+url = "2.4"
+reqwest = { version = "0.11", features = ["blocking"] }
+linkify = "0.9"
+
+# Spell checking
+symspell = "0.4"
+html2text = "0.4"
+
+# Common libraries
+common-models = { path = "../common/models" }
+common-config = { path = "../common/config" }
+common-fs = { path = "../common/fs" }
+common-markdown = { path = "../common/markdown" }
+common-errors = { path = "../common/errors" }
+
+[dev-dependencies]
+tempfile.workspace = true
+similar = "2.2"

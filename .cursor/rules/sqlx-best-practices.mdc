@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+---
+name: sqlx-best-practices.mdc
+description: Best practices for async database interactions with SQLx
+globs: **/*.rs
+---
+
+- Use connection pooling with `sqlx::Pool` for efficient database connections
+- Implement prepared statements with `sqlx::query` for better performance and security
+- Use `sqlx::query_as!` for direct mapping to Rust structs
+- Implement transactions with `sqlx::Transaction` for data consistency
+- Use `sqlx::migrate!` for database migrations

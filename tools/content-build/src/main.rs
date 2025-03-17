@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 use content_build::{BuildOptions, build_content};
-use std::path::PathBuf;
 
 /// Tool for building content into static files (JSON, HTML, RSS, sitemap)
 #[derive(Parser, Debug)]

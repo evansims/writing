@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.ts,*.tsx,*.css
+alwaysApply: false
+---
+---
+name: tailwindcss-best-practices.mdc
+description: Best practices for using Tailwind CSS
+globs: **/*.{ts,tsx,css}
+---
+
+- Use utility classes directly in your JSX for rapid development
+- Implement responsive design using Tailwind's responsive modifiers
+- Create custom components with Tailwind classes for reusability
+- Use `@apply` in CSS to combine multiple utility classes
+- Optimize build times by using the `jit` (Just-In-Time) mode of Tailwind

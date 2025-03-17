@@ -23,8 +23,11 @@ dialoguer.workspace = true
 fs_extra.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
-common-fs = { path = "../common/fs" }
+common-fs = { path = "../common/fs", features = ["content", "find"] }
 common-markdown = { path = "../common/markdown" }
+common-errors = { path = "../common/errors" }
+common-cli = { path = "../common/cli" }
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile.workspace = true
+common-test-utils = { path = "../common/test_utils" } 

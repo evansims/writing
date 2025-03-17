@@ -1,10 +1,14 @@
+#[cfg(test)]
+mod tests;
+
 use anyhow::{Context, Result};
 use common_config::load_config;
-use common_models::{Config, ImageNaming, ImageSize};
+use common_models::{Config, ImageNaming};
 use image::{GenericImageView, ImageFormat};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(feature = "avif")]
 use std::process::Command;
 
 /// Options for building images
@@ -68,7 +72,7 @@ pub fn find_topic_for_article(config: &Config, article_slug: &str) -> Result<Str
     for (topic_key, topic_config) in &config.content.topics {
         let article_dir = PathBuf::from(format!("{}/{}/{}", 
             config.content.base_dir, 
-            topic_config.path, 
+            topic_config.directory, 
             article_slug
         ));
         if article_dir.exists() {
@@ -95,7 +99,7 @@ pub fn get_article_dir(config: &Config, article_slug: &str, topic_key: &str) -> 
     let topic_config = &config.content.topics[topic_key];
     Ok(PathBuf::from(format!("{}/{}/{}", 
         config.content.base_dir, 
-        topic_config.path, 
+        topic_config.directory, 
         article_slug
     )))
 }
@@ -142,8 +146,14 @@ pub fn process_image(
             img.resize(size_config.width, target_height, image::imageops::FilterType::Lanczos3)
         };
         
-        // Define supported formats
-        let formats = &["jpg", "webp", "avif"];
+        // Define supported formats based on features
+        let mut formats = vec!["jpg"];
+        
+        #[cfg(feature = "basic-formats")]
+        formats.push("webp");
+        
+        #[cfg(feature = "avif")]
+        formats.push("avif");
         
         // Create an empty HashMap to use as default
         let empty_quality_settings = HashMap::new();
@@ -155,7 +165,8 @@ pub fn process_image(
         // Generate filenames and save in each format
         for format_name in formats {
             // Get quality setting for this format based on format and size
-            let quality = match *format_name {
+            let _quality = match format_name {
+                #[cfg(feature = "basic-formats")]
                 "webp" => {
                     let webp_settings = quality_settings.get("webp").unwrap_or(&empty_format_settings);
                     let default_value = if size_key == "thumbnail" { 75 } else { 80 };
@@ -168,6 +179,7 @@ pub fn process_image(
                     let key = if size_key == "thumbnail" { "thumbnail" } else { "standard" };
                     *jpg_settings.get(key).unwrap_or(&default_value)
                 },
+                #[cfg(feature = "avif")]
                 "avif" => {
                     let avif_settings = quality_settings.get("avif").unwrap_or(&empty_format_settings);
                     let default_value = if size_key == "thumbnail" { 65 } else { 70 };
@@ -191,7 +203,8 @@ pub fn process_image(
             let output_path = article_output_dir.join(&filename);
             
             // Save the image based on format
-            match *format_name {
+            match format_name {
+                #[cfg(feature = "basic-formats")]
                 "webp" => {
                     processed_img.save_with_format(&output_path, ImageFormat::WebP)
                         .context(format!("Failed to save WebP image: {:?}", output_path))?;
@@ -200,6 +213,7 @@ pub fn process_image(
                     processed_img.save_with_format(&output_path, ImageFormat::Jpeg)
                         .context(format!("Failed to save JPEG image: {:?}", output_path))?;
                 },
+                #[cfg(feature = "avif")]
                 "avif" => {
                     // For AVIF, we'll use ImageMagick's convert command
                     // First save as a temporary PNG
@@ -211,7 +225,7 @@ pub fn process_image(
                     let status = Command::new("convert")
                         .arg(&temp_path)
                         .arg("-quality")
-                        .arg(quality.to_string())
+                        .arg(_quality.to_string())
                         .arg("-define")
                         .arg("avif:speed=2")
                         .arg("-define")
@@ -256,7 +270,7 @@ pub fn build_article_images(
         process_image(
             &source_path,
             article_slug,
-            &topic_config.path,
+            &topic_config.directory,
             &options.output_dir,
             config,
         )
@@ -310,7 +324,9 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
             },
             Err(e) => {
                 skipped_articles += 1;
-                Err(e)
+                // Return the error with context about the skipped article
+                Err(anyhow::anyhow!("Failed to process article {}: {}. Stats: {} total, {} processed, {} skipped", 
+                    article_slug, e, total_articles, processed_images, skipped_articles))
             }
         }
     } else {
@@ -336,7 +352,7 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
             let topic_config = &config.content.topics[&topic_key];
             let topic_dir = PathBuf::from(format!("{}/{}", 
                 config.content.base_dir, 
-                topic_config.path
+                topic_config.directory
             ));
             
             if !topic_dir.exists() {
@@ -359,7 +375,7 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
                         match process_image(
                             &source_path,
                             &article_slug,
-                            &topic_config.path,
+                            &topic_config.directory,
                             &options.output_dir,
                             &config,
                         ) {

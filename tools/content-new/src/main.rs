@@ -1,65 +1,97 @@
-use common_errors::Result;
+use common_errors::{Result, WritingError};
 use clap::Parser;
-use colored::*;
-use content_new::{ContentOptions, create_content, get_available_topics, list_templates};
+use content_new::{NewOptions, create_content, get_available_topics, list_templates};
 use dialoguer::{Input, Select, Confirm};
+use std::convert::From;
+
+// Define our own simplified versions of the CLI argument structs
+#[derive(Parser, Debug, Clone)]
+pub struct ContentArgs {
+    /// Topic of the content
+    #[arg(short, long)]
+    pub topic: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct CreateArgs {
+    /// Title of the content
+    #[arg(short = 'T', long, default_value = "")]
+    pub title: String,
+    
+    /// Tagline or description
+    #[arg(short = 'g', long, default_value = "")]
+    pub tagline: String,
+    
+    /// Content type (article, note, etc.)
+    #[arg(short, long, default_value = "")]
+    pub content_type: String,
+    
+    /// Introduction text
+    #[arg(short, long)]
+    pub introduction: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct DraftArgs {
+    /// Create as draft
+    #[arg(short, long)]
+    pub draft: bool,
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct TemplateArgs {
+    /// Template to use
+    #[arg(short = 'e', long)]
+    pub template: Option<String>,
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct TagArgs {
+    /// Tags for the content (comma-separated)
+    #[arg(short = 'a', long)]
+    pub tags: Option<String>,
+}
 
 #[derive(Parser)]
 #[command(author, version, about = "Create new content")]
 struct Args {
-    /// Content title
-    #[arg(short, long)]
-    title: Option<String>,
+    #[command(flatten)]
+    content: ContentArgs,
 
-    /// Content topic
-    #[arg(short, long)]
-    topic: Option<String>,
+    #[command(flatten)]
+    create: CreateArgs,
 
-    /// Content tagline
-    #[arg(short, long)]
-    tagline: Option<String>,
+    #[command(flatten)]
+    draft: DraftArgs,
 
-    /// Comma-separated tags
-    #[arg(short, long)]
-    tags: Option<String>,
+    #[command(flatten)]
+    template: TemplateArgs,
 
-    /// Content type (article, note, etc.)
-    #[arg(short, long, default_value = "article")]
-    content_type: String,
-
-    /// Template to use
-    #[arg(short, long)]
-    template: Option<String>,
-
-    /// Draft mode (don't set published date)
-    #[arg(short, long)]
-    draft: bool,
-    
-    /// Introduction text
-    #[arg(long)]
-    introduction: Option<String>,
+    #[command(flatten)]
+    tag: TagArgs,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
     
     // Get title if not provided
-    let title = match args.title {
-        Some(t) => t,
-        None => {
-            let input: String = Input::new()
-                .with_prompt("Enter content title")
-                .interact_text()?;
-            input
-        }
+    let title = if !args.create.title.is_empty() {
+        args.create.title.clone()
+    } else {
+        let input = Input::new()
+            .with_prompt("Enter content title")
+            .interact_text()
+            .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
+        input
     };
     
     // Get topic if not provided
-    let topic = match args.topic {
-        Some(t) => t,
+    let topic = match &args.content.topic {
+        Some(t) => t.clone(),
         None => {
             // Get available topics
-            let topics = get_available_topics()?;
+            let topics = get_available_topics()
+                .map_err(|e| WritingError::validation_error(format!("Error getting topics: {}", e)))?;
             
             // Create a list of topic options
             let topic_display: Vec<String> = topics.iter()
@@ -70,15 +102,27 @@ fn main() -> Result<()> {
                 .with_prompt("Select a topic")
                 .items(&topic_display)
                 .default(0)
-                .interact()?;
+                .interact()
+                .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
             
             topics[selection].0.clone()
         }
     };
     
+    // Get tagline if not provided
+    let tagline = if !args.create.tagline.is_empty() {
+        args.create.tagline.clone()
+    } else {
+        let input = Input::new()
+            .with_prompt("Enter content tagline")
+            .interact_text()
+            .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
+        input
+    };
+    
     // Get content type if not already specified
-    let content_type = if args.content_type != "article" {
-        args.content_type.clone()
+    let _content_type = if !args.create.content_type.is_empty() {
+        args.create.content_type.clone()
     } else {
         // Offer content type selection
         let content_types = vec!["article", "note", "tutorial"];
@@ -86,122 +130,107 @@ fn main() -> Result<()> {
             .with_prompt("Select content type")
             .items(&content_types)
             .default(0)
-            .interact()?;
+            .interact()
+            .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
         
         content_types[selection].to_string()
     };
     
     // Get template if not provided
-    let template = match args.template {
-        Some(t) => Some(t),
+    let template = match &args.template.template {
+        Some(t) => Some(t.clone()),
         None => {
             // Ask if user wants to select a template
             let select_template = Confirm::new()
                 .with_prompt("Would you like to select a template?")
                 .default(false)
-                .interact()?;
-                
+                .interact()
+                .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
+            
             if select_template {
-                // List available templates
-                let templates = list_templates()?;
-                
-                // Filter templates by content type if possible
-                let filtered_templates: Vec<_> = templates.iter()
-                    .filter(|t| t.content_type == content_type)
-                    .collect();
-                
-                let template_list = if !filtered_templates.is_empty() {
-                    filtered_templates
-                } else {
-                    templates.iter().collect()
-                };
+                // Get available templates
+                let templates = list_templates()
+                    .map_err(|e| WritingError::validation_error(format!("Error listing templates: {}", e)))?;
                 
                 // Create a list of template options
-                let template_display: Vec<String> = template_list.iter()
-                    .map(|t| format!("{} - {}", t.name, t.description))
+                let template_display: Vec<String> = templates.iter()
+                    .map(|t| format!("{} ({})", t.name, t.content_type))
                     .collect();
                 
                 let selection = Select::new()
                     .with_prompt("Select a template")
                     .items(&template_display)
                     .default(0)
-                    .interact()?;
+                    .interact()
+                    .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
                 
-                Some(template_list[selection].name.clone())
+                Some(templates[selection].name.clone())
             } else {
                 None
             }
         }
     };
     
-    // Get tagline if not provided
-    let tagline = match args.tagline {
-        Some(t) => t,
-        None => {
-            let input: String = Input::new()
-                .with_prompt("Enter content tagline")
-                .interact_text()?;
-            input
-        }
-    };
-    
     // Get tags if not provided
-    let tags = match args.tags {
-        Some(t) => t,
+    let tags = match &args.tag.tags {
+        Some(t) => t.clone(),
         None => {
-            let input: String = Input::new()
-                .with_prompt("Enter comma-separated tags")
+            let input = Input::new()
+                .with_prompt("Enter tags (comma-separated)")
                 .allow_empty(true)
-                .interact_text()?;
+                .interact_text()
+                .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
             input
         }
     };
     
-    // Get introduction if not provided and content type is article or tutorial
-    let introduction = if content_type == "article" || content_type == "tutorial" {
-        match args.introduction {
-            Some(i) => Some(i),
-            None => {
-                let input: String = Input::new()
-                    .with_prompt("Enter introduction paragraph")
-                    .allow_empty(true)
-                    .interact_text()?;
-                
-                if input.is_empty() {
-                    None
-                } else {
-                    Some(input)
-                }
+    // Get draft status if not provided
+    let draft = args.draft.draft;
+    
+    // Get introduction if not provided
+    let _introduction = match &args.create.introduction {
+        Some(i) => Some(i.clone()),
+        None => {
+            // Ask if user wants to provide an introduction
+            let provide_intro = Confirm::new()
+                .with_prompt("Would you like to provide an introduction?")
+                .default(false)
+                .interact()
+                .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
+            
+            if provide_intro {
+                let input = Input::new()
+                    .with_prompt("Enter introduction")
+                    .interact_text()
+                    .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
+                Some(input)
+            } else {
+                None
             }
         }
-    } else {
-        None
+    };
+    
+    // Create content options
+    let options = NewOptions {
+        slug: None,
+        topic: Some(topic),
+        title: Some(title),
+        description: Some(tagline),
+        template,
+        tags: if !tags.is_empty() {
+            Some(tags.split(',').map(|s| s.trim().to_string()).collect())
+        } else {
+            None
+        },
+        draft: Some(draft),
     };
     
     // Create content
-    let options = ContentOptions {
-        title,
-        topic,
-        tagline,
-        tags,
-        content_type,
-        draft: args.draft,
-        template,
-        introduction,
-    };
+    let content_path = create_content(&options)
+        .map_err(|e| WritingError::validation_error(format!("Error creating content: {}", e)))?;
     
-    let content_path = create_content(options)?;
-    
-    println!("{} Content created at: {}", "SUCCESS:".green().bold(), content_path);
-    
-    // Extract slug from the path
-    let slug = content_path.split('/').nth_back(1).unwrap_or("");
-    let content_dir = content_path.trim_end_matches("index.mdx").trim_end_matches('/');
-    
-    println!("Don't forget to add a source image:");
-    println!("  {}/index.jpg", content_dir);
-    println!("\nTo optimize your source image:");
-    println!("  ./write image optimize --source path/to/image.jpg --article {}", slug);
+    // Print success message
+    println!("Created content: {}", content_path.display());
     
     Ok(())
 } 

@@ -1,0 +1,16 @@
+---
+description: 
+globs: *.rs
+alwaysApply: false
+---
+---
+name: tokio-best-practices.mdc
+description: Best practices for using Tokio in Rust async programming
+globs: **/*.rs
+---
+
+- Use `tokio::spawn` for task spawning and concurrency management
+- Implement structured concurrency with scoped tasks and clean cancellation
+- Use `tokio::select!` for managing multiple async tasks and cancellations
+- Implement timeouts, retries, and backoff strategies for robust async operations
+- Use `tokio::time::sleep` and `tokio::time::interval` for efficient time-based operations
