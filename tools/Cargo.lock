@@ -474,6 +474,7 @@ name = "common-errors"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "colored",
  "serde_yaml",
  "thiserror 1.0.69",
 ]
@@ -4179,6 +4180,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
+ "common-errors",
  "criterion",
  "dialoguer 0.10.4",
  "indicatif",
