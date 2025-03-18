@@ -27,7 +27,7 @@ members = [
     "content-template",
     "content-validate",
     "content-search"
-]
+, "benchmark-analyze"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"

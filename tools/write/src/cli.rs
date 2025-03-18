@@ -327,4 +327,31 @@ pub enum BuildCommands {
         #[arg(short, long)]
         topic: Option<String>,
     },
+
+    /// Analyze benchmark results
+    Benchmark {
+        /// Directory containing baseline benchmark results
+        #[arg(short, long)]
+        baseline: Option<String>,
+
+        /// Directory containing current benchmark results
+        #[arg(short, long)]
+        current: String,
+
+        /// Regression threshold percentage
+        #[arg(short, long, default_value = "10")]
+        threshold: f64,
+
+        /// Output report file
+        #[arg(short, long, default_value = "benchmark_report.md")]
+        report: String,
+
+        /// Output JSON format
+        #[arg(short, long)]
+        json: bool,
+
+        /// Enable verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }

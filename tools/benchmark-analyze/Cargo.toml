@@ -1,0 +1,18 @@
+[package]
+name = "benchmark-analyze"
+version = "0.1.0"
+edition = "2021"
+authors = ["Evan Sims <hello@evansims.com>"]
+description = "Tool for analyzing Criterion benchmark results and detecting performance regressions"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+walkdir = "2.4"
+chrono = "0.4"
+colored = "2.1"
+
+[dev-dependencies]
+tempfile = "3.10"
