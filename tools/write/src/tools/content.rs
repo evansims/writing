@@ -3,36 +3,41 @@
 //! This module provides functionality for managing content, including creating,
 //! editing, moving, deleting, and listing content.
 
-use std::sync::Arc;
 use anyhow::Result;
 use colored::*;
 use crate::ui;
+use crate::ui::feedback;
 use common_traits::tools::{
     ContentCreator, ContentEditor, ContentMover, ContentDeleter, ContentValidator, ContentSearcher,
-    ContentOptions, EditOptions, MoveOptions, ValidationOptions, SearchOptions
+    ContentOptions, EditOptions, MoveOptions, ValidationOptions, SearchOptions, ToolFactory
 };
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+use std::sync::Arc;
+use common_models;
+use crate::tools::factory::WriteToolFactory;
 
 /// Content tools for the Write CLI
 ///
 /// This struct provides content management operations for the Write CLI.
 pub struct ContentTools {
-    creator: Box<dyn ContentCreator>,
-    editor: Box<dyn ContentEditor>,
-    mover: Box<dyn ContentMover>,
-    deleter: Box<dyn ContentDeleter>,
-    validator: Box<dyn ContentValidator>,
-    searcher: Box<dyn ContentSearcher>,
+    creator: Box<dyn ContentCreator + Send + Sync>,
+    editor: Box<dyn ContentEditor + Send + Sync>,
+    mover: Box<dyn ContentMover + Send + Sync>,
+    deleter: Box<dyn ContentDeleter + Send + Sync>,
+    validator: Box<dyn ContentValidator + Send + Sync>,
+    searcher: Box<dyn ContentSearcher + Send + Sync>,
 }
 
 impl ContentTools {
     /// Create a new ContentTools instance with the given dependencies
     pub fn new(
-        creator: Box<dyn ContentCreator>,
-        editor: Box<dyn ContentEditor>,
-        mover: Box<dyn ContentMover>,
-        deleter: Box<dyn ContentDeleter>,
-        validator: Box<dyn ContentValidator>,
-        searcher: Box<dyn ContentSearcher>,
+        creator: Box<dyn ContentCreator + Send + Sync>,
+        editor: Box<dyn ContentEditor + Send + Sync>,
+        mover: Box<dyn ContentMover + Send + Sync>,
+        deleter: Box<dyn ContentDeleter + Send + Sync>,
+        validator: Box<dyn ContentValidator + Send + Sync>,
+        searcher: Box<dyn ContentSearcher + Send + Sync>,
     ) -> Self {
         Self {
             creator,
@@ -87,7 +92,7 @@ impl ContentTools {
         &self,
         slug: Option<String>,
         topic: Option<String>,
-        frontmatter: bool,
+        _frontmatter: bool,
         editor: bool,
     ) -> Result<()> {
         // Create options
@@ -171,7 +176,7 @@ impl ContentTools {
 
         // Check if content can be safely deleted
         if !self.deleter.can_delete(&slug, topic.as_deref())? && !force {
-            ui::show_error("Content cannot be safely deleted. Use --force to override.");
+            feedback::show_error("Content cannot be safely deleted. Use --force to override.");
             return Ok(());
         }
 
@@ -217,7 +222,7 @@ impl ContentTools {
         } else {
             ui::show_warning(&format!("Found {} validation issues:", issues.len()));
             for issue in issues {
-                ui::show_error(&issue);
+                feedback::show_error(&issue);
             }
 
             // If fix mode is enabled
@@ -370,6 +375,7 @@ pub fn create_template(
 }
 
 /// Generate a slug from a title
+#[allow(dead_code)]
 fn slugify(title: &str) -> String {
     // A simple slugification implementation
     // In a real application, you would use a proper slugification library
@@ -379,4 +385,157 @@ fn slugify(title: &str) -> String {
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '-')
         .collect()
+}
+
+// Add module-level functions that delegate to a ContentTools instance
+
+// Create a singleton ContentTools instance for module-level functions
+static CONTENT_TOOLS: Lazy<Mutex<Option<ContentTools>>> = Lazy::new(|| Mutex::new(None));
+
+/// Initialize the ContentTools singleton with the provided instance
+pub fn init_content_tools(tools: ContentTools) {
+    let mut singleton = CONTENT_TOOLS.lock().unwrap();
+    *singleton = Some(tools);
+}
+
+/// Get or create a ContentTools instance
+pub fn lazy_content_tools() -> Result<()> {
+    // If the tools are already initialized, just return Ok
+    if let Ok(tools) = get_content_tools() {
+        if tools.is_some() {
+            return Ok(());
+        }
+    }
+
+    // Create a placeholder config for now - in a real implementation,
+    // this would load the actual config
+    let config = Arc::new(common_models::Config::default());
+
+    // Create the factory
+    let factory = WriteToolFactory::new(config);
+
+    // Create the ContentTools instance with dependencies from the factory
+    let tools = ContentTools::new(
+        factory.create_content_creator(),
+        factory.create_content_editor(),
+        factory.create_content_mover(),
+        factory.create_content_deleter(),
+        factory.create_content_validator(),
+        factory.create_content_searcher(),
+    );
+
+    // Initialize the singleton
+    init_content_tools(tools);
+
+    Ok(())
+}
+
+// Helper to get the ContentTools singleton
+fn get_content_tools() -> Result<std::sync::MutexGuard<'static, Option<ContentTools>>> {
+    let tools = CONTENT_TOOLS.lock().unwrap();
+    if tools.is_none() {
+        return Err(anyhow::anyhow!("ContentTools not initialized"));
+    }
+    Ok(tools)
+}
+
+// Module-level functions that delegate to the ContentTools instance
+
+/// Create new content
+pub fn create_content(
+    title: Option<String>,
+    topic: Option<String>,
+    tagline: Option<String>,
+    tags: Option<String>,
+    content_type: Option<String>,
+    draft: bool,
+    template: Option<String>,
+    introduction: Option<String>,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().create_content(title, topic, tagline, tags, content_type, draft, template, introduction)
+}
+
+/// Edit content
+pub fn edit_content(
+    slug: Option<String>,
+    topic: Option<String>,
+    _frontmatter: bool,
+    editor: bool,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().edit_content(slug, topic, _frontmatter, editor)
+}
+
+/// Move content
+pub fn move_content(
+    slug: Option<String>,
+    new_slug: Option<String>,
+    from_topic: Option<String>,
+    to_topic: Option<String>,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().move_content(slug, new_slug, from_topic, to_topic)
+}
+
+/// Delete content
+pub fn delete_content(
+    slug: Option<String>,
+    topic: Option<String>,
+    force: bool,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().delete_content(slug, topic, force)
+}
+
+/// Validate content
+pub fn validate_content(
+    slug: Option<String>,
+    topic: Option<String>,
+    validation_types: Option<Vec<String>>,
+    check_links: bool,
+    timeout: Option<u64>,
+    dictionary: Option<String>,
+    include_drafts: bool,
+    verbose: bool,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().validate_content(slug, topic, validation_types, check_links, timeout, dictionary, include_drafts, verbose)
+}
+
+/// List content
+pub fn list_content_with_options(
+    topic: Option<String>,
+    include_drafts: bool,
+    format: &str,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().list_content_with_options(topic, include_drafts, format)
+}
+
+/// Search content
+pub fn search_content(
+    query: String,
+    topic: Option<String>,
+    content_type: Option<String>,
+    tags: Option<String>,
+    limit: Option<usize>,
+    include_drafts: bool,
+    title_only: bool,
+    index_path: Option<String>,
+    rebuild: bool,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().search_content(query, topic, content_type, tags, limit, include_drafts, title_only, index_path, rebuild)
+}
+
+/// Update frontmatter field
+pub fn update_frontmatter_field(
+    slug: &str,
+    topic: Option<&str>,
+    field: &str,
+    value: &str,
+) -> Result<()> {
+    let tools = get_content_tools()?;
+    tools.as_ref().unwrap().update_frontmatter_field(slug, topic, field, value)
 }

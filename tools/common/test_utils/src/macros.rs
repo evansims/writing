@@ -21,7 +21,10 @@
 #[macro_export]
 macro_rules! with_test_fixture {
     ($fixture:ident => $block:block) => {
-        let $fixture = $crate::TestFixture::new().unwrap();
+        let $fixture = match $crate::TestFixture::new() {
+            Ok(fixture) => fixture,
+            Err(err) => panic!("Failed to create test fixture: {:?}", err),
+        };
         $block
         // Fixture will be automatically cleaned up when it goes out of scope
     };

@@ -31,6 +31,9 @@ pub fn execute_command(command: Commands) -> Result<()> {
 
 /// Execute a content command
 pub fn execute_content_command(command: ContentCommands) -> Result<()> {
+    // Initialize the ContentTools singleton
+    crate::tools::content::lazy_content_tools()?;
+
     match command {
         ContentCommands::New { title, topic, tagline, tags, draft, template, edit } => {
             let content = title.clone();

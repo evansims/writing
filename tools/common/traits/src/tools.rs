@@ -185,29 +185,29 @@ pub trait ImageManager {
 /// A factory trait for creating tool implementations
 pub trait ToolFactory {
     /// Create a content creator implementation
-    fn create_content_creator(&self) -> Box<dyn ContentCreator>;
+    fn create_content_creator(&self) -> Box<dyn ContentCreator + Send + Sync>;
 
     /// Create a content editor implementation
-    fn create_content_editor(&self) -> Box<dyn ContentEditor>;
+    fn create_content_editor(&self) -> Box<dyn ContentEditor + Send + Sync>;
 
     /// Create a content mover implementation
-    fn create_content_mover(&self) -> Box<dyn ContentMover>;
+    fn create_content_mover(&self) -> Box<dyn ContentMover + Send + Sync>;
 
     /// Create a content deleter implementation
-    fn create_content_deleter(&self) -> Box<dyn ContentDeleter>;
+    fn create_content_deleter(&self) -> Box<dyn ContentDeleter + Send + Sync>;
 
     /// Create a content validator implementation
-    fn create_content_validator(&self) -> Box<dyn ContentValidator>;
+    fn create_content_validator(&self) -> Box<dyn ContentValidator + Send + Sync>;
 
     /// Create a content searcher implementation
-    fn create_content_searcher(&self) -> Box<dyn ContentSearcher>;
+    fn create_content_searcher(&self) -> Box<dyn ContentSearcher + Send + Sync>;
 
     /// Create a content builder implementation
-    fn create_content_builder(&self) -> Box<dyn ContentBuilder>;
+    fn create_content_builder(&self) -> Box<dyn ContentBuilder + Send + Sync>;
 
     /// Create a topic manager implementation
-    fn create_topic_manager(&self) -> Box<dyn TopicManager>;
+    fn create_topic_manager(&self) -> Box<dyn TopicManager + Send + Sync>;
 
     /// Create an image manager implementation
-    fn create_image_manager(&self) -> Box<dyn ImageManager>;
+    fn create_image_manager(&self) -> Box<dyn ImageManager + Send + Sync>;
 }

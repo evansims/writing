@@ -7,7 +7,7 @@ authors = ["Evan Sims <hello@evansims.com>"]
 
 [dependencies]
 # Internal dependencies
-common_errors = { path = "../errors" }
+common-errors = { path = "../errors" }
 
 # External dependencies
 serde = { version = "1.0", features = ["derive"] }

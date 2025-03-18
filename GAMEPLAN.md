@@ -73,16 +73,34 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 
 #### 3A: Core Libraries
 
-- [ ] Enhance testing for common libraries
+- [x] Enhance testing for common libraries
   - [x] common/models - Add property-based testing
   - [x] common/errors - Add comprehensive unit tests
   - [x] common/config - Expand mocking and test scenarios
-  - [ ] common/fs - Add test coverage for edge cases
-  - [ ] common/markdown - Add property-based tests for parsing
+  - [x] common/fs - Add test coverage for edge cases
+    - Added property-based tests for file operations
+    - Added edge case tests for file system operations
+    - Implemented test strategies for generating valid file paths and content
+  - [x] common/markdown - Add property-based tests for parsing
+    - Added property-based tests for frontmatter extraction
+    - Added property-based tests for markdown content processing
+    - Implemented test strategies for generating valid markdown documents
 
 #### 3B: Individual Tool Unit Testing
 
 - [ ] Ensure each tool has comprehensive isolated unit tests
+  - [x] content-new - Comprehensive unit, property, and integration tests
+    - Added unit tests for create_content covering all edge cases
+    - Added unit tests for list_templates with pattern for proper mocking
+    - Added unit tests for get_available_topics
+    - Added property-based tests for content creation
+    - Added integration tests for CLI interface
+  - [x] content-edit - Comprehensive unit, property, and integration tests
+    - Added ContentEditorImpl that implements ContentEditor trait
+    - Added unit tests for edit_content with proper mocking
+    - Added unit tests for update_frontmatter_field
+    - Added unit tests for get_frontmatter_fields
+    - Added property-based tests for content editing
   - [ ] Refactor as needed to make each tool independently testable
   - [ ] Mock all dependencies on other tools
   - [ ] Test all edge cases and error paths
@@ -91,9 +109,20 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 #### 3C: Content Tools
 
 - [ ] Enhance testing for content manipulation tools
-  - [ ] content-new - Add property-based tests for edge cases
-  - [ ] content-edit - Add tests for file operations
-  - [ ] content-move - Add comprehensive validation tests
+  - [x] content-new - Add property-based tests for edge cases
+    - Added comprehensive property-based testing for content creation
+    - Added integration tests for CLI functionality
+    - Added test coverage for error conditions and edge cases
+  - [x] content-edit - Add tests for file operations
+    - Added unit tests for all file operations
+    - Added property-based tests for frontmatter updates
+    - Added integration tests for the content editing workflow
+  - [x] content-move - Add comprehensive validation tests
+    - Added unit tests for MoveOptions validation
+    - Added unit tests for find_content_dir functionality
+    - Added unit tests for move_content functionality
+    - Added property-based tests for content references updating
+    - Added integration tests for CLI functionality
   - [ ] content-delete - Add safety verification tests
   - [ ] content-search - Add performance tests
   - [ ] content-stats - Add statistical validation tests
@@ -202,7 +231,7 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 - Isolate test environments with fixtures
 - Clean up all test resources after use
 
-## �� EXAMPLES
+## EXAMPLES
 
 ### Unit Test Example (to standardize on)
 

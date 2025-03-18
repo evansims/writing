@@ -12,6 +12,14 @@ path = "src/lib.rs"
 name = "content-edit"
 path = "src/main.rs"
 
+[[bin]]
+name = "standalone-tests"
+path = "tests/standalone/standalone_tests.rs"
+
+[[bin]]
+name = "content-edit-cli"
+path = "src/bin/simple_cli.rs"
+
 [dependencies]
 clap = { workspace = true }
 anyhow = { workspace = true }
@@ -27,6 +35,10 @@ common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs", features = ["find"] }
 common-markdown = { path = "../common/markdown" }
 common-errors = { path = "../common/errors" }
+common_traits = { path = "../common/traits" }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 common-test-utils = { path = "../common/test_utils" }
+tempfile = "3.10.1"
+copy_dir = "0.1.3"

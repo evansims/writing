@@ -10,3 +10,7 @@ pub mod integration;
 
 // Property-based tests (can be added when needed)
 pub mod property;
+
+// Integration tests
+mod directory_operations_tests;
+mod file_operations_tests;

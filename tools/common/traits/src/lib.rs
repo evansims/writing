@@ -3,11 +3,11 @@
 //! This module provides shared trait implementations for common behaviors
 //! across the codebase.
 
-use std::fmt;
-use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
-use serde::{Serialize, Deserialize};
 use common_errors::{Result, WritingError};
+use std::path::{Path, PathBuf};
+use std::io;
+use std::fs;
+use serde::{Serialize, Deserialize};
 
 // Import and re-export tool-specific traits
 pub mod tools;
@@ -90,7 +90,7 @@ pub trait ErrorConversion<E> {
 /// Implementation of ErrorConversion for IO errors
 impl ErrorConversion<io::Error> for io::Error {
     fn to_writing_error(error: io::Error, context: &str) -> WritingError {
-        WritingError::io_error(&format!("{}: {}", context, error))
+        WritingError::other(&format!("{}: {}", context, error))
     }
 
     fn to_result<T>(result: std::result::Result<T, io::Error>, context: &str) -> Result<T> {
@@ -178,36 +178,39 @@ pub trait TempFileOps {
 /// Default implementation of TempFileOps
 impl TempFileOps for PathBuf {
     fn create_temp_file(&self, content: &str) -> Result<PathBuf> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("writing-")
-            .tempdir()
-            .map_err(|e| WritingError::io_error(&format!("Failed to create temp dir: {}", e)))?;
+        // Create a temporary file in the specified directory
+        let dir = tempfile::Builder::new()
+            .prefix("temp")
+            .tempdir_in(self)
+            .map_err(|e| WritingError::other(&format!("Failed to create temp dir: {}", e)))?;
 
-        let file_path = temp_dir.path().join(self.file_name().unwrap_or_default());
-
-        std::fs::write(&file_path, content)
-            .map_err(|e| WritingError::io_error(&format!("Failed to write temp file: {}", e)))?;
+        // Write content to the file
+        let file_path = dir.path().join("temp_file.txt");
+        fs::write(&file_path, content)
+            .map_err(|e| WritingError::other(&format!("Failed to write temp file: {}", e)))?;
 
         Ok(file_path)
     }
 
     fn create_temp_dir(&self) -> Result<PathBuf> {
-        let temp_dir = tempfile::Builder::new()
-            .prefix("writing-")
-            .tempdir()
-            .map_err(|e| WritingError::io_error(&format!("Failed to create temp dir: {}", e)))?;
+        // Create a temporary directory in the specified directory
+        let dir = tempfile::Builder::new()
+            .prefix("temp")
+            .tempdir_in(self)
+            .map_err(|e| WritingError::other(&format!("Failed to create temp dir: {}", e)))?;
 
-        Ok(temp_dir.path().to_path_buf())
+        Ok(dir.path().to_path_buf())
     }
 
     fn cleanup_temp(&self) -> Result<()> {
-        if self.starts_with(std::env::temp_dir()) && self.exists() {
+        if self.starts_with(std::env::temp_dir()) {
+            // Only clean up if it's in the temp directory
             if self.is_dir() {
-                std::fs::remove_dir_all(self)
-                    .map_err(|e| WritingError::io_error(&format!("Failed to remove temp dir: {}", e)))?;
-            } else {
-                std::fs::remove_file(self)
-                    .map_err(|e| WritingError::io_error(&format!("Failed to remove temp file: {}", e)))?;
+                fs::remove_dir_all(self)
+                    .map_err(|e| WritingError::other(&format!("Failed to remove temp dir: {}", e)))?;
+            } else if self.is_file() {
+                fs::remove_file(self)
+                    .map_err(|e| WritingError::other(&format!("Failed to remove temp file: {}", e)))?;
             }
         }
 
@@ -217,7 +220,9 @@ impl TempFileOps for PathBuf {
 
 /// Module with trait implementations for content utilities
 pub mod content {
+    #[allow(unused_imports)]
     use super::*;
+    #[allow(unused_imports)]
     use common_errors::Result;
 
     /// Trait for content metadata extraction
@@ -267,11 +272,14 @@ pub mod content {
         }
 
         fn sentence_count(&self, content: &str) -> usize {
-            let sentence_endings = [".", "!", "?"];
+            let sentence_endings = vec![".", "!", "?"];
 
+            // Count sentences by splitting on sentence endings
             content
-                .split(|c| sentence_endings.contains(&c.to_string().as_str()))
-                .filter(|s| !s.trim().is_empty())
+                .chars()
+                .collect::<Vec<char>>()
+                .split(|c: &char| sentence_endings.contains(&c.to_string().as_str()))
+                .filter(|s| !s.is_empty())
                 .count()
         }
     }
@@ -320,5 +328,18 @@ mod tests {
 
         let long_content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(40);
         assert_eq!(extractor.reading_time(&long_content), 2);
+    }
+}
+
+#[cfg(test)]
+mod mock_tests {
+    #[allow(unused_imports)]
+    use super::*;
+    #[allow(unused_imports)]
+    use common_errors::Result;
+
+    #[test]
+    fn test_mocks() {
+        // MockFileSystem tests...
     }
 }

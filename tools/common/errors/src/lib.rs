@@ -516,27 +516,13 @@ impl From<fs_extra::error::Error> for WritingError {
 #[cfg(feature = "walkdir")]
 impl From<walkdir::Error> for WritingError {
     fn from(err: walkdir::Error) -> Self {
-        if let Some(io_err) = err.io_error() {
-            match io_err.kind() {
-                std::io::ErrorKind::NotFound => {
-                    if let Some(path) = err.path() {
-                        WritingError::file_not_found(path)
-                    } else {
-                        WritingError::IoError(format!("File not found: {}", err))
-                    }
-                },
-                std::io::ErrorKind::PermissionDenied => {
-                    if let Some(path) = err.path() {
-                        WritingError::permission_denied(path)
-                    } else {
-                        WritingError::IoError(format!("Permission denied: {}", err))
-                    }
-                },
-                _ => WritingError::IoError(err.to_string()),
-            }
-        } else {
-            WritingError::IoError(err.to_string())
-        }
+        WritingError::other(err.to_string())
+    }
+}
+
+impl From<anyhow::Error> for WritingError {
+    fn from(err: anyhow::Error) -> Self {
+        WritingError::other(err.to_string())
     }
 }
 

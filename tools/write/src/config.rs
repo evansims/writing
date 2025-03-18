@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Global configuration cache instance with a 5-minute cache duration
+#[allow(dead_code)]
 static CONFIG_CACHE: Lazy<ConfigCache> = Lazy::new(|| {
     ConfigCache::new(Duration::from_secs(300), true)
 });
@@ -19,7 +20,8 @@ static CONFIG_CACHE: Lazy<ConfigCache> = Lazy::new(|| {
 ///
 /// This struct lazily loads configuration only when needed, improving
 /// performance by avoiding unnecessary file system operations.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct LazyConfig {
     /// The cached configuration
     config: Option<Arc<Config>>,
@@ -57,11 +59,13 @@ impl LazyConfig {
 }
 
 /// Global instance of lazy configuration
+#[allow(dead_code)]
 static LAZY_CONFIG: Lazy<std::sync::Mutex<LazyConfig>> = Lazy::new(|| {
     std::sync::Mutex::new(LazyConfig::new())
 });
 
 /// Get the configuration, loading it lazily
+#[allow(dead_code)]
 pub fn get_config() -> Result<Arc<Config>> {
     let mut config = LAZY_CONFIG.lock()
         .map_err(|_| anyhow::anyhow!("Failed to acquire configuration lock"))?;
@@ -69,6 +73,7 @@ pub fn get_config() -> Result<Arc<Config>> {
 }
 
 /// Clear the configuration cache, forcing a reload on next access
+#[allow(dead_code)]
 pub fn clear_config_cache() {
     if let Ok(mut config) = LAZY_CONFIG.lock() {
         config.clear();
@@ -76,12 +81,14 @@ pub fn clear_config_cache() {
 }
 
 /// Get all topics from the configuration
+#[allow(dead_code)]
 pub fn get_topics() -> Result<Vec<String>> {
     let config = get_config()?;
     Ok(config.content.topics.keys().cloned().collect())
 }
 
 /// Get all topic names from the configuration
+#[allow(dead_code)]
 pub fn get_topic_names() -> Result<Vec<String>> {
     let config = get_config()?;
     let topic_names = config.content.topics.values()
@@ -91,18 +98,21 @@ pub fn get_topic_names() -> Result<Vec<String>> {
 }
 
 /// Get a topic by its key
+#[allow(dead_code)]
 pub fn get_topic_by_key(key: &str) -> Result<Option<TopicConfig>> {
     let config = get_config()?;
     Ok(config.content.topics.get(key).cloned())
 }
 
 /// Get the site URL from the configuration
+#[allow(dead_code)]
 pub fn get_site_url() -> Result<Option<String>> {
     let config = get_config()?;
     Ok(config.publication.site_url.clone())
 }
 
 /// Validate a topic key exists
+#[allow(dead_code)]
 pub fn validate_topic(key: &str) -> Result<TopicConfig> {
     common_config::validate_topic(key)
         .map_err(|e| anyhow::anyhow!("Invalid topic '{}': {}", key, e))

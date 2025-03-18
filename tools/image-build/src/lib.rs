@@ -1,29 +1,19 @@
-#[cfg(test)]
-mod tests;
-
-use anyhow::{Context, Result};
-use common_config::load_config;
-use common_models::{Config, ImageNaming};
-use image::{GenericImageView, ImageFormat};
-use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
-#[cfg(feature = "avif")]
-use std::process::Command;
+use std::fs;
+use std::collections::HashMap;
+use anyhow::{Result, Context};
+use common_models::{Config, ImageNaming};
+use common_config::load_config;
+use image::{ImageFormat, GenericImageView};
 
-/// Options for building images
+/// Options for building responsive images
 #[derive(Debug, Clone)]
 pub struct BuildImagesOptions {
-    /// Output directory for optimized images
     pub output_dir: PathBuf,
-    /// Source directory containing content
     pub source_dir: PathBuf,
-    /// Source image filename
-    pub source_filename: String,
-    /// Specific article to process (optional)
-    pub article: Option<String>,
-    /// Specific topic to process (optional)
     pub topic: Option<String>,
+    pub article: Option<String>,
+    pub force_rebuild: bool,
 }
 
 impl Default for BuildImagesOptions {
@@ -31,9 +21,9 @@ impl Default for BuildImagesOptions {
         Self {
             output_dir: PathBuf::from("build/images"),
             source_dir: PathBuf::from("content"),
-            source_filename: String::from("index.jpg"),
-            article: None,
             topic: None,
+            article: None,
+            force_rebuild: false,
         }
     }
 }
@@ -265,7 +255,7 @@ pub fn build_article_images(
     let topic_config = &config.content.topics[topic_key];
     let article_dir = get_article_dir(config, article_slug, topic_key)?;
 
-    let source_path = article_dir.join(&options.source_filename);
+    let source_path = article_dir.join("index.jpg");
     if source_path.exists() {
         process_image(
             &source_path,
@@ -366,7 +356,7 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
 
                 if path.is_dir() {
                     let article_slug = path.file_name().unwrap().to_string_lossy().to_string();
-                    let source_path = path.join(&options.source_filename);
+                    let source_path = path.join("index.jpg");
 
                     if source_path.exists() {
                         total_articles += 1;

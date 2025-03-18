@@ -55,23 +55,12 @@ pub use proptest::TestScenario;
 // Re-export key mocks for easier access
 pub use mocks::{
     // File system mocks
-    FileSystem, MockFileSystem, InMemoryFileSystem, create_test_fs,
-
+    FileSystem, MockFileSystem,
     // Config mocks
-    ConfigLoader, MockConfigLoader, InMemoryConfigLoader, create_test_config_loader,
-
+    ConfigLoader, MockConfigLoader,
     // Tool mocks
-    ContentCreatorMock, MockContentCreatorMock,
-    ContentEditorMock, MockContentEditorMock,
-    ContentValidatorMock, MockContentValidatorMock,
-    ContentSearcherMock, MockContentSearcherMock,
-    ContentMoverMock, MockContentMoverMock,
-    ContentDeleterMock, MockContentDeleterMock,
-
-    // Test tool implementations
-    TestContentCreator, TestContentEditor, TestContentValidator,
-    TestContentSearcher, TestContentMover, TestContentDeleter,
-    create_test_tools
+    ContentCreator, ContentEditor, ContentValidator, ContentSearcher,
+    ContentMover, ContentDeleter
 };
 
 // Re-export macros
@@ -136,10 +125,12 @@ pub mod integration {
 
             eprintln!("Debug: Found command at: {}", path.display());
 
+            let fixture = TestFixture::new()?;
+
             Ok(Self {
                 name: name.to_string(),
                 path,
-                fixture: TestFixture::new()?,
+                fixture,
             })
         }
 
@@ -147,11 +138,11 @@ pub mod integration {
         pub fn run(&self, args: &[&str]) -> std::io::Result<Output> {
             // Print debug information
             eprintln!("Debug: Running command: {} {:?}", self.path.display(), args);
-            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
-            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
+            eprintln!("Debug: Current dir: {}", self.fixture.temp_dir.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.temp_dir.path().join("config.yaml").display());
 
             // Ensure the content directory exists
-            let content_dir = self.fixture.path().join("content");
+            let content_dir = self.fixture.temp_dir.path().join("content");
             if !content_dir.exists() {
                 std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
             }
@@ -159,35 +150,10 @@ pub mod integration {
             // Run the command
             Command::new(&self.path)
                 .args(args)
-                .current_dir(self.fixture.path())
-                .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
+                .current_dir(self.fixture.temp_dir.path())
+                .env("CONFIG_PATH", self.fixture.temp_dir.path().join("config.yaml"))
                 .env("TEST_MODE", "1")
                 .output()
-        }
-
-        /// Spawn the command with the given arguments
-        pub fn spawn(&self, args: &[&str]) -> std::io::Result<Child> {
-            // Print debug information
-            eprintln!("Debug: Spawning command: {} {:?}", self.path.display(), args);
-            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
-            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
-
-            // Ensure the content directory exists
-            let content_dir = self.fixture.path().join("content");
-            if !content_dir.exists() {
-                std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
-            }
-
-            // Run the command
-            Command::new(&self.path)
-                .args(args)
-                .current_dir(self.fixture.path())
-                .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
-                .env("TEST_MODE", "1")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
         }
 
         /// Run the command with the given input
@@ -195,19 +161,19 @@ pub mod integration {
             // Print debug information
             eprintln!("Debug: Running command with input: {} {:?}", self.path.display(), args);
             eprintln!("Debug: Input: {}", input);
-            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
-            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
+            eprintln!("Debug: Current dir: {}", self.fixture.temp_dir.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.temp_dir.path().join("config.yaml").display());
 
             // Ensure the content directory exists
-            let content_dir = self.fixture.path().join("content");
+            let content_dir = self.fixture.temp_dir.path().join("content");
             if !content_dir.exists() {
                 std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
             }
 
             let mut child = Command::new(&self.path)
                 .args(args)
-                .current_dir(self.fixture.path())
-                .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
+                .current_dir(self.fixture.temp_dir.path())
+                .env("CONFIG_PATH", self.fixture.temp_dir.path().join("config.yaml"))
                 .env("TEST_MODE", "1")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -220,6 +186,31 @@ pub mod integration {
             }
 
             child.wait_with_output()
+        }
+
+        /// Spawn the command with the given arguments
+        pub fn spawn(&self, args: &[&str]) -> std::io::Result<Child> {
+            // Print debug information
+            eprintln!("Debug: Spawning command: {} {:?}", self.path.display(), args);
+            eprintln!("Debug: Current dir: {}", self.fixture.temp_dir.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.temp_dir.path().join("config.yaml").display());
+
+            // Ensure the content directory exists
+            let content_dir = self.fixture.temp_dir.path().join("content");
+            if !content_dir.exists() {
+                std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
+            }
+
+            // Run the command
+            Command::new(&self.path)
+                .args(args)
+                .current_dir(self.fixture.temp_dir.path())
+                .env("CONFIG_PATH", self.fixture.temp_dir.path().join("config.yaml"))
+                .env("TEST_MODE", "1")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
         }
 
         /// Assert that the command succeeds with the given arguments

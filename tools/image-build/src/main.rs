@@ -30,18 +30,18 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    
+
     // Convert args to options
     let options = BuildImagesOptions {
         output_dir: args.output_dir,
         source_dir: args.source_dir,
-        source_filename: args.source_filename,
         article: args.article,
         topic: args.topic,
+        force_rebuild: false,
     };
-    
+
     println!("{}", "Scanning for source images...".yellow().bold());
-    
+
     // Build images using the library function
     match build_images(&options) {
         Ok((total_articles, total_images, processed_images, skipped_articles)) => {
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
             println!("  Total source images found: {}", total_images.to_string().cyan().bold());
             println!("  Images processed: {}", processed_images.to_string().green().bold());
             println!("  Articles skipped (no source image): {}", skipped_articles.to_string().red().bold());
-            
+
             println!("\n{}", "Image build complete!".green().bold());
             Ok(())
         },
@@ -60,4 +60,4 @@ fn main() -> Result<()> {
             Err(e)
         }
     }
-} 
+}

@@ -272,3 +272,131 @@ pub fn update_content(path: &Path, frontmatter: Option<Frontmatter>, content: Op
 
     Ok(())
 }
+
+/// Update a specific frontmatter field in content.
+///
+/// This function updates a specific field in the frontmatter of a content file.
+///
+/// # Arguments
+///
+/// * `slug` - The slug of the content to update
+/// * `topic` - Optional topic to narrow down the search
+/// * `field` - The frontmatter field to update
+/// * `value` - The new value for the field
+///
+/// # Returns
+///
+/// Returns `Ok(())` if the field was updated successfully.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// * The content cannot be found
+/// * The content cannot be read
+/// * The frontmatter cannot be parsed
+/// * The frontmatter cannot be serialized
+/// * The content cannot be written
+pub fn update_frontmatter_field(slug: &str, topic: Option<&str>, field: &str, value: &str) -> Result<(), ContentEditError> {
+    // Find the content
+    let content_path = find_content_path(slug, topic)?;
+
+    // Read the content
+    let content = common_fs::read_file(&content_path)
+        .map_err(|e| ContentEditError::FileSystem {
+            error: std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+        })?;
+
+    // Split the content
+    let (frontmatter, body) = split_frontmatter_and_body(&content)
+        .map_err(|e| ContentEditError::InvalidFormat {
+            reason: format!("Failed to parse content: {}", e)
+        })?;
+
+    // Update the frontmatter with the provided field and value
+    // Convert the value to the appropriate type if possible
+    let value_yaml = if value.to_lowercase() == "true" || value.to_lowercase() == "false" {
+        // Parse as boolean
+        serde_yaml::Value::Bool(value.to_lowercase() == "true")
+    } else if let Ok(num) = value.parse::<i64>() {
+        // Parse as integer
+        serde_yaml::Value::Number(serde_yaml::Number::from(num))
+    } else if let Ok(num) = value.parse::<f64>() {
+        // Parse as float
+        // Convert to a string value since serde_yaml::Number::from doesn't work well with f64
+        serde_yaml::Value::String(num.to_string())
+    } else {
+        // Treat as string
+        serde_yaml::Value::String(value.to_string())
+    };
+
+    // Create a mapping from the frontmatter
+    let mut fm_mapping = serde_yaml::Mapping::new();
+
+    // Add standard frontmatter fields
+    fm_mapping.insert(
+        serde_yaml::Value::String("title".to_string()),
+        serde_yaml::Value::String(frontmatter.title.clone())
+    );
+
+    if let Some(date) = &frontmatter.published_at {
+        fm_mapping.insert(
+            serde_yaml::Value::String("published".to_string()),
+            serde_yaml::Value::String(date.clone())
+        );
+    }
+
+    if let Some(updated) = &frontmatter.updated_at {
+        fm_mapping.insert(
+            serde_yaml::Value::String("updated".to_string()),
+            serde_yaml::Value::String(updated.clone())
+        );
+    }
+
+    if let Some(tagline) = &frontmatter.tagline {
+        fm_mapping.insert(
+            serde_yaml::Value::String("tagline".to_string()),
+            serde_yaml::Value::String(tagline.clone())
+        );
+    }
+
+    if let Some(tags) = &frontmatter.tags {
+        let tags_array = tags.iter()
+            .map(|t| serde_yaml::Value::String(t.clone()))
+            .collect::<Vec<serde_yaml::Value>>();
+
+        fm_mapping.insert(
+            serde_yaml::Value::String("tags".to_string()),
+            serde_yaml::Value::Sequence(tags_array)
+        );
+    }
+
+    if let Some(is_draft) = frontmatter.is_draft {
+        fm_mapping.insert(
+            serde_yaml::Value::String("draft".to_string()),
+            serde_yaml::Value::Bool(is_draft)
+        );
+    }
+
+    // Add or update the field
+    fm_mapping.insert(
+        serde_yaml::Value::String(field.to_string()),
+        value_yaml
+    );
+
+    // Serialize the updated mapping back to YAML
+    let yaml_str = serde_yaml::to_string(&fm_mapping)
+        .map_err(|e| ContentEditError::InvalidFormat {
+            reason: format!("Failed to serialize frontmatter: {}", e)
+        })?;
+
+    // Create the updated content
+    let updated_content = format!("---\n{}---\n\n{}", yaml_str, body);
+
+    // Write the updated content
+    common_fs::write_file(&content_path, &updated_content)
+        .map_err(|e| ContentEditError::FileSystem {
+            error: std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+        })?;
+
+    Ok(())
+}

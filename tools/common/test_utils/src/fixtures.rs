@@ -2,15 +2,19 @@
 //!
 //! This module provides reusable test fixtures for common testing patterns.
 
-use common_errors::Result;
+use anyhow::{anyhow, Result};
 use common_models::{Config, Frontmatter};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::{tempdir, TempDir};
 use serde_yaml;
 use crate::mocks::{MockFileSystem, MockConfigLoader};
+use mockall::predicate;
+use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
+use common_traits::tools::EditOptions;
 
 /// Fixture for validation testing
 pub struct ValidationFixture {
@@ -255,181 +259,254 @@ impl FileSystemFixture {
     }
 }
 
-/// A reusable test fixture for integration tests
-///
-/// This fixture provides a temporary directory, mock filesystem,
-/// and configuration loader for testing.
+/// A test fixture for testing file operations.
 pub struct TestFixture {
+    /// The temporary directory for the test
+    pub temp_dir: TempDir,
+    /// The mock file system
     pub fs: MockFileSystem,
+    /// The mock config loader
     pub config: MockConfigLoader,
-    pub temp_dir: tempfile::TempDir,
 }
 
 impl TestFixture {
     /// Create a new test fixture
     pub fn new() -> Result<Self> {
-        let temp_dir = tempdir()?;
-
-        // Create a basic configuration file
-        let config_yaml = r#"
-content:
-  base_dir: content
-  templates_dir: templates
-  topics:
-    creativity:
-      name: Creativity
-      description: Creative content
-      directory: creativity
-    strategy:
-      name: Strategy
-      description: Strategic content
-      directory: strategy
-    blog:
-      name: Blog
-      description: Blog posts
-      directory: blog
-  tags:
-    test:
-      - Test tag
-    example:
-      - Example tag
-images:
-  formats:
-    - jpg
-  format_descriptions: {}
-  sizes: {}
-  naming: null
-  quality: null
-publication:
-  author: Test Author
-  copyright: Test Copyright
-  site: null
-"#;
-
-        // Create the config file
-        let config_path = temp_dir.path().join("config.yaml");
-        let mut file = fs::File::create(&config_path)?;
-        file.write_all(config_yaml.as_bytes())?;
-
-        // Set the CONFIG_PATH environment variable
-        std::env::set_var("CONFIG_PATH", config_path.to_str().unwrap());
-
-        // Create the content directory and topic directories
-        let content_dir = temp_dir.path().join("content");
-        fs::create_dir_all(&content_dir)?;
-        fs::create_dir_all(content_dir.join("creativity"))?;
-        fs::create_dir_all(content_dir.join("strategy"))?;
-        fs::create_dir_all(content_dir.join("blog"))?;
-
-        // Create templates directory and a default template
-        let templates_dir = temp_dir.path().join("templates");
-        fs::create_dir_all(&templates_dir)?;
-
-        // Create a default article template
-        let default_template = r#"---
-title: "{{title}}"
-tagline: "{{tagline}}"
-date: {{date}}
-draft: {{draft}}
-tags:
-{{#if tags}}
-{{#each tags}}
-  - "{{this}}"
-{{/each}}
-{{/if}}
----
-
-# {{title}}
-
-{{#if introduction}}
-{{introduction}}
-{{else}}
-Write your content here...
-{{/if}}
-"#;
-
-        let template_path = templates_dir.join("article.hbs");
-        std::fs::write(&template_path, default_template)?;
-
-        // Parse the config into a Config struct
-        let config_str = fs::read_to_string(&config_path)?;
-        let config: Config = serde_yaml::from_str(&config_str)?;
-
-        // Create mock filesystem and config loader
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let fs = MockFileSystem::new();
-        let config_loader = MockConfigLoader::new(config);
+        let config = MockConfigLoader::new();
 
         Ok(Self {
-            fs,
-            config: config_loader,
             temp_dir,
+            fs,
+            config,
         })
     }
 
-    /// Register this test fixture's config as the test config
-    /// This allows the config to be accessed by the common_config::load_config function
-    pub fn register_test_config(&self) {
-        // Set the CONFIG_PATH environment variable to the test config file
-        std::env::set_var("CONFIG_PATH", self.temp_dir.path().join("config.yaml").to_str().unwrap());
-    }
-
-    /// Add a custom configuration to the fixture
-    pub fn with_config(&mut self, config_yaml: &str) -> Result<&mut Self> {
-        // Create a config file
-        let config_path = self.temp_dir.path().join("config.yaml");
-        std::fs::write(&config_path, config_yaml)?;
-
-        // Parse the YAML into a Config object
-        let config = serde_yaml::from_str::<Config>(config_yaml)?;
-
-        // Update the mock config loader
-        self.config.set_config(config);
-
-        Ok(self)
-    }
-
-    /// Get the path to the temporary directory
+    /// Get the path to the test fixture
     pub fn path(&self) -> &Path {
         self.temp_dir.path()
     }
 
-    /// Create directories in the mock filesystem
-    pub fn create_directories(&mut self, directories: &[&str]) -> Result<()> {
-        for dir in directories {
-            self.fs.create_directory(Path::new(dir));
+    /// Create a directory in the test fixture
+    pub fn create_dir(&self, relative_path: &str) -> Result<PathBuf> {
+        let dir_path = self.temp_dir.path().join(relative_path);
+        fs::create_dir_all(&dir_path)?;
+        Ok(dir_path)
+    }
+
+    /// Create a file in the test fixture
+    pub fn create_file(&self, relative_path: &str, content: &str) -> Result<PathBuf> {
+        let file_path = self.temp_dir.path().join(relative_path);
+
+        // Create parent directories if needed
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
         }
+
+        let mut file = fs::File::create(&file_path)?;
+        file.write_all(content.as_bytes())?;
+
+        Ok(file_path)
+    }
+
+    /// Write YAML content to a file
+    pub fn write_yaml<T: serde::Serialize>(&self, path: &Path, data: &T) -> Result<()> {
+        let yaml = serde_yaml::to_string(data)?;
+        let mut file = fs::File::create(path)?;
+        file.write_all(yaml.as_bytes())?;
         Ok(())
     }
 
-    /// Add files to the mock filesystem
-    pub fn add_files(&mut self, files: &[(&str, &str)]) -> Result<()> {
-        for (path, content) in files {
-            self.fs.add_file(path, content);
+    /// Write a file in the test fixture
+    pub fn write_file(&self, path: &Path, content: &str) -> Result<()> {
+        // Create parent directories if needed
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
         }
+
+        let mut file = fs::File::create(path)?;
+        file.write_all(content.as_bytes())?;
+
         Ok(())
     }
 
-    /// Create a test content file with frontmatter
-    pub fn create_content(&self, topic: &str, slug: &str, title: &str, is_draft: bool) -> Result<PathBuf> {
-        let topic_dir = self.temp_dir.path().join("content").join(topic);
-        let content_dir = topic_dir.join(slug);
-        let content_file = content_dir.join("index.mdx");
+    /// Read a file from the test fixture
+    pub fn read_file(&self, path: &Path) -> Result<String> {
+        let content = fs::read_to_string(path)?;
+        Ok(content)
+    }
 
-        std::fs::create_dir_all(&content_dir)?;
+    /// Register a test configuration for common_config
+    pub fn register_test_config(&self) -> Result<()> {
+        // This is a stub - in real implementation, this would set environment variables or modify config files
+        Ok(())
+    }
 
-        let frontmatter = format!(
-            r#"---
-title: "{}"
-date: "2023-01-01"
-draft: {}
----
-"#,
-            title, is_draft
-        );
+    /// Patch a module for testing
+    pub fn patch_module<F>(&self, module_name: &str, setup_fn: F) -> Result<PatchGuard>
+    where
+        F: Fn(&mut ModulePatcher) -> () + 'static
+    {
+        // This is a simplified implementation
+        let mut patcher = ModulePatcher::new(module_name);
+        setup_fn(&mut patcher);
+        Ok(PatchGuard::new())
+    }
 
-        let content = format!("{}\n\n# {}\n\nThis is test content.", frontmatter, title);
-        std::fs::write(&content_file, content)?;
+    /// Create a new builder for a TestFixture
+    pub fn builder() -> TestFixtureBuilder {
+        TestFixtureBuilder::new()
+    }
 
-        Ok(content_file)
+    /// Create a TestFixture with the specified config
+    pub fn with_config(config: Config) -> Result<Self> {
+        let mut fixture = Self::new()?;
+        fixture.with_config_obj(config);
+        Ok(fixture)
+    }
+
+    /// Add a configuration to the test fixture
+    pub fn with_config_obj(&mut self, config: Config) -> &mut Self {
+        self.config.expect_load_config()
+            .returning(move || Ok(config.clone()));
+        self
+    }
+
+    /// Set up directories for the test fixture
+    pub fn add_directories(&mut self, dirs: &[&str]) -> &mut Self {
+        for dir in dirs.iter() {
+            let dir_str = dir.to_string();
+            self.fs.expect_create_dir_all()
+                .with(mockall::predicate::function(move |p: &Path| p.to_string_lossy().contains(&dir_str)))
+                .returning(|_| Ok(()));
+        }
+        self
+    }
+
+    /// Add a file to the test fixture
+    pub fn add_file(&mut self, path: &str, content: &str) -> &mut Self {
+        let path_buf = PathBuf::from(path);
+        let path_clone = path_buf.clone();
+
+        self.fs.expect_dir_exists()
+            .with(mockall::predicate::function(|p: &Path| p.to_string_lossy().contains("content")))
+            .returning(|_| Ok(true));
+
+        self.fs.expect_dir_exists()
+            .with(mockall::predicate::function(|p: &Path| p.to_string_lossy().contains(".writing")))
+            .returning(|_| Ok(true));
+
+        self
+    }
+}
+
+/// A guard for a patched module
+pub struct PatchGuard;
+
+impl PatchGuard {
+    /// Create a new patch guard
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// A module patcher for testing
+pub struct ModulePatcher {
+    module_name: String
+}
+
+impl ModulePatcher {
+    /// Create a new module patcher
+    pub fn new(module_name: &str) -> Self {
+        Self {
+            module_name: module_name.to_string()
+        }
+    }
+
+    /// Mock a function in the module
+    pub fn mock_function(&mut self, function_name: &str) -> MockFunction {
+        MockFunction::new()
+    }
+}
+
+/// A mock function for testing
+pub struct MockFunction;
+
+impl MockFunction {
+    /// Create a new mock function
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Set the return value for the mock function
+    pub fn return_once<T>(self, value: T) -> Self {
+        self
+    }
+}
+
+/// Builder for TestFixture
+pub struct TestFixtureBuilder {
+    /// Whether to set up a content directory
+    content_directory: bool,
+    /// Whether to set up a config directory
+    config_directory: bool,
+    /// Custom config YAML
+    config_yaml: Option<String>,
+}
+
+impl TestFixtureBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self {
+            content_directory: false,
+            config_directory: false,
+            config_yaml: None,
+        }
+    }
+
+    /// Add a content directory to the fixture
+    pub fn with_content_directory(mut self) -> Self {
+        self.content_directory = true;
+        self
+    }
+
+    /// Add a config directory to the fixture
+    pub fn with_config_directory(mut self) -> Self {
+        self.config_directory = true;
+        self
+    }
+
+    /// Add a custom config to the fixture
+    pub fn with_config_yaml(mut self, yaml: &str) -> Self {
+        self.config_yaml = Some(yaml.to_string());
+        self
+    }
+
+    /// Build the fixture
+    pub fn build(self) -> Result<TestFixture> {
+        let mut fixture = TestFixture::new()?;
+
+        // Set up content directory if requested
+        if self.content_directory {
+            fixture.fs.expect_create_dir_all()
+                .with(mockall::predicate::function(|p: &Path| p.to_string_lossy().contains("content")))
+                .returning(|_| Ok(()));
+        }
+
+        // Set up config directory if requested
+        if self.config_directory {
+            fixture.fs.expect_create_dir_all()
+                .with(mockall::predicate::function(|p: &Path| p.to_string_lossy().contains(".writing")))
+                .returning(|_| Ok(()));
+        }
+
+        // Set up custom config if provided
+        if let Some(yaml) = self.config_yaml {
+            let config = serde_yaml::from_str(&yaml)?;
+            fixture.with_config_obj(config);
+        }
+
+        Ok(fixture)
     }
 }

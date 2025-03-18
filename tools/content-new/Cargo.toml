@@ -30,4 +30,6 @@ common-templates = { path = "../common/templates" }
 common-cli = { path = "../common/cli" }
 
 [dev-dependencies]
-common-test-utils = { path = "../common/test_utils" } 
+common-test-utils = { path = "../common/test_utils" }
+proptest = { workspace = true }
+mockall = { workspace = true }

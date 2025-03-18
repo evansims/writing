@@ -3,9 +3,10 @@
 //! This file contains integration tests for the JSON serialization and
 //! deserialization of models, ensuring they work correctly with external formats.
 
-use common_models::*;
 use serde_json;
 use std::collections::HashMap;
+
+use crate::*;
 
 #[test]
 fn test_full_config_json_roundtrip() {
@@ -179,4 +180,101 @@ fn test_article_serialization() {
     assert_eq!(deserialized.path, article.path);
     assert_eq!(deserialized.word_count, article.word_count);
     assert_eq!(deserialized.reading_time, article.reading_time);
+}
+
+#[test]
+fn test_serialize_article_to_json() {
+    let article = Article {
+        frontmatter: Frontmatter {
+            title: "Test Article".to_string(),
+            published_at: Some("2023-01-01".to_string()),
+            updated_at: None,
+            slug: Some("test-article".to_string()),
+            tagline: Some("A test article".to_string()),
+            tags: Some(vec!["test".to_string(), "sample".to_string()]),
+            topics: Some(vec!["blog".to_string()]),
+            is_draft: Some(false),
+            featured_image_path: None,
+        },
+        content: "This is a test article with some content.".to_string(),
+        slug: "test-article".to_string(),
+        topic: "blog".to_string(),
+        path: "content/blog/test-article.md".to_string(),
+        word_count: Some(100),
+        reading_time: Some(1),
+    };
+
+    let json = serde_json::to_string(&article).unwrap();
+    assert!(json.contains("\"title\":\"Test Article\""));
+    assert!(json.contains("\"published\":\"2023-01-01\""));
+    assert!(json.contains("\"content\":\"This is a test article with some content.\""));
+    assert!(json.contains("\"slug\":\"test-article\""));
+    assert!(json.contains("\"topic\":\"blog\""));
+    assert!(json.contains("\"path\":\"content/blog/test-article.md\""));
+    assert!(json.contains("\"word_count\":100"));
+    assert!(json.contains("\"reading_time\":1"));
+}
+
+#[test]
+fn test_deserialize_json_to_article() {
+    let json = r#"{
+        "frontmatter": {
+            "title": "Test Article",
+            "published": "2023-01-01",
+            "slug": "test-article",
+            "tagline": "A test article",
+            "tags": ["test", "sample"],
+            "topics": ["blog"],
+            "draft": false
+        },
+        "content": "This is a test article with some content.",
+        "slug": "test-article",
+        "topic": "blog",
+        "path": "content/blog/test-article.md",
+        "word_count": 100,
+        "reading_time": 1
+    }"#;
+
+    let article: Article = serde_json::from_str(json).unwrap();
+    assert_eq!(article.frontmatter.title, "Test Article");
+    assert_eq!(article.frontmatter.published_at, Some("2023-01-01".to_string()));
+    assert_eq!(article.content, "This is a test article with some content.");
+    assert_eq!(article.slug, "test-article");
+    assert_eq!(article.topic, "blog");
+    assert_eq!(article.path, "content/blog/test-article.md");
+    assert_eq!(article.word_count, Some(100));
+    assert_eq!(article.reading_time, Some(1));
+}
+
+#[test]
+fn test_serialize_and_deserialize_config() {
+    let original_config = Config {
+        title: "Test Site".to_string(),
+        email: "test@example.com".to_string(),
+        url: "https://test.example.com".to_string(),
+        image: "https://test.example.com/image.jpg".to_string(),
+        default_topic: Some("blog".to_string()),
+        content: ContentConfig {
+            base_dir: "/content".to_string(),
+            topics: HashMap::new(),
+            tags: None,
+        },
+        images: ImageConfig {
+            formats: vec!["jpg".to_string(), "png".to_string()],
+            format_descriptions: None,
+            sizes: HashMap::new(),
+            naming: None,
+            quality: None,
+        },
+        publication: PublicationConfig {
+            author: "Test Author".to_string(),
+            copyright: "Test Copyright".to_string(),
+            site_url: Some("https://example.com".to_string()),
+        },
+    };
+
+    let json = serde_json::to_string(&original_config).unwrap();
+    let deserialized_config: Config = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(original_config, deserialized_config);
 }

@@ -59,6 +59,7 @@ proptest = "1.3.1"
 mockall = "0.12.1"
 cargo-llvm-cov = "0.5.39"
 cargo-nextest = "0.9.67"
+rand = "0.8.5"
 
 [workspace.package]
 version = "0.1.0"
@@ -71,7 +72,7 @@ license = "MIT"
 
 # Nextest configuration
 [profile.ci]
-# Configure nextest for CI environment
+inherits = "test"
 fail-fast = true
 retries = 1
 test-threads = "num-cpus"
@@ -81,7 +82,7 @@ failure-output = "immediate-final"
 success-output = "never"
 
 [profile.coverage]
-# Profile for collecting coverage data
+inherits = "test"
 fail-fast = false
 retries = 0
 test-threads = "num-cpus"
@@ -91,7 +92,7 @@ failure-output = "immediate"
 success-output = "never"
 
 [profile.local]
-# Profile for local development
+inherits = "test"
 fail-fast = false
 retries = 0
 test-threads = "num-cpus"

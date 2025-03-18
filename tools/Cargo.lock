@@ -477,7 +477,9 @@ dependencies = [
  "anyhow",
  "common-errors",
  "common-models",
+ "common-test-utils",
  "dirs",
+ "mockall 0.11.4",
  "once_cell",
  "serde",
  "serde_yaml",
@@ -505,6 +507,7 @@ dependencies = [
  "common-models",
  "common-test-utils",
  "fs_extra",
+ "proptest",
  "tempfile",
  "walkdir",
 ]
@@ -516,7 +519,10 @@ dependencies = [
  "anyhow",
  "common-errors",
  "common-models",
+ "common-test-utils",
+ "proptest",
  "pulldown-cmark",
+ "rand",
  "regex",
  "serde",
  "serde_yaml",
@@ -530,8 +536,10 @@ dependencies = [
  "anyhow",
  "chrono",
  "image",
+ "proptest",
  "pulldown-cmark",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -559,7 +567,8 @@ dependencies = [
  "common-errors",
  "common-fs",
  "common-models",
- "mockall",
+ "common_traits",
+ "mockall 0.11.4",
  "proptest",
  "serde",
  "serde_yaml",
@@ -584,6 +593,17 @@ dependencies = [
  "serde_yaml",
  "slug",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "common_traits"
+version = "0.1.0"
+dependencies = [
+ "common-errors",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
 ]
 
 [[package]]
@@ -678,9 +698,12 @@ dependencies = [
  "common-markdown",
  "common-models",
  "common-test-utils",
+ "common_traits",
+ "copy_dir",
  "dialoguer 0.11.0",
  "fs_extra",
  "serde",
+ "serde_json",
  "serde_yaml",
  "tempfile",
  "walkdir",
@@ -697,8 +720,11 @@ dependencies = [
  "common-fs",
  "common-markdown",
  "common-models",
+ "common-test-utils",
  "dialoguer 0.11.0",
  "fs_extra",
+ "mockall 0.12.1",
+ "proptest",
  "serde",
  "serde_yaml",
  "slug",
@@ -723,6 +749,8 @@ dependencies = [
  "common-templates",
  "common-test-utils",
  "dialoguer 0.11.0",
+ "mockall 0.12.1",
+ "proptest",
  "serde",
  "serde_yaml",
  "slug",
@@ -812,6 +840,15 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "url",
+ "walkdir",
+]
+
+[[package]]
+name = "copy_dir"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "543d1dd138ef086e2ff05e3a48cf9da045da2033d16f8538fd76b86cd49b2ca3"
+dependencies = [
  "walkdir",
 ]
 
@@ -1781,6 +1818,7 @@ dependencies = [
  "clap",
  "colored",
  "common-config",
+ "common-errors",
  "common-fs",
  "common-models",
  "criterion",
@@ -2146,8 +2184,23 @@ dependencies = [
  "downcast",
  "fragile",
  "lazy_static",
- "mockall_derive",
- "predicates",
+ "mockall_derive 0.11.4",
+ "predicates 2.1.5",
+ "predicates-tree",
+]
+
+[[package]]
+name = "mockall"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43766c2b5203b10de348ffe19f7e54564b64f3d6018ff7648d1e2d6d3a0f0a48"
+dependencies = [
+ "cfg-if",
+ "downcast",
+ "fragile",
+ "lazy_static",
+ "mockall_derive 0.12.1",
+ "predicates 3.1.3",
  "predicates-tree",
 ]
 
@@ -2161,6 +2214,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "mockall_derive"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af7cbce79ec385a1d4f54baa90a76401eb15d9cab93685f62e7e9f942aa00ae2"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.99",
 ]
 
 [[package]]
@@ -2632,6 +2697,16 @@ dependencies = [
  "normalize-line-endings",
  "predicates-core",
  "regex",
+]
+
+[[package]]
+name = "predicates"
+version = "3.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5d19ee57562043d37e82899fade9a22ebab7be9cef5026b07fda9cdd4293573"
+dependencies = [
+ "anstyle",
+ "predicates-core",
 ]
 
 [[package]]
@@ -4250,13 +4325,15 @@ dependencies = [
  "common-config",
  "common-errors",
  "common-models",
+ "common_traits",
  "criterion",
  "dialoguer 0.10.4",
  "indicatif",
- "mockall",
+ "mockall 0.11.4",
  "once_cell",
  "proptest",
  "rayon",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml",

@@ -63,7 +63,7 @@ pub enum ContentCommands {
     /// Create new content
     New {
         /// Title of the content
-        #[arg(short, long)]
+        #[arg(short = 'T', long)]
         title: String,
 
         /// Topic to create the content in
@@ -71,11 +71,11 @@ pub enum ContentCommands {
         topic: String,
 
         /// Tagline or subtitle for the content
-        #[arg(short, long)]
+        #[arg(short = 'g', long)]
         tagline: Option<String>,
 
         /// Tags for the content (comma-separated)
-        #[arg(short, long)]
+        #[arg(short = 'a', long)]
         tags: Option<String>,
 
         /// Mark as draft
@@ -83,7 +83,7 @@ pub enum ContentCommands {
         draft: bool,
 
         /// Template to use
-        #[arg(short, long)]
+        #[arg(short = 'm', long)]
         template: Option<String>,
 
         /// Open editor after creation
@@ -230,7 +230,7 @@ pub enum TopicCommands {
         description: Option<String>,
 
         /// Directory to store the topic content
-        #[arg(short, long)]
+        #[arg(short = 'r', long)]
         directory: Option<String>,
     },
 

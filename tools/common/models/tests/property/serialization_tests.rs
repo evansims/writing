@@ -3,7 +3,7 @@
 //! This file contains property-based tests for serialization and deserialization
 //! of models in the common models library.
 
-use common_models::*;
+use crate::*;
 use proptest::prelude::*;
 use serde_json;
 
@@ -26,7 +26,10 @@ mod strategies {
             )
     }
 
-    pub fn option_of<T: Strategy>(strat: T) -> impl Strategy<Value = Option<T::Value>> {
+    pub fn option_of<T: Strategy>(strat: T) -> impl Strategy<Value = Option<T::Value>>
+    where
+        T::Value: Clone,
+    {
         prop_oneof![
             Just(None),
             strat.prop_map(Some)
@@ -74,7 +77,7 @@ mod strategies {
             option_of(valid_string()),
             option_of(proptest::collection::vec(valid_string(), 0..10)),
             option_of(proptest::collection::vec(valid_string(), 0..5)),
-            option_of(proptest::prelude::bool::ANY),
+            option_of(proptest::bool::ANY),
             option_of(valid_string())
         ).prop_map(|(
             title,

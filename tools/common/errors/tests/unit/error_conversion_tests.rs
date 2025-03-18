@@ -3,8 +3,8 @@
 //! This file contains tests for converting between error types.
 
 use std::io;
-use std::path::Path;
-use crate::{WritingError, ResultExt};
+use std::path::{Path, PathBuf};
+use common_errors::{WritingError, ResultExt};
 
 #[test]
 fn test_from_io_error() {

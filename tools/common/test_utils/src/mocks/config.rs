@@ -5,10 +5,11 @@
 use std::path::{Path, PathBuf};
 use mockall::mock;
 use common_errors::Result;
-use common_config::Config;
+use common_models::{Config, TopicConfig};
+use mockall::predicate::*;
+use std::collections::HashMap;
 
 /// The ConfigLoader trait defines operations for loading configuration
-#[mockall::automock]
 pub trait ConfigLoader {
     /// Load configuration from the default location
     fn load_config(&self) -> Result<Config>;
@@ -24,6 +25,18 @@ pub trait ConfigLoader {
 
     /// Get the default config path
     fn get_default_config_path(&self) -> PathBuf;
+}
+
+/// Mock implementation of ConfigLoader for testing
+mock! {
+    pub ConfigLoader {}
+    impl ConfigLoader for ConfigLoader {
+        fn load_config(&self) -> Result<Config>;
+        fn load_config_from(&self, path: &Path) -> Result<Config>;
+        fn save_config(&self, config: &Config) -> Result<()>;
+        fn save_config_to(&self, config: &Config, path: &Path) -> Result<()>;
+        fn get_default_config_path(&self) -> PathBuf;
+    }
 }
 
 /// A test implementation of ConfigLoader that operates in memory
@@ -75,9 +88,9 @@ impl ConfigLoader for InMemoryConfigLoader {
     fn load_config_from(&self, path: &Path) -> Result<Config> {
         match self.configs.get(&path.to_path_buf()) {
             Some(config) => Ok(config.clone()),
-            None => Err(common_errors::WritingError::not_found(&format!(
-                "Config not found at path: {}", path.display()
-            ))),
+            None => Err(common_errors::WritingError::config_error(
+                format!("Config not found at path: {}", path.display())
+            )),
         }
     }
 
@@ -114,13 +127,57 @@ pub fn create_test_config_loader() -> InMemoryConfigLoader {
     let mut config = Config::default();
 
     // Set up some test configuration values
-    config.content_directory = PathBuf::from("content");
-    config.templates_directory = PathBuf::from("templates");
-    config.topics = vec![
-        "blog".to_string(),
-        "tutorials".to_string(),
-        "guides".to_string(),
-    ];
+    // Add basic config values that match the fields in the Config struct
+    config.title = "Test Site".to_string();
+    config.email = "test@example.com".to_string();
+    config.url = "https://example.com".to_string();
+
+    // Add topic configuration to content
+    let mut topics = std::collections::HashMap::new();
+    topics.insert("blog".to_string(), TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        description: "Blog posts".to_string(),
+    });
+    topics.insert("tutorials".to_string(), TopicConfig {
+        name: "Tutorials".to_string(),
+        directory: "tutorials".to_string(),
+        description: "Tutorial articles".to_string(),
+    });
+
+    config.content.topics = topics;
 
     InMemoryConfigLoader::with_config(config)
+}
+
+/// Set up a default test configuration
+fn default_test_config() -> Config {
+    let mut config = Config::default();
+
+    // Set basic configuration values
+    config.title = "Test Site".to_string();
+    config.email = "test@example.com".to_string();
+    config.url = "https://example.com".to_string();
+
+    // Create topics
+    let mut topics = HashMap::new();
+
+    // Blog topic
+    topics.insert("blog".to_string(), TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        description: "Blog posts".to_string(),
+    });
+
+    // Tutorials topic
+    topics.insert("tutorials".to_string(), TopicConfig {
+        name: "Tutorials".to_string(),
+        directory: "tutorials".to_string(),
+        description: "Tutorial articles".to_string(),
+    });
+
+    // Set topics in content config
+    config.content.topics = topics;
+
+    config
 }

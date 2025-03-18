@@ -2,7 +2,7 @@
 //!
 //! This module contains tests for the error reporting system.
 
-use crate::{WritingError, ErrorReporter, ErrorDisplayStyle};
+use common_errors::{WritingError, ErrorReporter, ErrorDisplayStyle, get_default_reporter};
 
 #[test]
 fn test_simple_error_formatting() {
@@ -74,7 +74,7 @@ fn test_different_error_types_categorization() {
 
 #[test]
 fn test_default_reporter() {
-    let reporter = crate::get_default_reporter();
+    let reporter = get_default_reporter();
     assert!(reporter.show_suggestions);
     assert!(reporter.show_error_codes);
     assert!(!reporter.show_debug);

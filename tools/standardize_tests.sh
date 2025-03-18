@@ -95,9 +95,15 @@ EOF
       # First make a backup
       cp "$TOOL/src/lib.rs" "$TOOL/src/lib.rs.bak"
 
-      # Remove the test module using sed
-      sed -i.bak '/#\[cfg(test\)]/,/^}$/d' "$TOOL/src/lib.rs"
-      rm "$TOOL/src/lib.rs.bak"
+      # Remove the test module using sed with macOS compatibility
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS version
+        sed -i '' '/\#\[cfg(test)\]/,/^}/d' "$TOOL/src/lib.rs"
+      else
+        # Linux version
+        sed -i '/#\[cfg(test\)]/,/^}$/d' "$TOOL/src/lib.rs"
+      fi
+      rm -f "$TOOL/src/lib.rs.bak"
     fi
   fi
 done

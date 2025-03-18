@@ -2,7 +2,7 @@
 //!
 //! This module contains tests for the error category system.
 
-use crate::{WritingError, ErrorCategory, ResultExt};
+use common_errors::{WritingError, ErrorCategory, ResultExt};
 
 #[test]
 fn test_error_category_from_error() {

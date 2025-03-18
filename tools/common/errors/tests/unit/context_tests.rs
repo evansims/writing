@@ -4,7 +4,7 @@
 
 use std::io;
 use std::path::Path;
-use crate::{WritingError, Result, ResultExt, ErrorContext, IoResultExt};
+use common_errors::{WritingError, Result, ResultExt, ErrorContext, IoResultExt};
 
 #[test]
 fn test_with_context() {

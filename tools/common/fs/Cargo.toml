@@ -22,6 +22,7 @@ fs_extra = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+proptest.workspace = true
 common-test-utils = { path = "../test_utils" }
 
 [[test]]
@@ -31,3 +32,11 @@ path = "tests/file_operations_tests.rs"
 [[test]]
 name = "directory_operations_tests"
 path = "tests/directory_operations_tests.rs"
+
+[[test]]
+name = "file_tests"
+path = "tests/unit/file_tests.rs"
+
+[[test]]
+name = "directory_tests"
+path = "tests/unit/directory_tests.rs"

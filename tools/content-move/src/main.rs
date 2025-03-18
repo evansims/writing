@@ -20,13 +20,13 @@ struct Args {
     topic: Option<String>,
 
     /// New topic (optional, will move content to new topic)
-    #[arg(short, long)]
+    #[arg(short = 'o', long)]
     new_topic: Option<String>,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    
+
     // Create move options
     let options = MoveOptions {
         slug: args.slug.clone(),
@@ -35,7 +35,7 @@ fn main() -> Result<()> {
         new_topic: args.new_topic.clone(),
         update_frontmatter: true,
     };
-    
+
     // If no slug is provided, show a selection menu
     if options.slug.is_none() {
         // List all content and let user select
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
             .interact()?;
 
         let (topic, slug, _) = &content_list[selection];
-        
+
         // Create a new options struct with the selected content
         let mut new_options = MoveOptions {
             slug: Some(slug.clone()),
@@ -64,15 +64,15 @@ fn main() -> Result<()> {
             new_topic: None,
             update_frontmatter: true,
         };
-        
+
         // Get new slug
         let new_slug: String = Input::new()
             .with_prompt("Enter new content slug")
             .default(slug.clone())
             .interact_text()?;
-        
+
         new_options.new_slug = Some(new_slug);
-        
+
         // Get new topic if desired
         if Confirm::new().with_prompt("Move to a different topic?").interact()? {
             let content_list = list_all_content()?;
@@ -81,38 +81,38 @@ fn main() -> Result<()> {
                 .collect::<std::collections::HashSet<String>>()
                 .into_iter()
                 .collect();
-            
+
             let topic_selection = Select::new()
                 .with_prompt("Select new topic")
                 .items(&unique_topics)
                 .default(unique_topics.iter().position(|t| t == topic).unwrap_or(0))
                 .interact()?;
-            
+
             new_options.new_topic = Some(unique_topics[topic_selection].clone());
         }
-        
+
         // Confirm the move
         let confirm_message = match (&new_options.topic, &new_options.new_topic) {
             (Some(current_topic), Some(new_topic)) => {
-                format!("Move content from '{}/{}' to '{}/{}'?", 
-                    current_topic, slug, 
+                format!("Move content from '{}/{}' to '{}/{}'?",
+                    current_topic, slug,
                     new_topic, new_options.new_slug.as_ref().unwrap()
                 )
             },
             (Some(current_topic), None) => {
-                format!("Rename content from '{}/{}' to '{}/{}'?", 
-                    current_topic, slug, 
+                format!("Rename content from '{}/{}' to '{}/{}'?",
+                    current_topic, slug,
                     current_topic, new_options.new_slug.as_ref().unwrap()
                 )
             },
             _ => "Move content?".to_string(),
         };
-        
+
         if !Confirm::new().with_prompt(confirm_message).interact()? {
             println!("Operation cancelled");
             return Ok(());
         }
-        
+
         // Move the content
         match move_content(&new_options) {
             Ok(()) => {
@@ -128,7 +128,7 @@ fn main() -> Result<()> {
         }
     } else {
         // If slug is provided through command line
-        
+
         // Get new slug if not provided
         let options = if options.new_slug.is_none() {
             let mut updated_options = options.clone();
@@ -140,20 +140,20 @@ fn main() -> Result<()> {
         } else {
             options
         };
-        
+
         // If source and target are the same, there's nothing to do
         if options.slug == options.new_slug && options.topic == options.new_topic {
             println!("No changes requested, nothing to do");
             return Ok(());
         }
-        
+
         // Confirm the move
         let confirm_message = format!("Move content? (details will be shown after successful move)");
         if !Confirm::new().with_prompt(confirm_message).interact()? {
             println!("Operation cancelled");
             return Ok(());
         }
-        
+
         // Move the content
         match move_content(&options) {
             Ok(()) => {
@@ -168,4 +168,4 @@ fn main() -> Result<()> {
             }
         }
     }
-} 
+}

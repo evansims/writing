@@ -70,14 +70,39 @@ mod tests;
 ///     },
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Config {
+    /// The title of the site
+    pub title: String,
+    /// The email address for the site
+    pub email: String,
+    /// The URL of the site
+    pub url: String,
+    /// The image for the site
+    pub image: String,
+    /// The default topic for the site
+    pub default_topic: Option<String>,
     /// Content configuration settings
     pub content: ContentConfig,
     /// Image configuration settings
     pub images: ImageConfig,
     /// Publication configuration settings
     pub publication: PublicationConfig,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            title: "My Writing Site".to_string(),
+            email: "user@example.com".to_string(),
+            url: "https://example.com".to_string(),
+            image: "https://example.com/image.jpg".to_string(),
+            default_topic: Some("blog".to_string()),
+            content: ContentConfig::default(),
+            images: ImageConfig::default(),
+            publication: PublicationConfig::default(),
+        }
+    }
 }
 
 /// Configuration structure for content settings
@@ -107,7 +132,7 @@ pub struct Config {
 ///     tags: None,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContentConfig {
     /// Base directory for content files
     pub base_dir: String,
@@ -115,6 +140,26 @@ pub struct ContentConfig {
     pub topics: HashMap<String, TopicConfig>,
     /// Optional map of tag categories to tags
     pub tags: Option<HashMap<String, Vec<String>>>,
+}
+
+impl Default for ContentConfig {
+    fn default() -> Self {
+        let mut topics = HashMap::new();
+        topics.insert(
+            "blog".to_string(),
+            TopicConfig {
+                name: "Blog".to_string(),
+                description: "Blog posts".to_string(),
+                directory: "blog".to_string(),
+            },
+        );
+
+        Self {
+            base_dir: "content".to_string(),
+            topics,
+            tags: None,
+        }
+    }
 }
 
 /// Configuration structure for a topic
@@ -133,7 +178,7 @@ pub struct ContentConfig {
 ///     directory: "blog".to_string(),
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TopicConfig {
     /// Display name of the topic
     pub name: String,
@@ -172,7 +217,7 @@ pub struct TopicConfig {
 ///     quality: None,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageConfig {
     /// List of supported image formats
     pub formats: Vec<String>,
@@ -184,6 +229,44 @@ pub struct ImageConfig {
     pub naming: Option<ImageNaming>,
     /// Optional quality settings for different formats and sizes
     pub quality: Option<HashMap<String, HashMap<String, u32>>>,
+}
+
+impl Default for ImageConfig {
+    fn default() -> Self {
+        let mut sizes = HashMap::new();
+        sizes.insert(
+            "large".to_string(),
+            ImageSize {
+                width: 1200,
+                height: 800,
+                description: "Large size".to_string(),
+            },
+        );
+        sizes.insert(
+            "medium".to_string(),
+            ImageSize {
+                width: 800,
+                height: 600,
+                description: "Medium size".to_string(),
+            },
+        );
+        sizes.insert(
+            "small".to_string(),
+            ImageSize {
+                width: 400,
+                height: 300,
+                description: "Small size".to_string(),
+            },
+        );
+
+        Self {
+            formats: vec!["jpg".to_string(), "png".to_string(), "webp".to_string()],
+            format_descriptions: None,
+            sizes,
+            naming: None,
+            quality: None,
+        }
+    }
 }
 
 /// Configuration structure for image size
@@ -201,7 +284,7 @@ pub struct ImageConfig {
 ///     description: "Featured image".to_string(),
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageSize {
     /// Width of the image in pixels
     pub width: u32,
@@ -226,7 +309,7 @@ pub struct ImageSize {
 ///     examples: vec!["post-small.jpg".to_string()],
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageNaming {
     /// Pattern for image filenames
     pub pattern: String,
@@ -249,7 +332,7 @@ pub struct ImageNaming {
 ///     site_url: None,
 /// };
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PublicationConfig {
     /// Author name
     pub author: String,
@@ -258,6 +341,16 @@ pub struct PublicationConfig {
     /// Optional site URL
     #[serde(rename = "site")]
     pub site_url: Option<String>,
+}
+
+impl Default for PublicationConfig {
+    fn default() -> Self {
+        Self {
+            author: "Author Name".to_string(),
+            copyright: "© 2023, All rights reserved".to_string(),
+            site_url: Some("https://example.com".to_string()),
+        }
+    }
 }
 
 /// Frontmatter metadata for articles

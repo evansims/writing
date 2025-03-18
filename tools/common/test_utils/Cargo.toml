@@ -8,7 +8,7 @@ common-models = { path = "../models" }
 common-errors = { path = "../errors" }
 common-config = { path = "../config" }
 common-fs = { path = "../fs" }
-common-traits = { path = "../traits" }
+common_traits = { path = "../traits" }
 tempfile.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true

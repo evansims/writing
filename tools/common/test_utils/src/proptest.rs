@@ -23,7 +23,7 @@
 //! }
 //! ```
 
-use common_models::{Frontmatter, Article, TopicConfig, ContentMeta, Config};
+use common_models::{Frontmatter, Article, TopicConfig, Config};
 use proptest::prelude::*;
 use proptest::strategy::Just;
 use std::path::PathBuf;
@@ -227,7 +227,7 @@ pub fn complex_article_strategy() -> impl Strategy<Value = Article> {
             path: path.to_string_lossy().to_string(),
             slug,
             reading_time: reading_time.map(|rt| rt % 60), // Keep within reasonable bounds
-            word_count,
+            word_count: word_count.map(|wc| wc as usize), // Convert from u32 to usize
             topic,
         };
 
@@ -240,57 +240,20 @@ pub fn complex_article_strategy() -> impl Strategy<Value = Article> {
     })
 }
 
-/// Generate a valid content metadata strategy
-pub fn valid_content_meta_strategy() -> impl Strategy<Value = ContentMeta> {
-    (
-        valid_slug_strategy(),
-        valid_title_strategy(),
-        proptest::option::of(valid_title_strategy()),
-        prop::collection::vec(valid_tag_strategy(), 0..5),
-        valid_topic_key_strategy(),
-        valid_date_strategy(),
-        proptest::option::of(valid_date_strategy()),
-        prop::bool::ANY,
-    ).prop_map(|(slug, title, tagline, tags, topic, published_at, updated_at, is_draft)| {
-        ContentMeta {
-            slug,
-            title,
-            tagline,
-            tags,
-            topic,
-            published_at,
-            updated_at,
-            is_draft,
-        }
-    })
-}
-
-/// Generate a content collection strategy
-pub fn content_collection_strategy(min: usize, max: usize) -> impl Strategy<Value = Vec<ContentMeta>> {
-    proptest::collection::vec(valid_content_meta_strategy(), min..max)
-}
-
 /// Generate a valid Configuration strategy
 pub fn valid_config_strategy() -> impl Strategy<Value = Config> {
-    (
-        valid_title_strategy(),
-        prop::string::string_regex("[a-zA-Z0-9.]+@[a-zA-Z0-9.]+").unwrap(),
-        proptest::option::of(prop::string::string_regex("https?://[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?").unwrap()),
-        proptest::option::of(prop::string::string_regex("https?://[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?").unwrap()),
-        proptest::option::of(valid_slug_strategy()),
-    ).prop_map(|(title, email, url, image, default_topic)| {
+    let default_topic = valid_topic_key_strategy();
+    let topics = topic_config_map_strategy(1, 5);
+
+    (default_topic, topics).prop_map(|(default_topic, topics)| {
         let mut config = Config::default();
-        config.title = title;
-        config.email = email;
-        if let Some(url) = url {
-            config.url = url;
-        }
-        if let Some(image) = image {
-            config.image = image;
-        }
-        if let Some(default_topic) = default_topic {
-            config.default_topic = default_topic;
-        }
+        config.title = "Test Site".to_string();
+        config.email = "test@example.com".to_string();
+        config.url = "https://example.com".to_string();
+        config.image = "logo.png".to_string();
+        config.default_topic = Some(default_topic);
+        config.content.topics = topics;
+        config.content.base_dir = "content".to_string();
         config
     })
 }
@@ -347,7 +310,11 @@ pub fn test_scenario_strategy() -> impl Strategy<Value = TestScenario> {
     })
 }
 
-/// A complete test scenario with config, topics, and articles
+/// Test scenario with a complete test environment
+///
+/// This struct contains a complete test environment with a configuration,
+/// topics, and articles.
+#[derive(Debug)]
 pub struct TestScenario {
     pub config: Config,
     pub topics: HashMap<String, TopicConfig>,

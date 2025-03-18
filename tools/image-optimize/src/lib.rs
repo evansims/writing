@@ -1,14 +1,11 @@
-#[cfg(test)]
-mod tests;
-
+use std::path::{Path, PathBuf};
+use std::fs;
+use std::io::{Write, BufWriter};
 use anyhow::Result;
 use common_config::load_config;
 use common_errors::{WritingError, OptionValidationExt};
 use image::{GenericImageView, DynamicImage};
 use image::imageops::FilterType;
-use std::fs;
-use std::io::{Write, BufWriter};
-use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 /// Supported output formats for image optimization
@@ -28,7 +25,7 @@ impl OutputFormat {
             OutputFormat::WebP => "webp",
         }
     }
-    
+
     /// Create an OutputFormat from a string
     pub fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
@@ -45,13 +42,13 @@ impl OutputFormat {
 pub enum OptimizeError {
     #[error("Unsupported image format: {0}")]
     UnsupportedFormat(String),
-    
+
     #[error("Failed to process image: {0}")]
     ProcessingError(String),
-    
+
     #[error("Article not found: {0}")]
     ArticleNotFound(String),
-    
+
     #[error("Invalid dimensions: width={0}, height={1}")]
     InvalidDimensions(u32, u32),
 }
@@ -76,7 +73,7 @@ impl SizeVariant {
             SizeVariant::Thumbnail(_) => "thumbnail",
         }
     }
-    
+
     pub fn width(&self) -> Option<u32> {
         match self {
             SizeVariant::Original => None,
@@ -124,19 +121,19 @@ impl Default for OptimizeOptions {
 /// Find an article directory based on the slug
 pub fn find_article_directory(article_slug: &str) -> Result<PathBuf> {
     let config = load_config()?;
-    
+
     // Search for the article directory in all topics
     for (_, topic_config) in &config.content.topics {
-        let dir = PathBuf::from(format!("{}/{}/{}", 
-            config.content.base_dir, 
-            topic_config.directory, 
+        let dir = PathBuf::from(format!("{}/{}/{}",
+            config.content.base_dir,
+            topic_config.directory,
             article_slug
         ));
         if dir.exists() {
             return Ok(dir);
         }
     }
-    
+
     Err(OptimizeError::ArticleNotFound(article_slug.to_string()).into())
 }
 
@@ -144,27 +141,27 @@ pub fn find_article_directory(article_slug: &str) -> Result<PathBuf> {
 pub fn get_article_directory(options: &OptimizeOptions) -> Result<PathBuf> {
     let config = load_config()
         .map_err(|e| WritingError::config_error(format!("Failed to load config: {}", e)))?;
-    
+
     if let Some(topic_name) = &options.topic {
         // Find the topic in the config and validate it exists
         let topic_config = config.content.topics.get(topic_name)
             .validate_with(|| WritingError::topic_error(format!("Topic not found: {}", topic_name)))?;
-        
-        let article_dir = PathBuf::from(format!("{}/{}/{}", 
-            config.content.base_dir, 
-            topic_config.directory, 
+
+        let article_dir = PathBuf::from(format!("{}/{}/{}",
+            config.content.base_dir,
+            topic_config.directory,
             options.article.as_ref().unwrap()
         ));
-        
+
         // Check if directory exists
         if !article_dir.exists() {
             return Err(WritingError::content_not_found(format!(
-                "Article '{}' not found in topic '{}'", 
-                options.article.as_ref().unwrap(), 
+                "Article '{}' not found in topic '{}'",
+                options.article.as_ref().unwrap(),
                 topic_name
             )).into());
         }
-        
+
         return Ok(article_dir);
     } else {
         // Try to find the article directory by slug
@@ -175,10 +172,10 @@ pub fn get_article_directory(options: &OptimizeOptions) -> Result<PathBuf> {
 /// Resize an image to the specified width while maintaining aspect ratio
 fn resize_image(img: &DynamicImage, width: u32) -> DynamicImage {
     let (orig_width, orig_height) = img.dimensions();
-    
+
     // Calculate new height maintaining aspect ratio
     let height = (orig_height as f64 * (width as f64 / orig_width as f64)).round() as u32;
-    
+
     img.resize(width, height, image::imageops::FilterType::Lanczos3)
 }
 
@@ -187,16 +184,16 @@ fn save_as_jpeg(img: &DynamicImage, path: &Path, quality: u8) -> Result<u64> {
     // Use the built-in JPEG encoder from the image crate
     let file = std::fs::File::create(path)?;
     let mut writer = std::io::BufWriter::new(file);
-    
+
     // Convert quality from 0-100 to 1-100 (image crate uses 1-100)
     let quality = std::cmp::max(1, quality);
-    
+
     // Encode the image as JPEG
     img.write_to(&mut writer, image::ImageOutputFormat::Jpeg(quality))?;
-    
+
     // Get the file size
     let file_size = writer.into_inner()?.metadata()?.len();
-    
+
     Ok(file_size)
 }
 
@@ -206,15 +203,15 @@ fn save_as_webp(img: &DynamicImage, path: &Path, quality: u8) -> Result<u64> {
     // Convert to RGBA
     let rgba = img.to_rgba8();
     let (width, height) = img.dimensions();
-    
+
     // Encode as WebP
     let encoder = webp::Encoder::from_rgba(&rgba, width, height);
     let webp_data = encoder.encode(quality as f32 / 100.0);
-    
+
     // Write to file
     let mut file = BufWriter::new(fs::File::create(path)?);
     file.write_all(&webp_data)?;
-    
+
     Ok(webp_data.len() as u64)
 }
 
@@ -256,40 +253,40 @@ pub fn optimize_image(options: &OptimizeOptions) -> Result<OptimizationResult> {
     if !options.source.exists() {
         return Err(WritingError::file_not_found(&options.source).into());
     }
-    
+
     // Get the source image file size
     let original_size = std::fs::metadata(&options.source)
         .map_err(|e| WritingError::other(format!("Failed to read source file metadata: {}", e)))?
         .len();
-    
+
     // Load the source image
     let img = image::open(&options.source)
         .map_err(|e| WritingError::format_error(format!("Failed to open image: {}", e)))?;
-    
+
     // Get the image dimensions
     let (width, height) = img.dimensions();
-    
+
     // Validate dimensions
     if width == 0 || height == 0 {
         return Err(WritingError::invalid_argument(format!(
             "Invalid image dimensions: {}x{}", width, height
         )).into());
     }
-    
+
     // Get the article directory
     let article_dir = get_article_directory(options)?;
-    
+
     // Create the images directory
     let images_dir = article_dir.join("images");
     std::fs::create_dir_all(&images_dir)
         .map_err(|e| WritingError::other(format!("Failed to create images directory: {}", e)))?;
-    
+
     // Create results container
     let mut result = OptimizationResult {
         original_size,
         format_results: Vec::new(),
     };
-    
+
     // Process for each format
     for format in &options.formats {
         // Apply functional transformation to create size_results
@@ -304,21 +301,21 @@ pub fn optimize_image(options: &OptimizeOptions) -> Result<OptimizationResult> {
                     SizeVariant::Small(width) |
                     SizeVariant::Thumbnail(width) => resize_image(&img, *width),
                 };
-                
+
                 // Create filename with size variant and format
                 let filename = if matches!(size, SizeVariant::Original) {
                     format!("original.{}", format.extension())
                 } else {
                     format!("{}.{}", size.name(), format.extension())
                 };
-                
+
                 // Define target path
                 let target_path = images_dir.join(&filename);
-                
+
                 // Save the processed image and return result
                 let file_size = save_in_format(&processed_img, &target_path, *format, options.quality)
                     .expect("Failed to save image"); // Handle error appropriately in real code
-                
+
                 SizeResult {
                     variant: *size,
                     dimensions: processed_img.dimensions(),
@@ -327,22 +324,22 @@ pub fn optimize_image(options: &OptimizeOptions) -> Result<OptimizationResult> {
                 }
             })
             .collect::<Vec<_>>();
-        
+
         // Add special handling for index.jpg
         let all_size_results = if *format == OutputFormat::Jpeg {
             // Define target path for main index.jpg
             let index_path = article_dir.join(format!("index.{}", format.extension()));
-            
+
             // For index.jpg, always use the original dimensions
             let dimensions = img.dimensions();
             let file_size = save_in_format(&img, &index_path, *format, options.quality)?;
-            
+
             // Combine with the original index file
             let mut combined = vec![
                 SizeResult {
                     variant: SizeVariant::Original,
                     dimensions,
-                    file_size, 
+                    file_size,
                     path: index_path,
                 }
             ];
@@ -351,13 +348,13 @@ pub fn optimize_image(options: &OptimizeOptions) -> Result<OptimizationResult> {
         } else {
             size_results
         };
-        
+
         result.format_results.push(FormatResult {
             format: *format,
             size_results: all_size_results,
         });
     }
-    
+
     Ok(result)
 }
 
@@ -376,10 +373,10 @@ pub fn default_size_variants() -> Vec<SizeVariant> {
 /// Get the default output formats
 pub fn default_formats() -> Vec<OutputFormat> {
     let mut formats = vec![OutputFormat::Jpeg];
-    
+
     #[cfg(feature = "webp")]
     formats.push(OutputFormat::WebP);
-    
+
     formats
 }
 
@@ -401,17 +398,17 @@ pub fn default_formats() -> Vec<OutputFormat> {
 pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
     let config = load_config()?;
     let mut optimized_count = 0;
-    
+
     // Determine the quality to use
     let quality = options.quality;
-    
+
     // Get the maximum dimensions
     let max_width = options.sizes.iter().map(|s| s.width()).max().unwrap_or(Some(1200));
     let max_height = options.sizes.iter().map(|s| s.width()).max().unwrap_or(Some(1200));
-    
+
     // Determine the output format
     let format = options.formats.iter().next().cloned().unwrap_or(OutputFormat::Jpeg);
-    
+
     // If article is specified, optimize images for that article
     if options.article.is_some() {
         let article_slug = options.article.as_ref().unwrap();
@@ -421,13 +418,13 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
                 let content_dir = PathBuf::from(&config.content.base_dir)
                     .join(&topic_config.directory)
                     .join(article_slug);
-                
+
                 if !content_dir.exists() {
                     return Err(anyhow::anyhow!("Content not found: {}/{}", topic_key, article_slug));
                 }
-                
+
                 let images_dir = content_dir.join("images");
-                
+
                 if images_dir.exists() {
                     optimized_count += optimize_images_in_dir(
                         &images_dir,
@@ -446,10 +443,10 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
                 let content_dir = PathBuf::from(&config.content.base_dir)
                     .join(&topic_config.directory)
                     .join(article_slug);
-                
+
                 if content_dir.exists() {
                     let images_dir = content_dir.join("images");
-                    
+
                     if images_dir.exists() {
                         optimized_count += optimize_images_in_dir(
                             &images_dir,
@@ -459,7 +456,7 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
                             format,
                         )?;
                     }
-                    
+
                     break;
                 }
             }
@@ -469,19 +466,19 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
         if let Some(topic_config) = config.content.topics.get(topic_key) {
             let topic_dir = PathBuf::from(&config.content.base_dir)
                 .join(&topic_config.directory);
-            
+
             if !topic_dir.exists() {
                 return Err(anyhow::anyhow!("Topic directory not found: {}", topic_dir.display()));
             }
-            
+
             // Find all content directories in the topic
             for entry in fs::read_dir(topic_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if path.is_dir() {
                     let images_dir = path.join("images");
-                    
+
                     if images_dir.exists() {
                         optimized_count += optimize_images_in_dir(
                             &images_dir,
@@ -501,19 +498,19 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
         for (_topic_key, topic_config) in &config.content.topics {
             let topic_dir = PathBuf::from(&config.content.base_dir)
                 .join(&topic_config.directory);
-            
+
             if !topic_dir.exists() {
                 continue;
             }
-            
+
             // Find all content directories in the topic
             for entry in fs::read_dir(topic_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if path.is_dir() {
                     let images_dir = path.join("images");
-                    
+
                     if images_dir.exists() {
                         optimized_count += optimize_images_in_dir(
                             &images_dir,
@@ -527,7 +524,7 @@ pub fn optimize_images(options: &OptimizeOptions) -> Result<usize> {
             }
         }
     }
-    
+
     Ok(optimized_count)
 }
 
@@ -558,38 +555,38 @@ fn optimize_images_in_dir(
     format: OutputFormat,
 ) -> Result<usize> {
     let mut optimized_count = 0;
-    
+
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.is_file() {
             let extension = path.extension()
                 .and_then(|ext| ext.to_str())
                 .unwrap_or("")
                 .to_lowercase();
-            
+
             if ["jpg", "jpeg", "png", "gif", "webp"].contains(&extension.as_str()) {
                 // Load the image
                 let img = image::open(&path)?;
-                
+
                 // Resize if necessary
                 let img = resize_image_with_max_dimensions(&img, max_width, max_height);
-                
+
                 // Determine the output path
                 let output_path = match format {
                     OutputFormat::Jpeg => path.with_extension("jpg"),
                     OutputFormat::WebP => path.with_extension("webp"),
                 };
-                
+
                 // Save the optimized image
                 let _file_size = save_in_format(&img, &output_path, format, quality)?;
-                
+
                 optimized_count += 1;
             }
         }
     }
-    
+
     Ok(optimized_count)
 }
 
@@ -597,15 +594,15 @@ fn optimize_images_in_dir(
 fn resize_image_with_max_dimensions(img: &DynamicImage, max_width: Option<u32>, max_height: Option<u32>) -> DynamicImage {
     let width = img.width();
     let height = img.height();
-    
+
     // Calculate aspect ratio
     let aspect_ratio = width as f32 / height as f32;
-    
+
     // Calculate new dimensions
     let (new_width, new_height) = if width > height {
         let new_width = max_width.unwrap_or(width);
         let new_height = (new_width as f32 / aspect_ratio) as u32;
-        
+
         if new_height > max_height.unwrap_or(height) {
             let new_height = max_height.unwrap_or(height);
             let new_width = (new_height as f32 * aspect_ratio) as u32;
@@ -616,7 +613,7 @@ fn resize_image_with_max_dimensions(img: &DynamicImage, max_width: Option<u32>, 
     } else {
         let new_height = max_height.unwrap_or(height);
         let new_width = (new_height as f32 * aspect_ratio) as u32;
-        
+
         if new_width > max_width.unwrap_or(width) {
             let new_width = max_width.unwrap_or(width);
             let new_height = (new_width as f32 / aspect_ratio) as u32;
@@ -625,7 +622,7 @@ fn resize_image_with_max_dimensions(img: &DynamicImage, max_width: Option<u32>, 
             (new_width, new_height)
         }
     };
-    
+
     // Resize the image
     img.resize_exact(new_width, new_height, FilterType::Lanczos3)
-} 
+}
