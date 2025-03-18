@@ -14,9 +14,10 @@ use serde_json;
 use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
+use common_errors::{ResultExt, with_context, try_with_context, error};
+use common_macros::impl_default_options;
 
-/// Options for building content
-#[derive(Debug)]
+/// Options for the build process
 pub struct BuildOptions {
     pub output_dir: Option<String>,
     pub slug: Option<String>,
@@ -29,19 +30,17 @@ pub struct BuildOptions {
     pub verbose: bool,
 }
 
-impl Default for BuildOptions {
-    fn default() -> Self {
-        Self {
-            output_dir: None,
-            slug: None,
-            topic: None,
-            include_drafts: false,
-            skip_html: false,
-            skip_json: false,
-            skip_rss: false,
-            skip_sitemap: false,
-            verbose: false,
-        }
+impl_default_options! {
+    BuildOptions {
+        output_dir: Option<String> = None,
+        slug: Option<String> = None,
+        topic: Option<String> = None,
+        include_drafts: bool = false,
+        skip_html: bool = false,
+        skip_json: bool = false,
+        skip_rss: bool = false,
+        skip_sitemap: bool = false,
+        verbose: bool = false,
     }
 }
 
@@ -71,8 +70,11 @@ pub fn process_content(
     }
 
     // Read the file content
-    let content = fs::read_to_string(&file_path)
-        .with_context(|| format!("Failed to read content file: {:?}", file_path))?;
+    let content = try_with_context!(
+        fs::read_to_string(&file_path),
+        "Failed to read content file: {}",
+        file_path.display()
+    );
 
     // Extract frontmatter and markdown content
     let (frontmatter, md_content) = extract_frontmatter_and_content(&content)?;

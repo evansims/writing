@@ -1,0 +1,9 @@
+[package]
+name = "common-complexity"
+version = "0.1.0"
+edition = "2021"
+description = "Complexity metrics monitoring for the Writing project"
+authors = ["Evan Sims <hello@evansims.com>"]
+
+[dependencies]
+# No external dependencies required for the core functionality
