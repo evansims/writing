@@ -90,16 +90,16 @@ pub fn get_article_dir(config: &Config, article_slug: &str, topic_key: &str) -> 
             .map(|k| k.to_string())
             .collect();
         return Err(anyhow::anyhow!(
-            "Invalid topic: {}. Valid topics are: {}", 
-            topic_key, 
+            "Invalid topic: {}. Valid topics are: {}",
+            topic_key,
             valid_topics.join(", ")
         ));
     }
-    
+
     let topic_config = &config.content.topics[topic_key];
-    Ok(PathBuf::from(format!("{}/{}/{}", 
-        config.content.base_dir, 
-        topic_config.directory, 
+    Ok(PathBuf::from(format!("{}/{}/{}",
+        config.content.base_dir,
+        topic_config.directory,
         article_slug
     )))
 }
@@ -116,14 +116,14 @@ pub fn process_image(
     let article_output_dir = output_dir.join(topic_path).join(article_slug);
     fs::create_dir_all(&article_output_dir)
         .context(format!("Failed to create output directory: {:?}", article_output_dir))?;
-    
+
     // Open source image
     let img = image::open(source_path)
         .context(format!("Failed to open image: {:?}", source_path))?;
-    
+
     // Track all generated files
     let mut generated_files = Vec::new();
-    
+
     // Process each image size
     for (size_key, size_config) in &config.images.sizes {
         // Prepare the image according to its type
@@ -233,11 +233,11 @@ pub fn process_image(
                         .arg(&output_path)
                         .status()
                         .context("Failed to run convert command")?;
-                    
+
                     // Remove the temporary file
                     fs::remove_file(&temp_path)
                         .context(format!("Failed to remove temporary file: {:?}", temp_path))?;
-                    
+
                     if !status.success() {
                         return Err(anyhow::anyhow!("Failed to convert image to AVIF"));
                     }
@@ -247,11 +247,11 @@ pub fn process_image(
                     continue;
                 }
             }
-            
+
             generated_files.push(output_path.clone());
         }
     }
-    
+
     Ok(generated_files)
 }
 
@@ -313,10 +313,10 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
             // Find topic for article
             find_topic_for_article(&config, article_slug)?
         };
-        
+
         total_articles += 1;
         total_images += 1;
-        
+
         match build_article_images(&config, article_slug, &topic_key, options) {
             Ok(_) => {
                 processed_images += 1;
@@ -325,7 +325,7 @@ pub fn build_images(options: &BuildImagesOptions) -> Result<(usize, usize, usize
             Err(e) => {
                 skipped_articles += 1;
                 // Return the error with context about the skipped article
-                Err(anyhow::anyhow!("Failed to process article {}: {}. Stats: {} total, {} processed, {} skipped", 
+                Err(anyhow::anyhow!("Failed to process article {}: {}. Stats: {} total, {} processed, {} skipped",
                     article_slug, e, total_articles, processed_images, skipped_articles))
             }
         }

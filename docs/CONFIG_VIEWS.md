@@ -75,7 +75,7 @@ pub struct PublicationView {
 - **from_path**: Creates a new publication view from a specific path
 - **author**: Gets the author
 - **copyright**: Gets the copyright
-- **site**: Gets the site URL
+- **site_url**: Gets the site URL
 
 ## Usage Examples
 
@@ -190,7 +190,7 @@ impl ConfigView for CustomView {
     fn config(&self) -> &Config {
         &self.config
     }
-    
+
     fn from_config(config: Config) -> Self {
         CustomView { config }
     }
@@ -201,7 +201,7 @@ impl CustomView {
         let config = common_config::load_config()?;
         Ok(CustomView { config })
     }
-    
+
     fn custom_property(&self) -> &str {
         &self.config.custom.property
     }

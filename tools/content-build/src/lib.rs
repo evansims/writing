@@ -345,7 +345,7 @@ pub fn build_content(options: &BuildOptions) -> Result<()> {
                     let rendered = handlebars
                         .render("article", &article)
                         .with_context(|| format!("Failed to render HTML for {}", article.slug))?;
-                    
+
                     write_file(&html_path, &rendered)
                         .with_context(|| format!("Failed to write HTML file: {:?}", html_path))?;
                 }
@@ -396,7 +396,7 @@ pub fn generate_sitemap(
     config: &common_models::Config,
 ) -> Result<()> {
     let mut urls = Vec::new();
-    let site_url = config.publication.site.clone().unwrap_or_else(|| "https://example.com".to_string());
+    let site_url = config.publication.site_url.clone().unwrap_or_else(|| "https://example.com".to_string());
 
     // Add homepage
     urls.push(SitemapUrl {
@@ -470,13 +470,13 @@ pub fn generate_rss_feed(
     // Sort content items by date (newest first)
     let mut sorted_articles = articles.to_vec();
     sorted_articles.sort_by(|a, b| {
-        let a_date = a.frontmatter.published.as_ref().unwrap_or(&empty_string);
-        let b_date = b.frontmatter.published.as_ref().unwrap_or(&empty_string);
+        let a_date = a.frontmatter.published_at.as_ref().unwrap_or(&empty_string);
+        let b_date = b.frontmatter.published_at.as_ref().unwrap_or(&empty_string);
         b_date.cmp(a_date)
     });
 
     // Keep only non-draft items
-    sorted_articles.retain(|article| !article.frontmatter.draft.unwrap_or(false));
+    sorted_articles.retain(|article| !article.frontmatter.is_draft.unwrap_or(false));
 
     // Limit to 20 most recent items
     let items_to_include = sorted_articles.iter().take(20);
@@ -493,7 +493,7 @@ pub fn generate_rss_feed(
             .title(article.frontmatter.title.clone())
             .link(format!("{}/{}/{}", site_url, article.topic, article.slug))
             .description(clean_html.to_string())
-            .pub_date(article.frontmatter.published.clone().unwrap_or_default())
+            .pub_date(article.frontmatter.published_at.clone().unwrap_or_default())
             .build();
 
         rss_items.push(rss_item);

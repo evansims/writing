@@ -14,7 +14,7 @@ use std::collections::HashMap;
 /// Create a test configuration file with comprehensive content
 fn create_test_config_file() -> NamedTempFile {
     let file = NamedTempFile::new().unwrap();
-    
+
     let config_content = r#"
 publication:
   author: "Test Author"
@@ -156,44 +156,44 @@ fn create_test_config() -> Config {
 fn test_content_view_from_config() {
     // Create a test configuration
     let config = create_test_config();
-    
+
     // Create a content view from the configuration
     let view = ContentView::from_config(config);
-    
+
     // Test the ConfigView trait
     assert_eq!(view.config().publication.author, "Test Author");
-    
+
     // Test ContentView specific methods
     assert_eq!(view.base_dir(), "content");
     assert_eq!(view.topics().len(), 2);
-    
+
     let topic_keys = view.topic_keys();
     assert_eq!(topic_keys.len(), 2);
     assert!(topic_keys.contains(&"blog".to_string()));
     assert!(topic_keys.contains(&"notes".to_string()));
-    
+
     // Test topic retrieval
     let blog = view.topic("blog").unwrap();
     assert_eq!(blog.name, "Blog");
     assert_eq!(blog.description, "Blog posts");
     assert_eq!(blog.directory, "content/blog");
-    
+
     // Test nonexistent topic
     let nonexistent = view.topic("nonexistent");
     assert!(nonexistent.is_none());
-    
+
     // Test topic path retrieval
     let blog_path = view.get_topic_path("blog").unwrap();
     assert_eq!(blog_path, "content/blog");
-    
+
     // Test nonexistent topic path
     let nonexistent_path = view.get_topic_path("nonexistent");
     assert!(nonexistent_path.is_none());
-    
+
     // Test topic validation
     let result = view.validate_topic("blog");
     assert!(result.is_ok());
-    
+
     let result = view.validate_topic("nonexistent");
     assert!(result.is_err());
     match result.unwrap_err() {
@@ -207,17 +207,17 @@ fn test_content_view_from_path() {
     // Create a test configuration file
     let config_file = create_test_config_file();
     let config_path = config_file.path();
-    
+
     // Create a content view from the file path
     let result = ContentView::from_path(config_path);
     assert!(result.is_ok(), "Failed to create ContentView from path: {:?}", result.err());
-    
+
     let view = result.unwrap();
-    
+
     // Test the view
     assert_eq!(view.base_dir(), "content");
     assert_eq!(view.topics().len(), 2);
-    
+
     let topic_keys = view.topic_keys();
     assert_eq!(topic_keys.len(), 2);
     assert!(topic_keys.contains(&"blog".to_string()));
@@ -310,18 +310,18 @@ fn test_image_view_from_path() {
     // Create a test configuration file
     let config_file = create_test_config_file();
     let config_path = config_file.path();
-    
+
     // Create an image view from the file path
     let result = ImageView::from_path(config_path);
     assert!(result.is_ok(), "Failed to create ImageView from path: {:?}", result.err());
-    
+
     let view = result.unwrap();
-    
+
     // Test the view
     let formats = view.formats();
     assert_eq!(formats.len(), 3);
     assert!(formats.contains(&"jpg".to_string()));
-    
+
     // Test size retrieval
     let thumbnail = view.size("thumbnail").unwrap();
     assert_eq!(thumbnail.width, 200);
@@ -333,10 +333,10 @@ fn test_image_view_from_path() {
 fn test_content_view_base_dir_path() {
     // Create a test configuration
     let config = create_test_config();
-    
+
     // Create a content view from the configuration
     let view = ContentView::from_config(config);
-    
+
     // Test base_dir_path
     let path = view.base_dir_path();
     assert_eq!(path.to_str().unwrap(), "content");

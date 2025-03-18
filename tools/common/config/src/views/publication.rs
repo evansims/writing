@@ -138,6 +138,6 @@ publication:
 
         assert_eq!(view.author(), "Test Author");
         assert_eq!(view.copyright(), "© 2023");
-        assert_eq!(view.site(), Some("https://example.com"));
+        assert_eq!(view.site_url(), Some("https://example.com"));
     }
 }

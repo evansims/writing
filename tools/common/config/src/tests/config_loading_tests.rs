@@ -52,7 +52,7 @@ images:
       height: 900
       description: "Large image"
 "#;
-    
+
     fs::write(file.path(), config_content).unwrap();
     file
 }
@@ -60,7 +60,7 @@ images:
 /// Create a test configuration file with invalid YAML
 fn create_invalid_yaml_config_file() -> NamedTempFile {
     let file = NamedTempFile::new().unwrap();
-    
+
     let config_content = r#"
 publication:
   author: "Test Author"
@@ -121,7 +121,7 @@ images:
 /// Create a test configuration file with missing topics
 fn create_no_topics_config_file() -> NamedTempFile {
     let file = NamedTempFile::new().unwrap();
-    
+
     let config_content = r#"
 publication:
   author: "Test Author"
@@ -142,7 +142,7 @@ images:
       height: 320
       description: "Small image"
 "#;
-    
+
     fs::write(file.path(), config_content).unwrap();
     file
 }
@@ -227,18 +227,18 @@ fn test_load_nonexistent_config() {
 fn test_get_topics_functionality() {
     // Create a test config file
     let temp_file = create_valid_config_file();
-    
+
     // Mock the get_topics function
     let get_topics_mock = |config: Config| -> Result<Vec<TopicConfig>> {
         Ok(config.content.topics.values().cloned().collect())
     };
-    
+
     // Load the config
     let config = load_config_from_path(temp_file.path()).unwrap();
-    
+
     // Call the mock function
     let topics = get_topics_mock(config).unwrap();
-    
+
     // Verify the result
     assert_eq!(topics.len(), 2);
     assert!(topics.iter().any(|t| t.name == "Blog"));
@@ -249,18 +249,18 @@ fn test_get_topics_functionality() {
 fn test_get_topic_keys_functionality() {
     // Create a test config file
     let temp_file = create_valid_config_file();
-    
+
     // Mock the get_topic_keys function
     let get_topic_keys_mock = |config: Config| -> Result<Vec<String>> {
         Ok(config.content.topics.keys().cloned().collect())
     };
-    
+
     // Load the config
     let config = load_config_from_path(temp_file.path()).unwrap();
-    
+
     // Call the mock function
     let keys = get_topic_keys_mock(config).unwrap();
-    
+
     // Verify the result
     assert_eq!(keys.len(), 2);
     assert!(keys.contains(&"blog".to_string()));
@@ -336,21 +336,21 @@ fn test_validate_topic_functionality() {
 fn test_no_topics_config() {
     // Create a test config file with no topics
     let temp_file = create_no_topics_config_file();
-    
+
     // Load the config
     let config = load_config_from_path(temp_file.path()).unwrap();
-    
+
     // Verify topics section is empty
     assert_eq!(config.content.topics.len(), 0);
-    
+
     // Mock the get_topic_keys function
     let get_topic_keys_mock = |config: Config| -> Result<Vec<String>> {
         Ok(config.content.topics.keys().cloned().collect())
     };
-    
+
     // Call the mock function
     let keys = get_topic_keys_mock(config).unwrap();
-    
+
     // Verify the result
     assert_eq!(keys.len(), 0);
-} 
+}

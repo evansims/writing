@@ -123,7 +123,7 @@ pub fn format_date(date_str: &str) -> String {
 pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
     // Read configuration
     let config = common_config::load_config()?;
-    
+
     // Validate topic if provided
     if let Some(ref topic) = options.topic {
         if !config.content.topics.contains_key(topic) {
@@ -131,47 +131,47 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
                 .map(|k| k.to_string())
                 .collect();
             return Err(anyhow::anyhow!(
-                "Invalid topic: {}. Valid topics are: {}", 
-                topic, 
+                "Invalid topic: {}. Valid topics are: {}",
+                topic,
                 valid_topics.join(", ")
             ));
         }
     }
-    
+
     let mut all_stats: Vec<ContentStats> = Vec::new();
     let mut total_words = 0;
     let mut total_articles = 0;
     let mut total_drafts = 0;
     let mut tag_counts: HashMap<String, usize> = HashMap::new();
-    
+
     // Get the content base directory
     let content_base_dir = PathBuf::from(&config.content.base_dir);
-    
+
     // Process content for specific slug if provided
     if let Some(ref slug) = options.slug {
         // Find the article with the given slug in any topic
         let mut found = false;
-        
+
         for (topic_key, topic_config) in &config.content.topics {
             // Skip if a specific topic is requested and it's not this one
             if options.topic.is_some() && options.topic.as_ref() != Some(topic_key) {
                 continue;
             }
-            
+
             let topic_path = &topic_config.directory;
             let article_path = content_base_dir.join(topic_path).join(slug);
-            
+
             if article_path.exists() {
                 let index_path = article_path.join("index.mdx");
                 if index_path.exists() {
-                    process_article(&index_path, topic_key, slug, options, &mut all_stats, 
-                                   &mut total_words, &mut total_articles, &mut total_drafts, 
+                    process_article(&index_path, topic_key, slug, options, &mut all_stats,
+                                   &mut total_words, &mut total_articles, &mut total_drafts,
                                    &mut tag_counts)?;
                     found = true;
                 }
             }
         }
-        
+
         if !found {
             return Err(anyhow::anyhow!("No article found with slug: {}", slug));
         }
@@ -328,41 +328,41 @@ fn get_topic_stats(
         draft_count: 0,
         published_count: 0,
     };
-    
+
     // Get the topic directory
     let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
-    
+
     // Check if the topic directory exists
     if !topic_dir.exists() {
         return Ok(stats);
     }
-    
+
     // Find all article directories
     let article_dirs = std::fs::read_dir(&topic_dir)?
         .filter_map(Result::ok)
         .filter(|entry| entry.path().is_dir())
         .map(|entry| entry.path())
         .collect::<Vec<_>>();
-    
+
     // Process each article directory
     for article_dir in article_dirs {
         // Check if the article has an index.md file
         let index_file = article_dir.join("index.md");
-        
+
         if index_file.exists() {
             // Read the index file
             let content = common_fs::read_file(&index_file)?;
-            
+
             // Extract frontmatter
             if let Ok((frontmatter, content)) = common_markdown::extract_frontmatter_and_content(&content) {
                 // Count words
                 let word_count = content.split_whitespace().count();
-                
+
                 // Update statistics
                 stats.article_count += 1;
                 stats.word_count += word_count;
-                
-                if frontmatter.draft.unwrap_or(false) {
+
+                if frontmatter.is_draft.unwrap_or(false) {
                     stats.draft_count += 1;
                 } else {
                     stats.published_count += 1;
@@ -370,7 +370,7 @@ fn get_topic_stats(
             }
         }
     }
-    
+
     Ok(stats)
 }
 

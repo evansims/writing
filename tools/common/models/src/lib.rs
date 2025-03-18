@@ -1,19 +1,19 @@
 //! # Models Module
-//! 
+//!
 //! This module provides data structures for configuration and content.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - Configuration structures for the application
 //! - Content structures for articles and frontmatter
 //! - Serialization and deserialization support
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use common_models::{Config, ContentConfig, TopicConfig};
 //! use std::collections::HashMap;
-//! 
+//!
 //! // Create a simple configuration
 //! let mut topics = HashMap::new();
 //! topics.insert(
@@ -24,7 +24,7 @@
 //!         path: "blog".to_string(),
 //!     },
 //! );
-//! 
+//!
 //! let content_config = ContentConfig {
 //!     base_dir: "/content".to_string(),
 //!     topics,
@@ -193,17 +193,19 @@ pub struct ImageConfig {
 /// use common_models::ImageSize;
 ///
 /// let size = ImageSize {
-///     width: 800,
-///     height: 600,
-///     description: "Medium size image".to_string(),
+///     width_px: 1200,
+///     height_px: 630,
+///     description: "Featured image".to_string(),
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ImageSize {
     /// Width of the image in pixels
-    pub width: u32,
+    #[serde(rename = "width")]
+    pub width_px: u32,
     /// Height of the image in pixels
-    pub height: u32,
+    #[serde(rename = "height")]
+    pub height_px: u32,
     /// Description of the image size
     pub description: String,
 }
@@ -231,10 +233,9 @@ pub struct ImageNaming {
     pub examples: Vec<String>,
 }
 
-/// Configuration structure for publication
+/// Configuration structure for publication settings
 ///
-/// This struct contains configuration for publication settings,
-/// including author, copyright, and site URL.
+/// This struct contains the author, copyright, and site URL for the publication.
 ///
 /// # Example
 ///
@@ -299,23 +300,25 @@ pub struct Frontmatter {
     /// Optional list of topics
     pub topics: Option<Vec<String>>,
     /// Optional draft status
-    pub draft: Option<bool>,
+    #[serde(rename = "draft")]
+    pub is_draft: Option<bool>,
     /// Optional featured image path
-    pub featured_image: Option<String>,
+    #[serde(rename = "featured_image")]
+    pub featured_image_path: Option<String>,
 }
 
 impl Default for Frontmatter {
     fn default() -> Self {
         Self {
             title: "Untitled".to_string(),
-            published: None,
-            updated: None,
+            published_at: None,
+            updated_at: None,
             slug: None,
             tagline: None,
             tags: None,
             topics: None,
-            draft: Some(true),
-            featured_image: None,
+            is_draft: Some(true),
+            featured_image_path: None,
         }
     }
 }
