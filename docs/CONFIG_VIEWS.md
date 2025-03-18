@@ -87,26 +87,26 @@ use common_errors::Result;
 
 fn list_topics() -> Result<()> {
     let view = ContentView::new()?;
-    
+
     println!("Base directory: {}", view.base_dir());
-    
+
     for key in view.topic_keys() {
         let topic = view.topic(&key).unwrap();
         println!("Topic: {} - {}", topic.name, topic.description);
     }
-    
+
     Ok(())
 }
 
 fn get_topic_path(key: &str) -> Result<()> {
     let view = ContentView::new()?;
-    
+
     if let Some(path) = view.topic_full_path(key) {
         println!("Full path for {}: {}", key, path.display());
     } else {
         println!("Topic not found: {}", key);
     }
-    
+
     Ok(())
 }
 ```
@@ -119,25 +119,36 @@ use common_errors::Result;
 
 fn list_image_sizes() -> Result<()> {
     let view = ImageView::new()?;
-    
+
     println!("Supported formats: {:?}", view.formats());
-    
-    for key in view.size_keys() {
-        let size = view.size(&key).unwrap();
-        println!("Size {}: {}x{} - {}", key, size.width, size.height, size.description);
+
+    for (key, size) in view.sizes() {
+        println!("Size {}: {}x{} - {}", key, size.width_px, size.height_px, size.description);
     }
-    
+
     Ok(())
 }
 
 fn get_image_size(key: &str) -> Result<()> {
     let view = ImageView::new()?;
-    
-    match view.validate_size(key) {
-        Ok(size) => println!("Size {}: {}x{}", key, size.width, size.height),
-        Err(_) => println!("Size not found: {}", key),
+
+    if let Some(size) = view.size(key) {
+        println!("Size {}: {}x{}", key, size.width_px, size.height_px);
+    } else {
+        println!("Size not found: {}", key);
     }
-    
+
+    Ok(())
+}
+
+fn validate_image_size(key: &str) -> Result<()> {
+    let view = ImageView::new()?;
+
+    match view.validate_size(key) {
+        Ok(size) => println!("Size {}: {}x{}", key, size.width_px, size.height_px),
+        Err(e) => println!("Error: {}", e),
+    }
+
     Ok(())
 }
 ```
@@ -150,14 +161,14 @@ use common_errors::Result;
 
 fn show_publication_info() -> Result<()> {
     let view = PublicationView::new()?;
-    
+
     println!("Author: {}", view.author());
     println!("Copyright: {}", view.copyright());
-    
-    if let Some(site) = view.site() {
-        println!("Site: {}", site);
+
+    if let Some(site_url) = view.site_url() {
+        println!("Site URL: {}", site_url);
     }
-    
+
     Ok(())
 }
 ```
@@ -227,4 +238,4 @@ The context-specific configuration views are thoroughly tested to ensure they wo
 
 ## Conclusion
 
-The context-specific configuration views provided by the `common_config::views` module are essential for simplifying access to the configuration and ensuring type safety and context awareness. By using these views, you can make your code more readable, maintainable, and robust. 
+The context-specific configuration views provided by the `common_config::views` module are essential for simplifying access to the configuration and ensuring type safety and context awareness. By using these views, you can make your code more readable, maintainable, and robust.

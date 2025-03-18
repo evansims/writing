@@ -56,36 +56,36 @@ pub fn calculate_stats(content: &str, frontmatter: &Frontmatter, topic: &str, sl
     // Strip HTML tags for accurate word count
     let options = ComrakOptions::default();
     let html = markdown_to_html(content, &options);
-    
+
     // Use regex to remove HTML tags
     let re = Regex::new(r"<[^>]*>").unwrap();
     let text = re.replace_all(&html, "").to_string();
-    
+
     let word_count = common_markdown::calculate_word_count(&text);
     let character_count = text.chars().count();
-    
+
     // Count paragraphs (non-empty lines)
     let paragraph_count = content.lines()
         .filter(|line| !line.trim().is_empty())
         .count();
-    
+
     // Count sentences (roughly)
     let sentence_re = Regex::new(r"[.!?]+").unwrap();
     let sentence_count = sentence_re.find_iter(&text).count();
-    
+
     // Calculate reading time
     let reading_time = common_markdown::calculate_reading_time(word_count) as usize;
-    
+
     // Extract tags
     let tags = frontmatter.tags.clone().unwrap_or_default();
-    
+
     // Check if draft
-    let is_draft = frontmatter.draft.unwrap_or(false) || 
-                  frontmatter.published.as_ref().is_some_and(|p| p == "DRAFT");
-    
+    let is_draft = frontmatter.is_draft.unwrap_or(false) ||
+                  frontmatter.published_at.as_ref().is_some_and(|p| p == "DRAFT");
+
     // Get published date or default
-    let published = frontmatter.published.clone().unwrap_or_else(|| "DRAFT".to_string());
-    
+    let published = frontmatter.published_at.clone().unwrap_or_else(|| "DRAFT".to_string());
+
     ContentStats {
         title: frontmatter.title.clone(),
         published,
@@ -111,7 +111,7 @@ pub fn format_date(date_str: &str) -> String {
     if date_str == "DRAFT" {
         return "DRAFT".to_string();
     }
-    
+
     if let Ok(date) = NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
         date.format("%b %d, %Y").to_string()
     } else {
@@ -182,33 +182,33 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
             if options.topic.is_some() && options.topic.as_ref() != Some(topic_key) {
                 continue;
             }
-            
+
             let topic_path = &topic_config.directory;
             let topic_dir = content_base_dir.join(topic_path);
-            
+
             // Skip if the topic directory doesn't exist
             if !topic_dir.exists() {
                 continue;
             }
-            
+
             // Find all subdirectories in the topic directory (article directories)
             let dirs = common_fs::find_dirs_with_depth(&topic_dir, 1, 1)?;
-            
+
             for article_dir in dirs {
                 let slug = article_dir.file_name()
                     .and_then(|name| name.to_str())
                     .unwrap_or("");
-                
+
                 let index_path = article_dir.join("index.mdx");
                 if index_path.exists() {
-                    process_article(&index_path, topic_key, slug, options, &mut all_stats, 
-                                   &mut total_words, &mut total_articles, &mut total_drafts, 
+                    process_article(&index_path, topic_key, slug, options, &mut all_stats,
+                                   &mut total_words, &mut total_articles, &mut total_drafts,
                                    &mut tag_counts)?;
                 }
             }
         }
     }
-    
+
     // Sort the statistics
     match options.sort_by.as_str() {
         "date" => {
@@ -245,16 +245,16 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
             });
         }
     }
-    
+
     Ok((all_stats, tag_counts, total_words, total_articles, total_drafts))
 }
 
 /// Process a single article file and extract statistics
 fn process_article(
 #[allow(clippy::too_many_arguments)]
-    index_path: &Path, 
-    topic_key: &str, 
-    slug: &str, 
+    index_path: &Path,
+    topic_key: &str,
+    slug: &str,
     options: &StatsOptions,
     all_stats: &mut Vec<ContentStats>,
     total_words: &mut usize,
@@ -264,37 +264,37 @@ fn process_article(
 ) -> Result<()> {
     // Read the content file
     let content = common_fs::read_file(index_path)?;
-    
+
     // Extract frontmatter and content
     let (frontmatter, content_text) = common_markdown::extract_frontmatter_and_content(&content)?;
-    
+
     // Check if draft and skip if not including drafts
-    let is_draft = frontmatter.draft.unwrap_or(false) || 
-                  frontmatter.published.as_ref().is_some_and(|p| p == "DRAFT");
-    
+    let is_draft = frontmatter.is_draft.unwrap_or(false) ||
+                  frontmatter.published_at.as_ref().is_some_and(|p| p == "DRAFT");
+
     if is_draft && !options.include_drafts {
         return Ok(());
     }
-    
+
     // Calculate statistics
     let stats = calculate_stats(&content_text, &frontmatter, topic_key, slug);
-    
+
     // Update totals
     *total_words += stats.word_count;
     *total_articles += 1;
-    
+
     if is_draft {
         *total_drafts += 1;
     }
-    
+
     // Update tag counts
     for tag in &stats.tags {
         *tag_counts.entry(tag.clone()).or_insert(0) += 1;
     }
-    
+
     // Add to list of stats
     all_stats.push(stats);
-    
+
     Ok(())
 }
 
@@ -409,18 +409,18 @@ pub fn get_content_stats(options: &StatsOptions) -> Result<ContentStats> {
         total_published: 0,
         topics: Vec::new(),
     };
-    
+
     // If a specific topic is requested, only get stats for that topic
     if let Some(topic_key) = &options.topic {
         if let Some(topic_config) = config.content.topics.get(topic_key) {
             let topic_stats = get_topic_stats(&config, topic_key, topic_config)?;
-            
+
             // Update totals
             stats.total_articles += topic_stats.article_count;
             stats.total_words += topic_stats.word_count;
             stats.total_drafts += topic_stats.draft_count;
             stats.total_published += topic_stats.published_count;
-            
+
             // Add topic stats
             stats.topics.push(topic_stats);
         } else {
@@ -430,17 +430,25 @@ pub fn get_content_stats(options: &StatsOptions) -> Result<ContentStats> {
         // Get stats for all topics
         for (topic_key, topic_config) in &config.content.topics {
             let topic_stats = get_topic_stats(&config, topic_key, topic_config)?;
-            
+
             // Update totals
             stats.total_articles += topic_stats.article_count;
             stats.total_words += topic_stats.word_count;
             stats.total_drafts += topic_stats.draft_count;
             stats.total_published += topic_stats.published_count;
-            
+
             // Add topic stats
             stats.topics.push(topic_stats);
         }
     }
-    
+
     Ok(stats)
-} 
+}
+
+fn validate_draft_status(frontmatter: &Frontmatter) -> Result<()> {
+    if frontmatter.is_draft.unwrap_or(false) {
+        Ok(())
+    } else {
+        // ... existing code ...
+    }
+}

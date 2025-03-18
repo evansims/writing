@@ -62,7 +62,7 @@ use std::collections::HashMap;
 ///     publication: PublicationConfig {
 ///         author: "Author".to_string(),
 ///         copyright: "Copyright".to_string(),
-///         site: None,
+///         site_url: None,
 ///     },
 /// };
 /// ```
@@ -155,8 +155,8 @@ pub struct TopicConfig {
 /// sizes.insert(
 ///     "small".to_string(),
 ///     ImageSize {
-///         width: 480,
-///         height: 320,
+///         width_px: 480,
+///         height_px: 320,
 ///         description: "Small image".to_string(),
 ///     },
 /// );
@@ -183,10 +183,9 @@ pub struct ImageConfig {
     pub quality: Option<HashMap<String, HashMap<String, u32>>>,
 }
 
-/// Configuration structure for an image size
+/// Configuration structure for image size
 ///
-/// This struct contains configuration for a single image size,
-/// including width, height, and description.
+/// This struct contains the width, height, and description of an image size.
 ///
 /// # Example
 ///
@@ -243,9 +242,9 @@ pub struct ImageNaming {
 /// use common_models::PublicationConfig;
 ///
 /// let publication = PublicationConfig {
-///     author: "John Doe".to_string(),
-///     copyright: "© 2023 John Doe".to_string(),
-///     site: Some("https://example.com".to_string()),
+///     author: "Author".to_string(),
+///     copyright: "Copyright".to_string(),
+///     site_url: None,
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -255,13 +254,14 @@ pub struct PublicationConfig {
     /// Copyright notice
     pub copyright: String,
     /// Optional site URL
-    pub site: Option<String>,
+    #[serde(rename = "site")]
+    pub site_url: Option<String>,
 }
 
-/// Structure for article frontmatter
+/// Frontmatter metadata for articles
 ///
-/// This struct contains metadata for an article,
-/// including title, publication date, tags, and more.
+/// This struct contains metadata for an article, such as title,
+/// publication date, tags, etc.
 ///
 /// # Example
 ///
@@ -269,15 +269,15 @@ pub struct PublicationConfig {
 /// use common_models::Frontmatter;
 ///
 /// let frontmatter = Frontmatter {
-///     title: "My First Post".to_string(),
-///     published: Some("2023-01-01".to_string()),
-///     updated: None,
-///     slug: Some("my-first-post".to_string()),
-///     tagline: Some("An introduction to my blog".to_string()),
-///     tags: Some(vec!["intro".to_string(), "blog".to_string()]),
-///     topics: Some(vec!["blog".to_string()]),
-///     draft: Some(false),
-///     featured_image: None,
+///     title: "Article Title".to_string(),
+///     published_at: Some("2023-01-01".to_string()),
+///     updated_at: None,
+///     slug: Some("article-slug".to_string()),
+///     tagline: Some("Article tagline".to_string()),
+///     tags: Some(vec!["tag1".to_string(), "tag2".to_string()]),
+///     topics: Some(vec!["topic1".to_string()]),
+///     is_draft: Some(false),
+///     featured_image_path: Some("images/article.jpg".to_string()),
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -285,9 +285,11 @@ pub struct Frontmatter {
     /// Title of the article
     pub title: String,
     /// Optional publication date
-    pub published: Option<String>,
+    #[serde(rename = "published")]
+    pub published_at: Option<String>,
     /// Optional last updated date
-    pub updated: Option<String>,
+    #[serde(rename = "updated")]
+    pub updated_at: Option<String>,
     /// Optional slug for the article
     pub slug: Option<String>,
     /// Optional tagline or subtitle
@@ -331,14 +333,14 @@ impl Default for Frontmatter {
 /// let article = Article {
 ///     frontmatter: Frontmatter {
 ///         title: "My First Post".to_string(),
-///         published: Some("2023-01-01".to_string()),
-///         updated: None,
+///         published_at: Some("2023-01-01".to_string()),
+///         updated_at: None,
 ///         slug: Some("my-first-post".to_string()),
 ///         tagline: None,
 ///         tags: Some(vec!["intro".to_string()]),
 ///         topics: Some(vec!["blog".to_string()]),
-///         draft: Some(false),
-///         featured_image: None,
+///         is_draft: Some(false),
+///         featured_image_path: None,
 ///     },
 ///     content: "# My First Post\n\nThis is my first blog post.".to_string(),
 ///     slug: "my-first-post".to_string(),
@@ -364,4 +366,4 @@ pub struct Article {
     pub word_count: Option<usize>,
     /// Optional reading time in minutes
     pub reading_time: Option<u32>,
-} 
+}

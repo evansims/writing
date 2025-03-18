@@ -52,7 +52,7 @@ images:
       height: 900
       description: "Large image"
 "#;
-    
+
     fs::write(file.path(), config_content).unwrap();
     file
 }
@@ -65,77 +65,77 @@ fn create_test_config() -> Config {
         copyright: "© 2023 Test Author".to_string(),
         site: Some("https://example.com".to_string()),
     };
-    
+
     // Create topic configurations
     let mut topics = HashMap::new();
-    
+
     let blog = TopicConfig {
         name: "Blog".to_string(),
         description: "Blog posts".to_string(),
         directory: "content/blog".to_string(),
     };
-    
+
     let notes = TopicConfig {
         name: "Notes".to_string(),
         description: "Quick notes and thoughts".to_string(),
         directory: "content/notes".to_string(),
     };
-    
+
     topics.insert("blog".to_string(), blog);
     topics.insert("notes".to_string(), notes);
-    
+
     // Create tags
     let tags = HashMap::new();
-    
+
     // Create the content configuration
     let content = ContentConfig {
         base_dir: "content".to_string(),
         topics,
         tags: Some(tags),
     };
-    
+
     // Create image configurations
     let mut formats = Vec::new();
     formats.push("jpg".to_string());
     formats.push("png".to_string());
     formats.push("webp".to_string());
-    
+
     let mut sizes = HashMap::new();
-    
+
     let thumbnail = ImageSize {
         width: 200,
         height: 200,
         description: "Thumbnail image".to_string(),
     };
-    
+
     let medium = ImageSize {
         width: 800,
         height: 600,
         description: "Medium image".to_string(),
     };
-    
+
     let large = ImageSize {
         width: 1200,
         height: 900,
         description: "Large image".to_string(),
     };
-    
+
     sizes.insert("thumbnail".to_string(), thumbnail);
     sizes.insert("medium".to_string(), medium);
     sizes.insert("large".to_string(), large);
-    
+
     // Create format descriptions
     let mut format_descriptions = HashMap::new();
     format_descriptions.insert("jpg".to_string(), "JPEG image format".to_string());
     format_descriptions.insert("png".to_string(), "PNG image format".to_string());
     format_descriptions.insert("webp".to_string(), "WebP image format".to_string());
-    
+
     // Create image naming
     let naming = ImageNaming {
         pattern: "{slug}-{size}.{format}".to_string(),
         examples: vec!["post-small.jpg".to_string()],
     };
-    
+
     let images = ImageConfig {
         formats,
         sizes,
@@ -143,7 +143,7 @@ fn create_test_config() -> Config {
         naming: Some(naming),
         quality: Some(HashMap::new()),
     };
-    
+
     // Create the full configuration
     Config {
         publication,
@@ -228,44 +228,44 @@ fn test_content_view_from_path() {
 fn test_image_view_from_config() {
     // Create a test configuration
     let config = create_test_config();
-    
+
     // Create an image view from the configuration
     let view = ImageView::from_config(config);
-    
+
     // Test the ConfigView trait
     assert_eq!(view.config().publication.author, "Test Author");
-    
+
     // Test ImageView specific methods
     let formats = view.formats();
     assert_eq!(formats.len(), 3);
     assert!(formats.contains(&"jpg".to_string()));
     assert!(formats.contains(&"png".to_string()));
     assert!(formats.contains(&"webp".to_string()));
-    
+
     // Test size retrieval
     let sizes = view.sizes();
     assert_eq!(sizes.len(), 3);
-    
+
     let size_keys = view.size_keys();
     assert_eq!(size_keys.len(), 3);
     assert!(size_keys.contains(&"thumbnail".to_string()));
     assert!(size_keys.contains(&"medium".to_string()));
     assert!(size_keys.contains(&"large".to_string()));
-    
+
     // Test specific size retrieval
     let thumbnail = view.size("thumbnail").unwrap();
     assert_eq!(thumbnail.width, 200);
     assert_eq!(thumbnail.height, 200);
     assert_eq!(thumbnail.description, "Thumbnail image");
-    
+
     // Test nonexistent size
     let nonexistent = view.size("nonexistent");
     assert!(nonexistent.is_none());
-    
+
     // Test size validation
     let result = view.validate_size("thumbnail");
     assert!(result.is_ok());
-    
+
     let result = view.validate_size("nonexistent");
     assert!(result.is_err());
 }
@@ -274,13 +274,13 @@ fn test_image_view_from_config() {
 fn test_publication_view_from_config() {
     // Create a test configuration
     let config = create_test_config();
-    
+
     // Create a publication view from the configuration
     let view = PublicationView::from_config(config);
-    
+
     // Test the ConfigView trait
     assert_eq!(view.config().publication.author, "Test Author");
-    
+
     // Test PublicationView specific methods
     assert_eq!(view.author(), "Test Author");
     assert_eq!(view.copyright(), "© 2023 Test Author");
@@ -292,13 +292,13 @@ fn test_publication_view_from_path() {
     // Create a test configuration file
     let config_file = create_test_config_file();
     let config_path = config_file.path();
-    
+
     // Create a publication view from the file path
     let result = PublicationView::from_path(config_path);
     assert!(result.is_ok(), "Failed to create PublicationView from path: {:?}", result.err());
-    
+
     let view = result.unwrap();
-    
+
     // Test the view
     assert_eq!(view.author(), "Test Author");
     assert_eq!(view.copyright(), "© 2023 Test Author");
@@ -346,18 +346,18 @@ fn test_content_view_base_dir_path() {
 fn test_content_view_get_topic_absolute_path() {
     // Create a test configuration
     let mut config = create_test_config();
-    
+
     // Ensure we're using absolute paths
     config.content.base_dir = "/content".to_string();
     config.content.topics.get_mut("blog").unwrap().directory = "/content/blog".to_string();
-    
+
     // Create a content view from the configuration
     let view = ContentView::from_config(config);
-    
+
     // Test get_topic_absolute_path
     let path = view.get_topic_absolute_path("blog").unwrap();
     assert_eq!(path.to_str().unwrap(), "/content/blog");
-    
+
     // Test nonexistent topic
     let path = view.get_topic_absolute_path("nonexistent");
     assert!(path.is_none());
@@ -369,11 +369,66 @@ fn test_content_view_base_dir_path_modified() {
     let mut config = create_test_config();
     config.content.base_dir = "/content".to_string();
     config.content.topics.get_mut("blog").unwrap().directory = "/content/blog".to_string();
-    
+
     // Create a content view from the modified configuration
     let view = ContentView::from_config(config);
-    
+
     // Test base_dir_path
     let path = view.base_dir_path();
     assert_eq!(path.to_str().unwrap(), "/content");
-} 
+}
+
+#[test]
+fn test_publication_view() {
+    let config_file = create_test_config();
+    let view = PublicationView::from_path(config_file.path()).unwrap();
+
+    assert_eq!(view.author(), "Test Author");
+    assert_eq!(view.copyright(), "© 2023");
+    assert_eq!(view.site_url(), Some("https://example.com"));
+}
+
+#[test]
+fn test_image_view_sizes() {
+    let config_file = create_test_config();
+    let view = ImageView::from_path(config_file.path()).unwrap();
+
+    let formats = view.formats();
+    assert_eq!(formats.len(), 3);
+    assert!(formats.contains(&"jpg".to_string()));
+    assert!(formats.contains(&"png".to_string()));
+    assert!(formats.contains(&"webp".to_string()));
+
+    let sizes = view.sizes();
+    assert_eq!(sizes.len(), 3);
+
+    let size_keys = view.size_keys();
+    assert_eq!(size_keys.len(), 3);
+    assert!(size_keys.contains(&"thumbnail".to_string()));
+    assert!(size_keys.contains(&"medium".to_string()));
+    assert!(size_keys.contains(&"large".to_string()));
+
+    let thumbnail = view.size("thumbnail").unwrap();
+    assert_eq!(thumbnail.width_px, 200);
+    assert_eq!(thumbnail.height_px, 200);
+    assert_eq!(thumbnail.description, "Thumbnail size");
+
+    let medium = view.size("medium").unwrap();
+    assert_eq!(medium.width_px, 800);
+    assert_eq!(medium.height_px, 600);
+    assert_eq!(medium.description, "Medium image");
+
+    let large = view.size("large").unwrap();
+    assert_eq!(large.width_px, 1200);
+    assert_eq!(large.height_px, 900);
+    assert_eq!(large.description, "Large image");
+
+    let nonexistent = view.size("nonexistent");
+    assert!(nonexistent.is_none());
+
+    let result = view.validate_size("thumbnail");
+    assert!(result.is_ok());
+
+    let result = view.validate_size("nonexistent");
+    assert!(result.is_err());
+}

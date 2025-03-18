@@ -72,8 +72,22 @@ impl PublicationView {
     /// # Returns
     ///
     /// The site URL as a string if available, or `None` if not set
+    pub fn site_url(&self) -> Option<&str> {
+        self.config.publication.site_url.as_deref()
+    }
+
+    /// Get the site URL (deprecated)
+    ///
+    /// # Returns
+    ///
+    /// The site URL as a string if available, or `None` if not set
+    ///
+    /// # Deprecated
+    ///
+    /// This method is deprecated. Use [`site_url`](Self::site_url) instead.
+    #[deprecated(since = "1.1.0", note = "Use site_url() instead")]
     pub fn site(&self) -> Option<&str> {
-        self.config.publication.site.as_deref()
+        self.site_url()
     }
 }
 

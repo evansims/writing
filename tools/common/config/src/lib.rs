@@ -106,7 +106,7 @@ pub fn get_content_base_dir() -> Result<String> {
 /// Get the site URL from the configuration
 pub fn get_site_url() -> Result<Option<String>> {
     let config = load_config()?;
-    Ok(config.publication.site.clone())
+    Ok(config.publication.site_url.clone())
 }
 
 /// Validate a topic key and return the topic configuration

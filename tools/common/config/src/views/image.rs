@@ -191,8 +191,8 @@ publication:
         assert!(sizes.contains_key("medium"));
 
         let small = view.size("small").unwrap();
-        assert_eq!(small.width, 400);
-        assert_eq!(small.height, 300);
+        assert_eq!(small.width_px, 400);
+        assert_eq!(small.height_px, 300);
         assert_eq!(small.description, "Small thumbnail");
 
         let quality = view.quality("webp", "small").unwrap();

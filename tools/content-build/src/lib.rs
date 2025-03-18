@@ -78,7 +78,7 @@ pub fn process_content(
     let (frontmatter, md_content) = extract_frontmatter_and_content(&content)?;
 
     // Skip draft content unless specifically included
-    if frontmatter.draft.unwrap_or(false) && !include_drafts {
+    if frontmatter.is_draft.unwrap_or(false) && !include_drafts {
         return Err(anyhow::anyhow!("Skipping draft content"));
     }
 
@@ -164,7 +164,7 @@ pub fn find_content_files(
             .filter_map(|e| e.ok())
         {
             let path = entry.path();
-            
+
             // Check for subdirectories with index.mdx or for *.mdx files
             if path.is_dir() {
                 let index_path = path.join("index.mdx");
@@ -196,7 +196,7 @@ pub fn find_content_files(
                 .filter_map(|e| e.ok())
             {
                 let path = entry.path();
-                
+
                 // Check for subdirectories with index.mdx or for *.mdx files
                 if path.is_dir() {
                     let index_path = path.join("index.mdx");
@@ -225,19 +225,19 @@ pub fn find_content_by_slug(
     topic_key: Option<&str>,
 ) -> Result<PathBuf> {
     let content_files = find_content_files(base_dir, topic_key)?;
-    
+
     for path in content_files {
         let path_slug = path
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("")
             .to_string();
-        
+
         if path_slug == slug {
             return Ok(path);
         }
     }
-    
+
     Err(anyhow::anyhow!("Content not found with slug: {}", slug))
 }
 
@@ -245,7 +245,7 @@ pub fn find_content_by_slug(
 pub fn build_content(options: &BuildOptions) -> Result<()> {
     // Load config
     let config = load_config()?;
-    
+
     // Get content base directory
     let content_base_dir = PathBuf::from(&config.content.base_dir);
 
@@ -418,14 +418,14 @@ pub fn generate_sitemap(
 
     // Add content pages
     for article in articles {
-        if article.frontmatter.draft.unwrap_or(false) {
+        if article.frontmatter.is_draft.unwrap_or(false) {
             continue;
         }
 
         let url = format!("{}/{}/{}", site_url, article.topic, article.slug);
-        let last_mod = article.frontmatter.updated
+        let last_mod = article.frontmatter.updated_at
             .as_ref()
-            .or(article.frontmatter.published.as_ref())
+            .or(article.frontmatter.published_at.as_ref())
             .unwrap_or(&"".to_string())
             .to_string();
 
@@ -447,7 +447,7 @@ pub fn generate_sitemap(
 
     // Convert to XML
     let xml = to_string(&sitemap).context("Failed to generate sitemap XML")?;
-    
+
     // Write to file
     let sitemap_path = output_dir.join("sitemap.xml");
     write_file(&sitemap_path, &xml)
@@ -462,7 +462,7 @@ pub fn generate_rss_feed(
     articles: &[Article],
     config: &common_models::Config,
 ) -> Result<()> {
-    let site_url = config.publication.site.clone().unwrap_or_else(|| "https://example.com".to_string());
+    let site_url = config.publication.site_url.clone().unwrap_or_else(|| "https://example.com".to_string());
     let site_title = config.publication.author.clone();
     let site_description = "Articles and content".to_string();
     let empty_string = "".to_string();
@@ -514,4 +514,4 @@ pub fn generate_rss_feed(
         .with_context(|| format!("Failed to write RSS file: {:?}", rss_path))?;
 
     Ok(())
-} 
+}
