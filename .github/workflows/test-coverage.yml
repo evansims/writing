@@ -23,28 +23,43 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Install grcov
         run: cargo install grcov
 
       - name: Build
+        working-directory: tools
         run: cargo build --workspace
 
       - name: Run tests
+        working-directory: tools
         run: cargo test --workspace
 
       - name: Generate coverage
+        working-directory: tools
         run: |
           grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
         with:
-          file: ./lcov.info
+          file: tools/lcov.info
           name: code-coverage
           fail_ci_if_error: true
           verbose: true
 
       - name: Check coverage threshold
+        working-directory: tools
         run: |
           COVERAGE_PCT=$(lcov --summary lcov.info | grep "lines" | cut -d ":" -f 2 | cut -d "%" -f 1 | xargs)
           echo "Current coverage: $COVERAGE_PCT%"
@@ -52,3 +67,16 @@ jobs:
             echo "Coverage below threshold of 60%"
             exit 1
           fi
+
+      - name: Create issue if coverage below threshold
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ Test Coverage Below Threshold',
+              body: 'The test coverage has fallen below the required threshold of 60%. Please review and add more tests.',
+              labels: ['coverage', 'needs-attention']
+            });

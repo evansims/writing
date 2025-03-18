@@ -21,19 +21,46 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Run benchmarks
+        working-directory: tools
         run: cargo bench --workspace
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v3
         with:
           name: benchmark-results
-          path: target/criterion/
+          path: tools/target/criterion/
+          retention-days: 7
 
       - name: Check performance regressions
+        working-directory: tools
         run: |
           # Compare with baseline if available
           if [ -f "target/criterion/report.json" ]; then
             echo "Analyzing benchmark results..."
             # Add custom analysis logic here
           fi
+
+      - name: Create issue if regression detected
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Performance Regression Detected',
+              body: 'A performance regression was detected in the latest benchmark run. Please check the workflow run for details.',
+              labels: ['performance', 'regression']
+            });

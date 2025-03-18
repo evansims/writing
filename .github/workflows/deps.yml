@@ -21,10 +21,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Update dependencies
+        working-directory: tools
         run: cargo update --workspace
 
       - name: Check for security vulnerabilities
+        working-directory: tools
         run: cargo audit
 
       - name: Create Pull Request
@@ -40,3 +53,6 @@ jobs:
             Please review the changes before merging.
           branch: update-deps
           delete-branch: true
+          labels: |
+            dependencies
+            automated pr
