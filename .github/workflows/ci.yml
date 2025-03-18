@@ -29,9 +29,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick nasm
 
-      - name: Run tests
+      - name: Install Nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Run tests with Nextest
         working-directory: tools
-        run: cargo test --workspace --all-features
+        run: |
+          cargo nextest run --workspace --all-features --profile ci
+          cargo nextest run --workspace --all-features --profile ci --no-capture --run-ignored
 
   lint:
     name: Lint
@@ -80,14 +87,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick nasm
 
+      - name: Install Nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
       - name: Test image-optimize
         working-directory: tools/image-optimize
         run: |
-          cargo test --all-features
+          cargo nextest run --all-features --profile ci
           cargo clippy --all-features -- -D warnings --allow clippy::to-string-in-format-args
 
       - name: Test image-build
         working-directory: tools/image-build
         run: |
-          cargo test --all-features
+          cargo nextest run --all-features --profile ci
           cargo clippy --all-features -- -D warnings --allow clippy::to-string-in-format-args

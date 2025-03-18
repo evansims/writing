@@ -11,6 +11,9 @@
 //! - Mock implementations for unit testing
 //! - Property-based testing utilities
 //! - Specialized test fixtures for validation and file system testing
+//! - Standard assertion helpers for common test patterns
+//! - Test environment setup helpers
+//! - Test helper macros for common patterns
 //!
 //! ## Example
 //!
@@ -35,17 +38,45 @@ use common_errors::Result;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
-// Export the mocks module
+// Export the modules
 pub mod mocks;
-
-// Export the proptest module
 pub mod proptest;
-
-// Export the fixtures module
 pub mod fixtures;
+pub mod assertions;
+pub mod test_environment;
+pub mod macros;
 
 // Also re-export key fixtures for easier access
 pub use fixtures::{ValidationFixture, FileSystemFixture, TestFixture};
+pub use test_environment::{TestEnvironment, TestEnvironmentConfig, with_test_environment, with_custom_test_environment};
+pub use assertions::*;
+pub use proptest::TestScenario;
+
+// Re-export key mocks for easier access
+pub use mocks::{
+    // File system mocks
+    FileSystem, MockFileSystem, InMemoryFileSystem, create_test_fs,
+
+    // Config mocks
+    ConfigLoader, MockConfigLoader, InMemoryConfigLoader, create_test_config_loader,
+
+    // Tool mocks
+    ContentCreatorMock, MockContentCreatorMock,
+    ContentEditorMock, MockContentEditorMock,
+    ContentValidatorMock, MockContentValidatorMock,
+    ContentSearcherMock, MockContentSearcherMock,
+    ContentMoverMock, MockContentMoverMock,
+    ContentDeleterMock, MockContentDeleterMock,
+
+    // Test tool implementations
+    TestContentCreator, TestContentEditor, TestContentValidator,
+    TestContentSearcher, TestContentMover, TestContentDeleter,
+    create_test_tools
+};
+
+// Re-export macros
+// Note: Macros are automatically exported through the #[macro_export] attribute,
+// so we don't need to re-export them here explicitly
 
 /// Integration test utilities for command-line tools
 pub mod integration {

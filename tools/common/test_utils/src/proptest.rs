@@ -23,10 +23,11 @@
 //! }
 //! ```
 
-use common_models::{Frontmatter, Article, TopicConfig};
+use common_models::{Frontmatter, Article, TopicConfig, ContentMeta, Config};
 use proptest::prelude::*;
 use proptest::strategy::Just;
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 /// Generate a valid slug
 pub fn valid_slug_strategy() -> impl Strategy<Value = String> {
@@ -198,4 +199,180 @@ pub fn valid_topic_config_strategy() -> impl Strategy<Value = TopicConfig> {
             directory,
         }
     })
+}
+
+/// Generate a complex valid article with nested data structures
+pub fn complex_article_strategy() -> impl Strategy<Value = Article> {
+    let metadata_strategy = proptest::collection::hash_map(
+        any::<String>(),
+        any::<String>(),
+        0..5
+    );
+
+    (
+        valid_frontmatter_strategy(),
+        prop::string::string_regex("[\\s\\S]{10,1000}").unwrap(),
+        valid_path_strategy(),
+        proptest::option::of(prop::num::u32::ANY),  // word_count
+        proptest::option::of(prop::num::u32::ANY),  // reading_time
+        metadata_strategy,
+    ).prop_map(|(frontmatter, content, path, word_count, reading_time, metadata)| {
+        let slug = frontmatter.slug.clone().unwrap_or_default();
+        let topics = frontmatter.topics.clone();
+        let topic = topics.as_ref().and_then(|t| t.first().cloned()).unwrap_or_default();
+
+        let mut article = Article {
+            frontmatter,
+            content,
+            path: path.to_string_lossy().to_string(),
+            slug,
+            reading_time: reading_time.map(|rt| rt % 60), // Keep within reasonable bounds
+            word_count,
+            topic,
+        };
+
+        // Add any additional metadata
+        if !metadata.is_empty() {
+            // We would store metadata here if the model supported it
+        }
+
+        article
+    })
+}
+
+/// Generate a valid content metadata strategy
+pub fn valid_content_meta_strategy() -> impl Strategy<Value = ContentMeta> {
+    (
+        valid_slug_strategy(),
+        valid_title_strategy(),
+        proptest::option::of(valid_title_strategy()),
+        prop::collection::vec(valid_tag_strategy(), 0..5),
+        valid_topic_key_strategy(),
+        valid_date_strategy(),
+        proptest::option::of(valid_date_strategy()),
+        prop::bool::ANY,
+    ).prop_map(|(slug, title, tagline, tags, topic, published_at, updated_at, is_draft)| {
+        ContentMeta {
+            slug,
+            title,
+            tagline,
+            tags,
+            topic,
+            published_at,
+            updated_at,
+            is_draft,
+        }
+    })
+}
+
+/// Generate a content collection strategy
+pub fn content_collection_strategy(min: usize, max: usize) -> impl Strategy<Value = Vec<ContentMeta>> {
+    proptest::collection::vec(valid_content_meta_strategy(), min..max)
+}
+
+/// Generate a valid Configuration strategy
+pub fn valid_config_strategy() -> impl Strategy<Value = Config> {
+    (
+        valid_title_strategy(),
+        prop::string::string_regex("[a-zA-Z0-9.]+@[a-zA-Z0-9.]+").unwrap(),
+        proptest::option::of(prop::string::string_regex("https?://[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?").unwrap()),
+        proptest::option::of(prop::string::string_regex("https?://[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/[a-zA-Z0-9._~:/?#\\[\\]@!$&'()*+,;=]*)?").unwrap()),
+        proptest::option::of(valid_slug_strategy()),
+    ).prop_map(|(title, email, url, image, default_topic)| {
+        let mut config = Config::default();
+        config.title = title;
+        config.email = email;
+        if let Some(url) = url {
+            config.url = url;
+        }
+        if let Some(image) = image {
+            config.image = image;
+        }
+        if let Some(default_topic) = default_topic {
+            config.default_topic = default_topic;
+        }
+        config
+    })
+}
+
+/// Generate a map of topic configs
+pub fn topic_config_map_strategy(min: usize, max: usize) -> impl Strategy<Value = HashMap<String, TopicConfig>> {
+    proptest::collection::vec((valid_topic_key_strategy(), valid_topic_config_strategy()), min..max)
+        .prop_map(|vec| {
+            vec.into_iter().collect()
+        })
+}
+
+/// Generate a valid file path with a specified extension
+pub fn valid_file_path_strategy(extension: &'static str) -> impl Strategy<Value = PathBuf> {
+    valid_path_strategy()
+        .prop_map(move |mut path| {
+            path.set_extension(extension);
+            path
+        })
+}
+
+/// Generate a valid directory path for testing
+pub fn valid_directory_path_strategy() -> impl Strategy<Value = PathBuf> {
+    prop::collection::vec(valid_slug_strategy(), 1..5)
+        .prop_map(|parts| parts.into_iter().collect::<Vec<_>>().join("/"))
+        .prop_map(PathBuf::from)
+}
+
+/// Generate a valid content directory structure strategy
+pub fn valid_content_directory_strategy() -> impl Strategy<Value = (PathBuf, Vec<PathBuf>)> {
+    (
+        valid_directory_path_strategy(),
+        proptest::collection::vec(valid_slug_strategy(), 1..10),
+    ).prop_map(|(base, slugs)| {
+        let files = slugs.into_iter()
+            .map(|slug| base.join(format!("{}.md", slug)))
+            .collect();
+        (base, files)
+    })
+}
+
+/// Generate a structured set of test data for integration testing
+pub fn test_scenario_strategy() -> impl Strategy<Value = TestScenario> {
+    (
+        valid_config_strategy(),
+        topic_config_map_strategy(1, 5),
+        proptest::collection::vec(complex_article_strategy(), 1..10),
+    ).prop_map(|(config, topics, articles)| {
+        TestScenario {
+            config,
+            topics,
+            articles,
+        }
+    })
+}
+
+/// A complete test scenario with config, topics, and articles
+pub struct TestScenario {
+    pub config: Config,
+    pub topics: HashMap<String, TopicConfig>,
+    pub articles: Vec<Article>,
+}
+
+impl TestScenario {
+    /// Get articles that belong to a specific topic
+    pub fn articles_for_topic(&self, topic: &str) -> Vec<&Article> {
+        self.articles.iter()
+            .filter(|a| a.topic == topic)
+            .collect()
+    }
+
+    /// Get published articles (not drafts)
+    pub fn published_articles(&self) -> Vec<&Article> {
+        self.articles.iter()
+            .filter(|a| !a.frontmatter.is_draft.unwrap_or(false))
+            .collect()
+    }
+
+    /// Get draft articles
+    pub fn draft_articles(&self) -> Vec<&Article> {
+        self.articles.iter()
+            .filter(|a| a.frontmatter.is_draft.unwrap_or(false))
+            .collect()
+    }
 }

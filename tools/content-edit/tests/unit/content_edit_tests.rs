@@ -1,6 +1,6 @@
-//! Tests for the content-edit module.
+//! Unit tests for the content-edit module.
 
-use crate::*;
+use content_edit::*;
 use std::fs;
 use std::io::Write;
 use tempfile::NamedTempFile;

@@ -44,6 +44,7 @@ mod error_formatter;
 
 // Add comprehensive test modules
 #[cfg(test)]
+#[path = "../tests/mod.rs"]
 mod tests;
 
 // Re-export the validation traits

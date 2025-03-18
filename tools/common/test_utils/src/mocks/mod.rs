@@ -1,21 +1,28 @@
-//! # Mock Implementations
-//! 
-//! This module provides mock implementations for various components used in testing.
+//! Mock implementations for testing
+//!
+//! This module provides mock implementations of various components for testing.
 
-mod markdown;
-mod filesystem;
+mod fs;
 mod config;
-mod content;
-mod command;
+mod tools;
 
-// Re-export the markdown mocks
-pub use markdown::{MockMarkdown, MarkdownOperations};
-pub use filesystem::{MockFileSystem, FileSystem};
-pub use config::{MockConfigLoader, ConfigLoader};
-pub use content::{MockContentOperations, ContentOperations};
-pub use command::{MockCommandExecutor, CommandExecutor};
+// Re-export filesystem mocks
+pub use fs::{FileSystem, MockFileSystem, InMemoryFileSystem, create_test_fs};
 
-// Re-export all traits in a traits module
-pub mod traits {
-    pub use super::{FileSystem, ConfigLoader, ContentOperations, CommandExecutor, MarkdownOperations};
-} 
+// Re-export config mocks
+pub use config::{ConfigLoader, MockConfigLoader, InMemoryConfigLoader, create_test_config_loader};
+
+// Re-export tool mocks
+pub use tools::{
+    ContentCreatorMock, MockContentCreatorMock,
+    ContentEditorMock, MockContentEditorMock,
+    ContentValidatorMock, MockContentValidatorMock,
+    ContentSearcherMock, MockContentSearcherMock,
+    ContentMoverMock, MockContentMoverMock,
+    ContentDeleterMock, MockContentDeleterMock,
+
+    TestContentCreator, TestContentEditor, TestContentValidator,
+    TestContentSearcher, TestContentMover, TestContentDeleter,
+
+    create_test_tools
+};

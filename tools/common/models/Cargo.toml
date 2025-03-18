@@ -17,6 +17,10 @@ advanced-markdown = ["pulldown-cmark"]
 serde = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
+serde_json = { workspace = true }
 # Optional dependencies
 image = { workspace = true, optional = true }
-pulldown-cmark = { workspace = true, optional = true } 
+pulldown-cmark = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = "1.3.1"

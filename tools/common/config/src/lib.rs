@@ -58,6 +58,7 @@ pub use views::PublicationView;
 pub use views::ConfigView;
 
 #[cfg(test)]
+#[path = "../tests/mod.rs"]
 mod tests;
 
 /// Get the path to the configuration file

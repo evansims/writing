@@ -54,6 +54,11 @@ walkdir = "2.3"
 fs_extra = "1.3"
 handlebars = "4.3"
 once_cell = "1.18.0"
+# Testing dependencies
+proptest = "1.3.1"
+mockall = "0.12.1"
+cargo-llvm-cov = "0.5.39"
+cargo-nextest = "0.9.67"
 
 [workspace.package]
 version = "0.1.0"
@@ -63,3 +68,34 @@ description = "Writing tools for managing content"
 license = "MIT"
 # Default features for workspace members
 # Feature flag definitions
+
+# Nextest configuration
+[profile.ci]
+# Configure nextest for CI environment
+fail-fast = true
+retries = 1
+test-threads = "num-cpus"
+status-level = "all"
+final-status-level = "all"
+failure-output = "immediate-final"
+success-output = "never"
+
+[profile.coverage]
+# Profile for collecting coverage data
+fail-fast = false
+retries = 0
+test-threads = "num-cpus"
+status-level = "all"
+final-status-level = "all"
+failure-output = "immediate"
+success-output = "never"
+
+[profile.local]
+# Profile for local development
+fail-fast = false
+retries = 0
+test-threads = "num-cpus"
+status-level = "fail"
+final-status-level = "fail"
+failure-output = "immediate"
+success-output = "immediate"

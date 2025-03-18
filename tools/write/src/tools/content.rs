@@ -3,317 +3,352 @@
 //! This module provides functionality for managing content, including creating,
 //! editing, moving, deleting, and listing content.
 
+use std::sync::Arc;
 use anyhow::Result;
 use colored::*;
 use crate::ui;
+use common_traits::tools::{
+    ContentCreator, ContentEditor, ContentMover, ContentDeleter, ContentValidator, ContentSearcher,
+    ContentOptions, EditOptions, MoveOptions, ValidationOptions, SearchOptions
+};
 
-/// Create new content
-pub fn create_content(
-    title: Option<String>,
-    _topic: Option<String>,
-    _tagline: Option<String>,
-    _tags: Option<String>,
-    _content_type: Option<String>,
-    _draft: bool,
-    _template: Option<String>,
-    _introduction: Option<String>,
-) -> Result<()> {
-    // Get the title if not provided
-    let title = match title {
-        Some(t) => t,
-        None => {
-            ui::show_info("Enter a title for the content:");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
-
-    // Get the topic if not provided
-    let topic = match _topic {
-        Some(t) => t,
-        None => {
-            // Show available topics and let user select one
-            ui::show_info("Select a topic for the content:");
-            // TODO: Implement topic selection UI
-            "blog".to_string() // Default for now
-        }
-    };
-
-    // Create a slug from the title
-    let slug = slugify(&title);
-
-    // Create content directory
-    let content_dir = format!("content/{}/{}", topic, slug);
-    std::fs::create_dir_all(&content_dir)?;
-
-    // Create frontmatter
-    let frontmatter = format!(
-        "---\ntitle: {}\ntopic: {}\ndate: {}\n",
-        title,
-        topic,
-        chrono::Local::now().format("%Y-%m-%d")
-    );
-
-    // Add introduction if provided
-    let content = match _introduction {
-        Some(intro) => format!("{}\n\n{}", frontmatter, intro),
-        None => frontmatter,
-    };
-
-    // Write the content file
-    let content_file = format!("{}/index.mdx", content_dir);
-    std::fs::write(&content_file, content)?;
-
-    ui::show_success(&format!("Created content: {}", content_file.green()));
-
-    Ok(())
+/// Content tools for the Write CLI
+///
+/// This struct provides content management operations for the Write CLI.
+pub struct ContentTools {
+    creator: Box<dyn ContentCreator>,
+    editor: Box<dyn ContentEditor>,
+    mover: Box<dyn ContentMover>,
+    deleter: Box<dyn ContentDeleter>,
+    validator: Box<dyn ContentValidator>,
+    searcher: Box<dyn ContentSearcher>,
 }
 
-/// Edit existing content
-pub fn edit_content(
-    _slug: Option<String>,
-    _topic: Option<String>,
-    _frontmatter: bool,
-    editor: bool,
-) -> Result<()> {
-    // Get the slug if not provided
-    let slug = match _slug {
-        Some(s) => s,
-        None => {
-            ui::show_info("Enter the slug of the content to edit:");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
+impl ContentTools {
+    /// Create a new ContentTools instance with the given dependencies
+    pub fn new(
+        creator: Box<dyn ContentCreator>,
+        editor: Box<dyn ContentEditor>,
+        mover: Box<dyn ContentMover>,
+        deleter: Box<dyn ContentDeleter>,
+        validator: Box<dyn ContentValidator>,
+        searcher: Box<dyn ContentSearcher>,
+    ) -> Self {
+        Self {
+            creator,
+            editor,
+            mover,
+            deleter,
+            validator,
+            searcher,
         }
-    };
-
-    // Get the topic if not provided
-    let topic = match _topic {
-        Some(t) => t,
-        None => {
-            ui::show_info("Enter the topic (optional):");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
-
-    // Get the content file path
-    let content_file = format!("content/{}/{}/index.mdx", topic, slug);
-
-    // Check if the file exists
-    if !std::path::Path::new(&content_file).exists() {
-        return Err(anyhow::anyhow!("Content not found: {}", content_file));
     }
 
-    // Open the file with the configured editor
-    if editor {
-        // Open the content file in the editor
-        let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-        let status = std::process::Command::new(&editor)
-            .arg(&content_file)
-            .status()?;
+    /// Create new content
+    pub fn create_content(
+        &self,
+        title: Option<String>,
+        topic: Option<String>,
+        tagline: Option<String>,
+        tags: Option<String>,
+        _content_type: Option<String>,
+        draft: bool,
+        template: Option<String>,
+        _introduction: Option<String>,
+    ) -> Result<()> {
+        // Parse tags
+        let tags = tags.map(|t| {
+            t.split(',')
+                .map(|tag| tag.trim().to_string())
+                .collect::<Vec<String>>()
+        });
 
-        if !status.success() {
-            return Err(anyhow::anyhow!("Editor exited with an error"));
-        }
-    } else {
-        // TODO: Implement in-app editing
-        ui::show_warning("In-app editing not implemented yet. Use the --editor flag.");
+        // Create options
+        let options = ContentOptions {
+            slug: None,  // Will be generated from title
+            title,
+            topic,
+            description: tagline,
+            template,
+            tags,
+            draft: Some(draft),
+        };
+
+        // Call the content creator
+        let path = self.creator.create_content(&options)?;
+
+        ui::show_success(&format!("Created content: {}", path.to_string_lossy().green()));
+
+        Ok(())
     }
 
-    ui::show_success(&format!("Edited content: {}", content_file.green()));
+    /// Edit existing content
+    pub fn edit_content(
+        &self,
+        slug: Option<String>,
+        topic: Option<String>,
+        frontmatter: bool,
+        editor: bool,
+    ) -> Result<()> {
+        // Create options
+        let options = EditOptions {
+            slug,
+            topic,
+            field: None,  // Editing the whole file
+            value: None,  // No specific value to update
+            editor,
+        };
 
-    Ok(())
-}
+        // Call the content editor
+        let path = self.editor.edit_content(&options)?;
 
-/// Move content to a different topic or slug
-pub fn move_content(
-    _slug: Option<String>,
-    _new_slug: Option<String>,
-    _topic: Option<String>,
-    _new_topic: Option<String>,
-) -> Result<()> {
-    // Get the slug if not provided
-    let slug = match _slug {
-        Some(s) => s,
-        None => {
-            ui::show_info("Enter the slug of the content to move:");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
+        let action = if editor { "Opened" } else { "Edited" };
+        ui::show_success(&format!("{} content: {}", action, path.to_string_lossy().green()));
 
-    // Get the new slug if not provided
-    let new_slug = match _new_slug {
-        Some(s) => s,
-        None => {
-            ui::show_info("Enter the new slug (optional):");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            let input = input.trim().to_string();
-            if input.is_empty() {
-                slug.clone()
-            } else {
-                input
+        Ok(())
+    }
+
+    /// Move content from one location to another
+    pub fn move_content(
+        &self,
+        slug: Option<String>,
+        new_slug: Option<String>,
+        from_topic: Option<String>,
+        to_topic: Option<String>,
+    ) -> Result<()> {
+        // Create options
+        let options = MoveOptions {
+            slug,
+            new_slug,
+            from_topic,
+            to_topic,
+        };
+
+        // First validate the move
+        self.mover.validate_move(&options)?;
+
+        // Then perform the move
+        let new_path = self.mover.move_content(&options)?;
+
+        ui::show_success(&format!("Moved content to: {}", new_path.to_string_lossy().green()));
+
+        Ok(())
+    }
+
+    /// Delete content
+    pub fn delete_content(
+        &self,
+        slug: Option<String>,
+        topic: Option<String>,
+        force: bool,
+    ) -> Result<()> {
+        // Get the slug if not provided
+        let slug = match slug {
+            Some(s) => s,
+            None => {
+                ui::show_info("Enter the slug of the content to delete:");
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                input.trim().to_string()
+            }
+        };
+
+        // Confirm deletion if not forced
+        if !force {
+            ui::show_warning(&format!("Are you sure you want to delete content '{}'?", slug));
+            ui::show_warning("This action cannot be undone.");
+
+            let confirm = dialoguer::Confirm::new()
+                .with_prompt("Delete this content?")
+                .default(false)
+                .interact()?;
+
+            if !confirm {
+                ui::show_info("Deletion cancelled.");
+                return Ok(());
             }
         }
-    };
 
-    // Get the topic if not provided
-    let topic = match _topic {
-        Some(t) => t,
-        None => {
-            ui::show_info("Enter the current topic (optional):");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
-
-    // Get the new topic if not provided
-    let new_topic = match _new_topic {
-        Some(t) => t,
-        None => {
-            ui::show_info("Enter the new topic (optional):");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            let input = input.trim().to_string();
-            if input.is_empty() {
-                topic.clone()
-            } else {
-                input
-            }
-        }
-    };
-
-    // Get the current content path
-    let content_path = format!("content/{}/{}", topic, slug);
-
-    // Get the new content path
-    let new_content_path = format!("content/{}/{}", new_topic, new_slug);
-
-    // Check if the current content exists
-    if !std::path::Path::new(&content_path).exists() {
-        return Err(anyhow::anyhow!("Content not found: {}", content_path));
-    }
-
-    // Move the content
-    std::fs::rename(&content_path, &new_content_path)?;
-
-    ui::show_success(&format!(
-        "Moved content from {} to {}",
-        content_path.green(),
-        new_content_path.green()
-    ));
-
-    Ok(())
-}
-
-/// Delete content
-pub fn delete_content(_slug: Option<String>, _topic: Option<String>, _force: bool) -> Result<()> {
-    // Get the slug if not provided
-    let slug = match _slug {
-        Some(s) => s,
-        None => {
-            ui::show_info("Enter the slug of the content to delete:");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
-
-    // Get the topic if not provided
-    let topic = match _topic {
-        Some(t) => t,
-        None => {
-            ui::show_info("Enter the topic (optional):");
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            input.trim().to_string()
-        }
-    };
-
-    // Get the content path
-    let content_path = format!("content/{}/{}", topic, slug);
-
-    // Check if the content exists
-    if !std::path::Path::new(&content_path).exists() {
-        return Err(anyhow::anyhow!("Content not found: {}", content_path));
-    }
-
-    // Confirm deletion if not forced
-    if !_force {
-        ui::show_warning(&format!("Are you sure you want to delete {}? (y/N)", content_path));
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-
-        if !input.trim().eq_ignore_ascii_case("y") {
-            ui::show_info("Deletion cancelled.");
+        // Check if content can be safely deleted
+        if !self.deleter.can_delete(&slug, topic.as_deref())? && !force {
+            ui::show_error("Content cannot be safely deleted. Use --force to override.");
             return Ok(());
         }
+
+        // Delete the content
+        self.deleter.delete_content(&slug, topic.as_deref(), force)?;
+
+        ui::show_success(&format!("Deleted content: {}", slug.green()));
+
+        Ok(())
     }
 
-    // Delete the content
-    std::fs::remove_dir_all(&content_path)?;
+    /// Validate content
+    pub fn validate_content(
+        &self,
+        slug: Option<String>,
+        topic: Option<String>,
+        validation_types: Option<Vec<String>>,
+        check_links: bool,
+        timeout: Option<u64>,
+        dictionary: Option<String>,
+        include_drafts: bool,
+        verbose: bool,
+    ) -> Result<()> {
+        // Create options
+        let options = ValidationOptions {
+            slug,
+            topic,
+            validation_types,
+            check_external_links: check_links,
+            external_link_timeout: timeout,
+            dictionary,
+            include_drafts,
+            verbose,
+            fix: !verbose,  // If not verbose, try to fix issues
+        };
 
-    ui::show_success(&format!("Deleted content: {}", content_path.red()));
+        // Call the content validator
+        let issues = self.validator.validate_content(&options)?;
 
-    Ok(())
-}
+        // Display results
+        if issues.is_empty() {
+            ui::show_success("No validation issues found.");
+        } else {
+            ui::show_warning(&format!("Found {} validation issues:", issues.len()));
+            for issue in issues {
+                ui::show_error(&issue);
+            }
 
-/// List content
-pub fn list_content() -> Result<()> {
-    // TODO: Implement content listing
-    ui::show_info("Listing content...");
+            // If fix mode is enabled
+            if options.fix {
+                ui::show_info("Attempting to fix issues...");
+                let fixed = self.validator.fix_validation_issues(&options)?;
 
-    Ok(())
-}
+                if fixed.is_empty() {
+                    ui::show_warning("No issues could be automatically fixed.");
+                } else {
+                    ui::show_success(&format!("Fixed {} issues:", fixed.len()));
+                    for fix in fixed {
+                        ui::show_info(&fix);
+                    }
+                }
+            }
+        }
 
-/// List content with options
-pub fn list_content_with_options(topic: Option<String>, include_drafts: bool, format: &str) -> Result<()> {
-    // TODO: Implement content listing with options
-    ui::show_info(&format!(
-        "Listing content with topic: {:?}, include_drafts: {}, format: {}",
-        topic, include_drafts, format
-    ));
+        Ok(())
+    }
 
-    Ok(())
-}
+    /// List content
+    pub fn list_content_with_options(
+        &self,
+        topic: Option<String>,
+        include_drafts: bool,
+        format: &str,
+    ) -> Result<()> {
+        // Create a search with empty query to list all content
+        let options = SearchOptions {
+            query: "".to_string(),
+            topic,
+            content_type: None,
+            tags: None,
+            limit: None,
+            include_drafts,
+            title_only: false,
+            index_path: None,
+            rebuild: false,
+        };
 
-/// Search for content
-pub fn search_content(
-    _query: String,
-    _topic: Option<String>,
-    _content_type: Option<String>,
-    _tags: Option<String>,
-    _limit: Option<usize>,
-    _include_drafts: bool,
-    _title_only: bool,
-    _index_path: Option<String>,
-    _rebuild: bool,
-) -> Result<()> {
-    // For now, just show a placeholder message
-    ui::show_info("Search functionality is not yet implemented");
-    Ok(())
-}
+        // Call the content searcher
+        let results = self.searcher.search_content(&options)?;
 
-/// Validate content
-pub fn validate_content(
-    _article: Option<String>,
-    _topic: Option<String>,
-    _validation_types: Option<Vec<String>>,
-    _check_external_links: bool,
-    _external_link_timeout: Option<u64>,
-    _dictionary: Option<String>,
-    _include_drafts: bool,
-    _verbose: bool,
-) -> Result<()> {
-    // For now, just show a placeholder message
-    ui::show_info("Validation functionality is not yet implemented");
-    Ok(())
+        // Display results
+        match format {
+            "table" => {
+                ui::show_info(&format!("Found {} content items:", results.len()));
+                // TODO: Implement table output
+                for (i, path) in results.iter().enumerate() {
+                    ui::show_info(&format!("{}. {}", i + 1, path.to_string_lossy()));
+                }
+            },
+            "json" => {
+                let json = serde_json::to_string_pretty(&results.iter().map(|p| p.to_string_lossy().to_string()).collect::<Vec<_>>())?;
+                println!("{}", json);
+            },
+            _ => {
+                for path in results {
+                    println!("{}", path.to_string_lossy());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Search content
+    pub fn search_content(
+        &self,
+        query: String,
+        topic: Option<String>,
+        content_type: Option<String>,
+        tags: Option<String>,
+        limit: Option<usize>,
+        include_drafts: bool,
+        title_only: bool,
+        index_path: Option<String>,
+        rebuild: bool,
+    ) -> Result<()> {
+        // Create options
+        let options = SearchOptions {
+            query,
+            topic,
+            content_type,
+            tags,
+            limit,
+            include_drafts,
+            title_only,
+            index_path,
+            rebuild,
+        };
+
+        // Rebuild the search index if requested
+        if rebuild {
+            ui::show_info("Rebuilding search index...");
+            self.searcher.build_search_index(include_drafts)?;
+            ui::show_success("Search index rebuilt.");
+        }
+
+        // Call the content searcher
+        let results = self.searcher.search_content(&options)?;
+
+        // Display results
+        if results.is_empty() {
+            ui::show_info("No results found.");
+        } else {
+            ui::show_success(&format!("Found {} results:", results.len()));
+            for (i, path) in results.iter().enumerate() {
+                ui::show_info(&format!("{}. {}", i + 1, path.to_string_lossy()));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Update a specific frontmatter field
+    pub fn update_frontmatter_field(
+        &self,
+        slug: &str,
+        topic: Option<&str>,
+        field: &str,
+        value: &str,
+    ) -> Result<()> {
+        // Call the content editor
+        self.editor.update_frontmatter_field(slug, topic, field, value)?;
+
+        ui::show_success(&format!("Updated field '{}' to '{}'.", field, value));
+
+        Ok(())
+    }
 }
 
 /// List templates
@@ -331,42 +366,6 @@ pub fn create_template(
 ) -> Result<()> {
     // For now, just show a placeholder message
     ui::show_info("Template creation is not yet implemented");
-    Ok(())
-}
-
-/// Update a frontmatter field
-pub fn update_frontmatter_field(
-    slug: &str,
-    topic: Option<&str>,
-    field: &str,
-    value: &str,
-) -> Result<()> {
-    // Get the topic if not provided
-    let topic = match topic {
-        Some(t) => t.to_string(),
-        None => {
-            // Show available topics and let user select one
-            ui::show_info("Select the topic of the content:");
-            // TODO: Implement topic selection UI
-            "blog".to_string() // Default for now
-        }
-    };
-
-    // Get the content file path
-    let content_file = format!("content/{}/{}/index.mdx", topic, slug);
-
-    // Check if the file exists
-    if !std::path::Path::new(&content_file).exists() {
-        return Err(anyhow::anyhow!("Content not found: {}", content_file));
-    }
-
-    // Read the content file
-    let _content = std::fs::read_to_string(&content_file)?;
-
-    // TODO: Parse and update the frontmatter
-    // For now, we'll just show a message
-    ui::show_info(&format!("Updating field {} to {} in {}", field, value, content_file));
-
     Ok(())
 }
 

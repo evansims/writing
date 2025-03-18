@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 use serde::{Serialize, Deserialize};
 use common_errors::{Result, WritingError};
 
+// Import and re-export tool-specific traits
+pub mod tools;
+pub use tools::*;
+
 /// Trait for file operations
 ///
 /// This trait provides common file operations for types that need

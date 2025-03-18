@@ -35,6 +35,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+// Include external test module
+#[cfg(test)]
+mod tests;
+
 /// Configuration structure for the entire application
 ///
 /// This struct contains all configuration for the application,

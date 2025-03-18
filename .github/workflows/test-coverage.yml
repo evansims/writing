@@ -7,8 +7,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-C instrument-coverage"
-  LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
 
 jobs:
   setup:
@@ -34,21 +32,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install grcov
-        run: cargo install grcov
+      - name: Install cargo-llvm-cov and cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-nextest
 
-      - name: Build
-        working-directory: tools
-        run: cargo build --workspace
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick nasm
 
-      - name: Run tests
-        working-directory: tools
-        run: cargo test --workspace
-
-      - name: Generate coverage
+      - name: Generate coverage with llvm-cov
         working-directory: tools
         run: |
-          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+          cargo llvm-cov nextest --workspace --all-features --profile coverage --lcov --output-path lcov.info
+          cargo llvm-cov report --summary-only
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
@@ -61,10 +59,10 @@ jobs:
       - name: Check coverage threshold
         working-directory: tools
         run: |
-          COVERAGE_PCT=$(lcov --summary lcov.info | grep "lines" | cut -d ":" -f 2 | cut -d "%" -f 1 | xargs)
+          COVERAGE_PCT=$(cargo llvm-cov report --summary-only | grep "TOTAL" | awk '{print $4}' | tr -d '%')
           echo "Current coverage: $COVERAGE_PCT%"
-          if (( $(echo "$COVERAGE_PCT < 60" | bc -l) )); then
-            echo "Coverage below threshold of 60%"
+          if (( $(echo "$COVERAGE_PCT < 80" | bc -l) )); then
+            echo "Coverage below threshold of 80%"
             exit 1
           fi
 
@@ -77,6 +75,19 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: '⚠️ Test Coverage Below Threshold',
-              body: 'The test coverage has fallen below the required threshold of 60%. Please review and add more tests.',
+              body: 'The test coverage has fallen below the required threshold of 80%. Please review and add more tests.',
               labels: ['coverage', 'needs-attention']
             });
+
+      - name: Generate HTML coverage report
+        working-directory: tools
+        run: |
+          cargo llvm-cov report --html
+          zip -r coverage-report.zip target/llvm-cov/html
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: tools/coverage-report.zip
+          retention-days: 7

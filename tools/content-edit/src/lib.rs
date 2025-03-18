@@ -67,28 +67,15 @@
 //! save_edited_content(&content.path, edited_frontmatter).expect("Failed to save frontmatter");
 //! ```
 
+// Import implementation modules
 mod impl_;
 mod models;
 mod errors;
 
-#[cfg(test)]
-mod tests;
+// Re-export public API
+pub use impl_::*;
+pub use models::*;
+pub use errors::*;
 
-// Re-export public types
-pub use errors::ContentEditError;
-pub use models::{EditOptions, EditableContent};
-
-// Re-export public functions from implementation
-pub use impl_::{
-    find_content_path,
-    list_all_content,
-    edit_content,
-    save_edited_content,
-    extract_frontmatter,
-    extract_frontmatter_from_string,
-    split_frontmatter_and_body,
-    update_content,
-};
-
-// Constants that should be available to users of this module
+// Constants
 pub const DEFAULT_CONTENT_DIR: &str = "content";

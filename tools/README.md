@@ -43,6 +43,55 @@ cargo build --release
 cargo build --release -p content-new
 ```
 
+## Testing
+
+We use Cargo Nextest for running tests and LLVM-based coverage tools for measuring test coverage.
+
+### Running Tests
+
+```bash
+# Run all tests using Nextest
+cargo nextest run --workspace
+
+# Run tests for a specific tool
+cargo nextest run -p content-new
+
+# Run tests with specific features
+cargo nextest run --workspace --all-features
+
+# Run tests with a specific profile
+cargo nextest run --workspace --profile local
+```
+
+### Measuring Test Coverage
+
+We provide a coverage script to simplify generating coverage reports:
+
+```bash
+# Generate summary coverage report
+./coverage.sh
+
+# Generate HTML coverage report
+./coverage.sh html
+
+# Generate HTML report and open it in browser
+./coverage.sh open
+
+# Generate LCOV report
+./coverage.sh lcov
+
+# Show help for coverage script
+./coverage.sh help
+```
+
+### Coverage Thresholds
+
+We aim for the following coverage targets:
+
+- Common libraries: 90%+ coverage
+- Individual tools: 80%+ coverage
+- Overall project: 80%+ coverage
+
 ## Development
 
 ### Adding a New Tool
@@ -82,7 +131,11 @@ common-markdown = { path = "../common/markdown" }
 
 1. **DRY Principle**: Use common libraries instead of duplicating code
 2. **Error Handling**: Use anyhow for error propagation
-3. **Testing**: Add unit tests for critical functionality
+3. **Testing**:
+   - Write unit tests for all critical functionality
+   - Keep tests isolated from other tools
+   - Aim for 80%+ code coverage
+   - Follow TDD principles where possible
 4. **Documentation**: Document all public functions and types
 
 ## Direct Usage (No Installation Required)
@@ -136,6 +189,24 @@ For more details on each command, use `--help`:
 ```
 
 ## Recent Improvements
+
+### Testing Framework Update
+
+We've updated our testing framework to use Cargo Nextest, which provides:
+
+- Faster test execution through parallelization
+- Better test organization and filtering
+- Improved test output and reporting
+- Test stability improvements
+
+### Code Coverage Tools
+
+We now use cargo-llvm-cov for coverage measurement, which:
+
+- Provides more accurate coverage data
+- Integrates better with Rust tooling
+- Generates HTML reports for easy inspection
+- Supports coverage thresholds and gating
 
 ### Incremental Building
 

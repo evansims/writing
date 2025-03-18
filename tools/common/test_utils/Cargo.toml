@@ -8,6 +8,7 @@ common-models = { path = "../models" }
 common-errors = { path = "../errors" }
 common-config = { path = "../config" }
 common-fs = { path = "../fs" }
+common-traits = { path = "../traits" }
 tempfile.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
@@ -18,3 +19,19 @@ anyhow = "1.0"
 [[example]]
 name = "test_fixture"
 path = "examples/test_fixture.rs"
+
+[[example]]
+name = "property_tests"
+path = "examples/property_tests.rs"
+
+[[example]]
+name = "mock_examples"
+path = "examples/mock_examples.rs"
+
+[[example]]
+name = "mock_test_patterns"
+path = "examples/mock_test_patterns.rs"
+
+[[example]]
+name = "test_organization"
+path = "examples/test_organization.rs"

@@ -6,8 +6,9 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 
 ## 🏆 SUCCESS CRITERIA
 
-- [ ] All Rust tools have unit tests at 80%+ code coverage
-- [ ] Integration tests for all critical user workflows
+- [ ] All Rust tools have isolated unit tests at 80%+ code coverage
+- [ ] Each tool is fully testable independently, without dependencies on other tools
+- [ ] Integration tests concentrated primarily in the Write/CLI tool
 - [ ] Property-based testing for complex data transformations
 - [ ] Consistent mocking approach across the codebase
 - [ ] Local and CI test environments are equivalent
@@ -20,58 +21,74 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 
 #### 1A: Testing Framework Setup
 
-- [ ] Standardize on Cargo Nextest for test execution
-  - [ ] Add Nextest configuration to Cargo.toml
-  - [ ] Update CI pipelines to use Nextest
-  - [ ] Document Nextest usage in README.md
-- [ ] Implement code coverage tooling
-  - [ ] Standardize on cargo-llvm-cov for consistent coverage reports
-  - [ ] Create coverage profile in Cargo.toml
-  - [ ] Add coverage commands to CI workflow
-  - [ ] Create local coverage report generation script
+- [x] Standardize on Cargo Nextest for test execution
+  - [x] Add Nextest configuration to Cargo.toml
+  - [x] Update CI pipelines to use Nextest
+  - [x] Document Nextest usage in README.md
+- [x] Implement code coverage tooling
+  - [x] Standardize on cargo-llvm-cov for consistent coverage reports
+  - [x] Create coverage profile in Cargo.toml
+  - [x] Add coverage commands to CI workflow
+  - [x] Create local coverage report generation script
 
 #### 1B: Test Utility Enhancement
 
-- [ ] Enhance common test_utils library
-  - [ ] Review and update existing fixtures
-  - [ ] Expand mock implementations
-  - [ ] Add comprehensive test environment setup helpers
-  - [ ] Create standard assertion helpers for common patterns
-- [ ] Implement QuickCheck/Proptest strategies
-  - [ ] Expand the existing proptest strategies
-  - [ ] Create composable generators for complex types
-  - [ ] Add example tests using property-based testing
+- [x] Enhance common test_utils library
+  - [x] Review and update existing fixtures
+  - [x] Expand mock implementations
+  - [x] Add comprehensive test environment setup helpers
+  - [x] Create standard assertion helpers for common patterns
+- [x] Implement QuickCheck/Proptest strategies
+  - [x] Expand the existing proptest strategies
+  - [x] Create composable generators for complex types
+  - [x] Add example tests using property-based testing
 
 ### PRIORITY 2: TESTING ARCHITECTURE
 
-#### 2A: Mocking Strategy
+#### 2A: Tool Isolation Strategy
 
-- [ ] Implement consistent mocking approach
-  - [ ] Introduce Mockall for trait mocking
-  - [ ] Create mock implementations for all external dependencies
-  - [ ] Document mocking patterns and best practices
-  - [ ] Create examples of proper dependency injection for testability
+- [x] Design for test isolation
+  - [x] Refactor tools to be independently testable
+  - [x] Extract shared code into common libraries
+  - [x] Define clear boundaries between tools
+  - [x] Ensure all tools can be tested in isolation
 
-#### 2B: Test Organization
+#### 2B: Mocking Strategy
 
-- [ ] Standardize test file organization
-  - [ ] Organize tests into unit, integration, and property-based categories
-  - [ ] Implement test tagging for selective test runs
-  - [ ] Create test helper macros for common test patterns
-  - [ ] Document testing structure in ARCHITECTURE.md
+- [x] Implement consistent mocking approach
+  - [x] Introduce Mockall for trait mocking
+  - [x] Create mock implementations for all external dependencies
+  - [x] Document mocking patterns and best practices
+  - [x] Create examples of proper dependency injection for testability
+
+#### 2C: Test Organization
+
+- [x] Standardize test file organization
+  - [x] Organize tests into unit, integration, and property-based categories
+  - [x] Implement test tagging for selective test runs
+  - [x] Create test helper macros for common test patterns
+  - [x] Document testing structure in ARCHITECTURE.md
 
 ### PRIORITY 3: IMPLEMENTATION FOR EXISTING TOOLS
 
 #### 3A: Core Libraries
 
 - [ ] Enhance testing for common libraries
-  - [ ] common/models - Add property-based testing
-  - [ ] common/errors - Add comprehensive unit tests
-  - [ ] common/config - Expand mocking and test scenarios
+  - [x] common/models - Add property-based testing
+  - [x] common/errors - Add comprehensive unit tests
+  - [x] common/config - Expand mocking and test scenarios
   - [ ] common/fs - Add test coverage for edge cases
   - [ ] common/markdown - Add property-based tests for parsing
 
-#### 3B: Content Tools
+#### 3B: Individual Tool Unit Testing
+
+- [ ] Ensure each tool has comprehensive isolated unit tests
+  - [ ] Refactor as needed to make each tool independently testable
+  - [ ] Mock all dependencies on other tools
+  - [ ] Test all edge cases and error paths
+  - [ ] Achieve 80%+ code coverage for each tool
+
+#### 3C: Content Tools
 
 - [ ] Enhance testing for content manipulation tools
   - [ ] content-new - Add property-based tests for edge cases
@@ -83,7 +100,7 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
   - [ ] content-validate - Add compliance tests
   - [ ] content-build - Add output verification tests
 
-#### 3C: Topic and Image Tools
+#### 3D: Topic and Image Tools
 
 - [ ] Enhance testing for topic tools
   - [ ] topic-add - Add validation tests
@@ -93,6 +110,15 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 - [ ] Enhance testing for image tools
   - [ ] image-optimize - Add output quality verification
   - [ ] image-build - Add size and format validation tests
+
+#### 3E: Write/CLI Integration Testing
+
+- [ ] Enhance integration testing for the Write/CLI tool
+  - [ ] Test tool coordination and integration points
+  - [ ] Cover all common user workflows
+  - [ ] Test error handling across tool boundaries
+  - [ ] Ensure configuration is correctly passed between tools
+  - [ ] Validate end-to-end output for complex operations
 
 ### PRIORITY 4: CONTINUOUS IMPROVEMENT
 
@@ -125,6 +151,7 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 ### Coverage Goals
 
 - [ ] Common libraries: 90%+ coverage
+- [ ] Individual tools: 80%+ coverage for each tool in isolation
 - [ ] Command line interfaces: 85%+ coverage
 - [ ] Business logic: 85%+ coverage
 - [ ] Integration points: 80%+ coverage
@@ -137,6 +164,14 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 - [ ] Full test suite with coverage: < 2m execution time
 
 ## 🛠️ TECHNICAL APPROACH
+
+### Tool Isolation Principles
+
+- Each tool should be testable independently
+- Tools should have clear interfaces for mocking
+- Avoid direct dependencies between tools
+- Use common libraries for shared functionality
+- Never test multiple tools together except in integration tests
 
 ### TDD Implementation
 
@@ -167,7 +202,7 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 - Isolate test environments with fixtures
 - Clean up all test resources after use
 
-## 🧪 EXAMPLES
+## �� EXAMPLES
 
 ### Unit Test Example (to standardize on)
 
@@ -176,15 +211,21 @@ Implement a comprehensive testing strategy across all Rust tools that follows DR
 mod tests {
     use super::*;
     use common_test_utils::TestFixture;
+    use common_test_utils::mocks::MockDependencyTool;
 
     #[test]
     fn test_function_with_valid_input() {
         // Arrange
         let fixture = TestFixture::new().unwrap();
         let input = fixture.create_valid_input();
+        let mock_dependency = MockDependencyTool::new();
+        mock_dependency.expect_some_method().returning(|_| Ok(()));
+
+        // Create SUT with mocked dependency
+        let system_under_test = SystemUnderTest::new(mock_dependency);
 
         // Act
-        let result = function_under_test(input);
+        let result = system_under_test.function_under_test(input);
 
         // Assert
         assert!(result.is_ok());
@@ -196,9 +237,13 @@ mod tests {
         // Arrange
         let fixture = TestFixture::new().unwrap();
         let input = fixture.create_invalid_input();
+        let mock_dependency = MockDependencyTool::new();
+
+        // Create SUT with mocked dependency
+        let system_under_test = SystemUnderTest::new(mock_dependency);
 
         // Act
-        let result = function_under_test(input);
+        let result = system_under_test.function_under_test(input);
 
         // Assert
         assert!(result.is_err());
@@ -219,8 +264,15 @@ mod prop_tests {
     proptest! {
         #[test]
         fn test_function_properties(input in valid_input_strategy()) {
+            // Setup mocked dependencies
+            let mock_dependency = MockDependencyTool::new();
+            mock_dependency.expect_some_method().returning(|_| Ok(()));
+
+            // Create SUT with mocked dependency
+            let system_under_test = SystemUnderTest::new(mock_dependency);
+
             // Property: function should not panic with valid input
-            let result = function_under_test(input.clone());
+            let result = system_under_test.function_under_test(input.clone());
 
             // Property: function should return result with same properties as input
             prop_assert!(result.property == input.expected_property);
@@ -229,7 +281,7 @@ mod prop_tests {
 }
 ```
 
-### Integration Test Example (to standardize on)
+### Integration Test Example (for Write/CLI tool)
 
 ```rust
 #[cfg(test)]
@@ -237,15 +289,15 @@ mod integration_tests {
     use common_test_utils::integration::TestCommand;
 
     #[test]
-    fn test_workflow_success() {
-        // Arrange
-        let command = TestCommand::new("tool-name").unwrap();
+    fn test_write_cli_workflow_success() {
+        // Arrange - use the actual Write CLI tool, not mocks
+        let command = TestCommand::new("write").unwrap();
         let test_input = "test input";
 
-        // Act & Assert - test entire workflow
-        let setup_output = command.assert_success(&["setup", "--option"]);
-        let main_output = command.assert_success(&["main", "--with-option"]);
-        let result_output = command.assert_output_contains(&["verify"], "Expected result");
+        // Act & Assert - test entire workflow across multiple tools
+        let setup_output = command.assert_success(&["content", "new", "--title", "Test Article", "--topic", "blog"]);
+        let main_output = command.assert_success(&["content", "edit", "--slug", "test-article"]);
+        let result_output = command.assert_output_contains(&["content", "validate", "--slug", "test-article"], "Validation passed");
 
         // Final validation
         assert!(result_output.status.success());

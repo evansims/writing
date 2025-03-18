@@ -7,7 +7,8 @@ mod context_tests;
 mod validation_tests;
 mod reporting_tests;
 mod category_tests;
+mod error_formatting_tests;
 
 // Re-export all test modules
 
-// Re-export any utility functions if needed 
+// Re-export any utility functions if needed
