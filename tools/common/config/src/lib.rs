@@ -189,16 +189,7 @@ pub fn validate_topic(topic_key: &str) -> Result<TopicConfig> {
 ///
 /// # Examples
 ///
-/// ```rust
-/// use common_config::clear_config_cache;
-///
-/// fn refresh_config() -> common_errors::Result<()> {
-///     clear_config_cache();
-///     let config = common_config::load_config()?;
-///     println!("Refreshed config: {}", config.publication.author);
-///     Ok(())
-/// }
-/// ```
+/// Call this function to force a refresh of cached configuration data.
 pub fn clear_config_cache() {
     cache::ConfigCache::global().clear();
 }

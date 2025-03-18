@@ -123,16 +123,20 @@ fn test_supported_formats() {
 #[test]
 fn test_build_article_images() -> Result<()> {
     let temp_dir = TempDir::new()?;
-    let article_dir = temp_dir.path().join("content/test-topic/test-article");
+    let content_dir = temp_dir.path().join("content");
+    let article_dir = content_dir.join("test-topic/test-article");
     std::fs::create_dir_all(&article_dir)?;
 
     let source_path = create_test_image(&article_dir)?;
     std::fs::rename(&source_path, article_dir.join("index.jpg"))?;
 
-    let config = create_test_config();
+    // Create a config that uses the temporary content directory
+    let mut config = create_test_config();
+    config.content.base_dir = content_dir.to_string_lossy().to_string();
+
     let options = BuildImagesOptions {
         output_dir: temp_dir.path().join("output"),
-        source_dir: temp_dir.path().join("content"),
+        source_dir: content_dir.clone(),  // Use the actual content directory path
         source_filename: "index.jpg".into(),
         article: Some("test-article".into()),
         topic: Some("test-topic".into()),

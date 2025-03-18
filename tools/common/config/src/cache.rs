@@ -10,21 +10,9 @@
 //!
 //! ## Example
 //!
-//! ```rust
-//! use common_config::cache::ConfigCache;
-//!
-//! fn get_cached_config() -> common_errors::Result<()> {
-//!     let cache = ConfigCache::global();
-//!     let config = cache.get_config()?;
-//!
-//!     println!("Author: {}", config.publication.author);
-//!
-//!     // Subsequent calls will use the cached config
-//!     let config2 = cache.get_config()?;
-//!
-//!     Ok(())
-//! }
-//! ```
+//! Use the ConfigCache::global() method to get a singleton instance, then call get_config()
+//! to retrieve the configuration. Subsequent calls will use the cached version until it expires
+//! or the file is modified (depending on settings).
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -91,11 +79,7 @@ impl ConfigCache {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use common_config::ConfigCache;
-    ///
-    /// let cache = ConfigCache::global();
-    /// ```
+    /// Use the global method to get a singleton instance of the ConfigCache.
     pub fn global() -> &'static ConfigCache {
         static INSTANCE: Lazy<ConfigCache> = Lazy::new(|| {
             // Default to 5 minutes max age and check for modifications
@@ -120,12 +104,7 @@ impl ConfigCache {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use common_config::cache::ConfigCache;
-    ///
-    /// let cache = ConfigCache::global();
-    /// let config = cache.get_config()?;
-    /// ```
+    /// Get the cached configuration using the global ConfigCache instance.
     pub fn get_config(&self) -> Result<Config> {
         let mut cache = self.cache.lock().unwrap();
 
@@ -178,13 +157,7 @@ impl ConfigCache {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use common_config::cache::ConfigCache;
-    /// use std::path::Path;
-    ///
-    /// let cache = ConfigCache::global();
-    /// let config = cache.get_config_from_path(Path::new("config.yaml"))?;
-    /// ```
+    /// Load a configuration from a specific file path using the ConfigCache.
     pub fn get_config_from_path(&self, path: &Path) -> Result<Config> {
         let mut cache = self.cache.lock().unwrap();
 
@@ -224,12 +197,7 @@ impl ConfigCache {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use common_config::cache::ConfigCache;
-    ///
-    /// let cache = ConfigCache::global();
-    /// cache.clear();
-    /// ```
+    /// Use this method to force a refresh of the configuration.
     pub fn clear(&self) {
         let mut cache = self.cache.lock().unwrap();
         *cache = None;

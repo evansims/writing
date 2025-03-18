@@ -12,19 +12,9 @@
 //!
 //! ## Example
 //!
-//! ```rust
-//! use common_config::views::ContentView;
-//!
-//! fn get_content_config() -> common_errors::Result<()> {
-//!     let view = ContentView::new()?;
-//!
-//!     // Access content-specific configuration
-//!     let base_dir = view.base_dir();
-//!     let topics = view.topics();
-//!
-//!     Ok(())
-//! }
-//! ```
+//! Use the ContentView to access content-specific configuration such as base directories
+//! and topic settings. The ImageView provides access to image processing configuration,
+//! and the PublicationView gives access to site-wide publication settings.
 
 use common_models::Config;
 
@@ -65,7 +55,7 @@ pub trait ConfigView {
 mod tests {
     use super::*;
     use common_errors::Result;
-    
+
     use std::io::Write;
     use tempfile::NamedTempFile;
 

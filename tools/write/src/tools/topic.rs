@@ -6,6 +6,7 @@
 use anyhow::Result;
 use colored::*;
 use crate::ui;
+use std::path::PathBuf;
 
 /// Add a new topic
 pub fn add_topic(
@@ -13,6 +14,18 @@ pub fn add_topic(
     name: Option<String>,
     description: Option<String>,
     directory: Option<String>,
+) -> Result<()> {
+    // Call with the default path (current directory)
+    add_topic_with_base_path(key, name, description, directory, None)
+}
+
+/// Add a new topic with a specified base path (useful for testing)
+pub fn add_topic_with_base_path(
+    key: Option<String>,
+    name: Option<String>,
+    description: Option<String>,
+    directory: Option<String>,
+    base_path: Option<PathBuf>,
 ) -> Result<()> {
     // Get the key if not provided
     let key = match key {
@@ -55,8 +68,17 @@ pub fn add_topic(
 
     // TODO: Add topic to config
     // For now, just create the directory
-    let content_dir = format!("content/{}", directory);
-    std::fs::create_dir_all(&content_dir)?;
+    let base = base_path.unwrap_or_else(|| std::env::current_dir().unwrap());
+    let content_dir = base.join("content");
+
+    // Ensure the content directory exists
+    if !content_dir.exists() {
+        std::fs::create_dir_all(&content_dir)?;
+    }
+
+    // Create the topic directory
+    let topic_dir = content_dir.join(&directory);
+    std::fs::create_dir_all(&topic_dir)?;
 
     ui::show_success(&format!("Added topic: {} ({})", name.green(), key.green()));
 
