@@ -6,12 +6,36 @@ pub mod normalize;
 pub mod cleanup;
 // Add the directory module for directory operations
 pub mod directory;
+pub mod file;
+pub mod macros;  // Include the new macros module
 
 #[cfg(feature = "content")]
 pub use content_path::find_content_path;
 
 // Re-export key directory operations for convenience
 pub use directory::{move_dir, copy_dir_all, has_content, copy_content, move_content};
+
+// Re-export from file module
+pub use file::{
+    // ... existing exports ...
+};
+
+// Re-export from cleanup module
+pub use cleanup::{
+    // ... existing exports ...
+};
+
+// Re-export macros for convenient usage
+#[doc(inline)]
+pub use crate::read_file;
+#[doc(inline)]
+pub use crate::write_file;
+#[doc(inline)]
+pub use crate::create_dir;
+#[doc(inline)]
+pub use crate::file_exists;
+#[doc(inline)]
+pub use crate::dir_exists;
 
 use common_errors::{Result, WritingError, ResultExt, ErrorContext, IoResultExt};
 use std::fs;
@@ -40,7 +64,7 @@ pub fn write_file(path: &Path, content: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         create_dir_all(parent)?;
     }
-    
+
     // Use the SafeFile wrapper to ensure proper cleanup
     cleanup::write_string(path, content)
 }
@@ -50,7 +74,7 @@ pub fn read_file(path: &Path) -> Result<String> {
     if !path.exists() {
         return Err(WritingError::file_not_found(path));
     }
-    
+
     // Use the SafeFile wrapper to ensure proper cleanup
     cleanup::read_to_string(path)
 }
@@ -60,7 +84,7 @@ pub fn read_file_if_exists(path: &Path) -> Result<Option<String>> {
     if !path.exists() {
         return Ok(None);
     }
-    
+
     // Use the SafeFile wrapper to ensure proper cleanup
     cleanup::read_to_string(path).map(Some)
 }
