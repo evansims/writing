@@ -1,0 +1,45 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+name: project-guidelines.mdc
+description: Guiding principles for this project.
+globs: **/*.*
+---
+
+This is the personal website, blog and podcast of Evan Sims (hello@evansims.com):
+
+1. STORES ALL BLOGGED ARTICLES IN MARKDOWN FORMAT:
+   - All written content is stored in MDX format and is contained within the /content directory.
+   - Content can either be "published" or in a draft (unpublished) state.
+
+2. STORES ALL PAGES IN MARKDOWN FORMAT, TOO:
+   - All pages are also in MDX format and contained within the /pages directory.
+
+3. SUPPORTS A PODCAST PRODUCTION, WITH EPISODE NOTES STORED IN MARKDOWN FORMAT:
+   - All podcast episode notes are stored in MDX format and contained within the /podcast directory.
+
+4. USES RUST-BASED TOOLING FOR MANAGING CONTENT:
+   - These tools are exclusively contained within the /tools directory.
+   - Use an interactive CLI for managing content from a shell.
+   - The primary tool for interacting with content is the "write" tool.
+   - All functions of content management is split up into individual tools, which the "write" tool imports as libraries.
+     - These functiosn can all still be executed directly as their respective tools as well.
+
+5. THE "BUILD" TOOL/COMMAND PRODUCES A WEBSITE SUITABLE FOR HOSTING ON THE VERCEL PLATFORM:
+   - THE FRONTEND:
+      - The frontend is built with nextjs v15, shadcn, and tailwind v4.
+         - The frontend must read dynamic content from a Vercel Fluid Compute-hosted backend.
+         - The frontend should be lightweight and efficient, and follow all accessibility best practices.
+         - The frontend must respent accessibilty best practices and standards throughout its design, components, and implementation.
+      - The site must provide Google Sitemaps (sitemap.xml), an RSS feed representations of blog articles (feed.xml), an RSS feed for allowing subscription to podcast episodes (podcast.xml), and an LLVM-friendly plain text representatinn of blog articles (llms.txt and llms-full.txt).
+         - An overview of the llms.txt and llms-full text formats can be reviewed here: https://raw.githubusercontent.com/AnswerDotAI/llms-txt/refs/heads/main/nbs/index.qmd
+   - THE BACKEND:
+      - The backend is built in Python and runs on Vercel Fluid Compute.
+        - The backend must support Python 3.10+ language features and follow all modern best practices.
+        - The backend must use the `ruff` tool to the fullest extend to ensure code quality is optimal.
+      - We dont need a database: store all the data inside the backend itself in as easily accessible and efficient a manner as possible.
+      - It should be ultra-lightweight and be as simple and minimal as possible, while respecting DRY principles and best practices.
+   - When a new "build" is requested by me (either via the CLI or via a new GitHub release) it should automatically build the new frontend and backend code, and update the build on Vercel.

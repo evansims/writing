@@ -1,31 +1,31 @@
 //! # Common Configuration Operations
-//! 
+//!
 //! This module provides common configuration operations for the writing tools.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - Configuration loading from files
 //! - Topic management
 //! - Configuration validation
 //! - Configuration caching
 //! - Context-specific configuration views
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use common_config::{load_config, get_topics, validate_topic};
 //! use common_config::views::ContentView;
-//! 
+//!
 //! fn list_topics() -> common_errors::Result<()> {
 //!     let topics = get_topics()?;
-//!     
+//!
 //!     for topic in topics {
 //!         println!("Topic: {} - {}", topic.name, topic.description);
 //!     }
-//!     
+//!
 //!     Ok(())
 //! }
-//! 
+//!
 //! fn check_topic(key: &str) -> common_errors::Result<()> {
 //!     let topic = validate_topic(key)?;
 //!     println!("Topic '{}' is valid: {}", key, topic.name);
@@ -51,6 +51,12 @@ pub mod cache;
 // Export the views module
 pub mod views;
 
+// Re-export the views for convenience
+pub use views::ContentView;
+pub use views::ImageView;
+pub use views::PublicationView;
+pub use views::ConfigView;
+
 #[cfg(test)]
 mod tests;
 
@@ -65,11 +71,11 @@ pub fn load_config_from_path(path: &Path) -> Result<Config> {
     // Read the file
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-    
+
     // Parse the YAML
     let config: Config = serde_yaml::from_str(&content)
         .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
-    
+
     Ok(config)
 }
 
@@ -106,7 +112,7 @@ pub fn get_site_url() -> Result<Option<String>> {
 /// Validate a topic key and return the topic configuration
 pub fn validate_topic(topic_key: &str) -> Result<TopicConfig> {
     let config = load_config()?;
-    
+
     // Check if the topic exists
     if let Some(topic) = config.content.topics.get(topic_key) {
         // Check if the directory exists
@@ -116,14 +122,14 @@ pub fn validate_topic(topic_key: &str) -> Result<TopicConfig> {
                 format!("Topic directory does not exist: {}", topic_dir.display())
             ));
         }
-        
+
         // Check if the directory is readable
         if let Err(e) = fs::read_dir(&topic_dir) {
             return Err(WritingError::topic_error(
                 format!("Topic directory is not readable: {}: {}", topic_dir.display(), e)
             ));
         }
-        
+
         Ok(topic.clone())
     } else {
         Err(WritingError::topic_error(format!("Topic not found: {}", topic_key)))
@@ -149,4 +155,4 @@ pub fn validate_topic(topic_key: &str) -> Result<TopicConfig> {
 /// ```
 pub fn clear_config_cache() {
     cache::ConfigCache::global().clear();
-} 
+}
