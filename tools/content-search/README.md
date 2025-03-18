@@ -1,80 +1,53 @@
 # Content Search Tool
 
-A tool for searching and discovering content within the content management system.
-
-## Features
-
-- Full-text search
-- Topic-based filtering
-- Tag-based filtering
-- Status filtering
-- Fuzzy matching
-- Result highlighting
-- Search history
+Tool for searching through content files.
 
 ## Usage
 
 ```bash
-# Basic search
-content-search "query"
-
-# Search in specific topic
-content-search "query" --topic "strategy"
-
-# Search by tags
-content-search "query" --tags "productivity,focus"
+# Search content
+./content-search "query"
 
 # Search with filters
-content-search "query" \
-  --topic "strategy" \
-  --tags "productivity" \
-  --status "published"
+./content-search "query" --topic "strategy" --type "article"
 
-# Fuzzy search
-content-search "query" --fuzzy
-
-# Search with highlighting
-content-search "query" --highlight
+# Search with options
+./content-search "query" --limit 10 --sort "date"
 ```
 
-## Search Options
+## Features
 
-### Filters
-
-- `--topic`: Filter by topic
-- `--tags`: Filter by tags
-- `--status`: Filter by status (draft/published)
-- `--date`: Filter by date range
-- `--author`: Filter by author
-
-### Search Behavior
-
-- `--fuzzy`: Enable fuzzy matching
-- `--exact`: Require exact matches
-- `--case-sensitive`: Case-sensitive search
-- `--highlight`: Show matched terms
-- `--limit`: Limit results count
+- Full-text search
+- Topic filtering
+- Type filtering
+- Status filtering
+- Date filtering
+- Result highlighting
 
 ## Output Format
 
 ```json
 {
-  "query": "search query",
-  "total": 42,
+  "query": "strategy",
   "results": [
     {
-      "title": "Article Title",
-      "slug": "article-slug",
-      "topic": "strategy",
-      "path": "/strategy/article-slug",
-      "excerpt": "Highlighted excerpt...",
-      "score": 0.95,
-      "tags": ["productivity", "focus"],
-      "status": "published"
+      "file": "content/strategy/article.mdx",
+      "title": "Strategic Planning",
+      "excerpt": "...",
+      "score": 0.95
     }
   ]
 }
 ```
+
+## Search Options
+
+- Case sensitivity
+- Word boundaries
+- Fuzzy matching
+- Result limit
+- Sort order
+- Output format
 
 ## Search Index
 

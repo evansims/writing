@@ -1,39 +1,23 @@
 # Topic Edit Tool
 
-A tool for modifying existing topic metadata and properties.
+Tool for modifying existing topics in the content management system.
 
 ## Features
 
-- Interactive topic editing
-- Metadata modification
-- Description updates
-- Icon changes
-- Parent topic management
-- Custom metadata editing
-- Change validation
+- Interactive editing
+- Metadata updates
+- Validation checks
+- Backup creation
+- Dry run mode
 
 ## Usage
 
 ```bash
 # Interactive mode
-topic-edit strategy
+./topic-edit
 
-# Update specific fields
-topic-edit strategy \
-  --title "Strategic Planning" \
-  --description "Updated description"
-
-# Update icon
-topic-edit strategy --icon "chart"
-
-# Change parent topic
-topic-edit strategy --parent "business"
-
-# Update custom metadata
-topic-edit strategy --meta "featured:false"
-
-# Remove parent topic
-topic-edit strategy --remove-parent
+# Direct edit
+./topic-edit --id "strategy" --title "Business Strategy" --description "Updated description"
 ```
 
 ## Editable Fields
@@ -48,13 +32,19 @@ The following fields can be modified:
 
 ## Validation
 
-All changes undergo the same validation as topic creation:
+- Topic existence check
+- ID format validation
+- Title and description length
+- Parent topic validation
+- Icon validation
 
-- Title format and length
-- Description length
-- Valid icon name
-- Valid parent topic
-- Metadata format
+## Safety Features
+
+- Automatic backup creation
+- Validation checks
+- Confirmation prompts
+- Dry run capability
+- Recovery support
 
 ## Change History
 

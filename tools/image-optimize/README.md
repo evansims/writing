@@ -1,35 +1,46 @@
 # Image Optimize Tool
 
-A tool for optimizing images used in content, ensuring fast loading and efficient storage.
-
-## Features
-
-- Automatic image optimization
-- Multiple format support (JPEG, PNG, WebP)
-- Responsive image generation
-- Quality preservation
-- Metadata stripping
-- Batch processing
-- Progress tracking
+Tool for optimizing images for web use.
 
 ## Usage
 
 ```bash
-# Optimize all images
-image-optimize
+# Optimize image
+./image-optimize "path/to/image.jpg"
 
-# Optimize specific directory
-image-optimize --dir "content/strategy"
+# Optimize with quality
+./image-optimize "path/to/image.jpg" --quality 80
 
-# Optimize with custom settings
-image-optimize \
-  --quality 85 \
-  --max-width 1920 \
-  --formats "webp,jpg"
-
-# Dry run (preview changes)
-image-optimize --dry-run
+# Optimize with format
+./image-optimize "path/to/image.jpg" --format "webp"
 ```
+
+## Features
+
+- Image optimization
+- Format conversion
+- Quality control
+- Size reduction
+- Batch processing
+- Progress reporting
+
+## Output
+
+```
+output/
+  image.webp    # Optimized WebP
+  image.jpg     # Optimized JPEG
+  image.avif    # Optimized AVIF
+```
+
+## Options
+
+- Quality level
+- Output format
+- Size limits
+- Batch mode
+- Progress display
+- Output directory
 
 ## Optimization Process
 

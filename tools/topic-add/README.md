@@ -1,6 +1,16 @@
 # Topic Add Tool
 
-A tool for adding new topics to the content management system.
+Tool for adding new topics to the content management system.
+
+## Usage
+
+```bash
+# Interactive mode
+./topic-add
+
+# Direct creation
+./topic-add --id "strategy" --title "Strategy" --description "Business strategy content"
+```
 
 ## Features
 
@@ -12,48 +22,23 @@ A tool for adding new topics to the content management system.
 - Parent topic support
 - Icon assignment
 
-## Usage
-
-```bash
-# Interactive mode
-topic-add
-
-# Direct creation
-topic-add \
-  --id "strategy" \
-  --title "Strategy" \
-  --description "Articles about strategic thinking" \
-  --icon "lightbulb"
-
-# Create with parent topic
-topic-add --parent "business" --id "strategy"
-
-# Create with custom metadata
-topic-add --id "strategy" --meta "featured:true"
-```
-
 ## Topic Structure
 
-Topics are stored with the following structure:
-
 ```yaml
-id: "strategy"
-title: "Strategy"
-description: "Articles about strategic thinking"
-icon: "lightbulb"
-parent: "business" # Optional
+id: strategy
+title: Strategy
+description: Business strategy content
+icon: chart-line
+parent: business
 metadata:
-  featured: true # Optional custom metadata
-created: "2024-03-18T12:00:00Z"
+  tags:
+    - business
+    - planning
 ```
 
 ## Validation
 
-The tool performs the following validations:
-
-- ID format (lowercase, alphanumeric with hyphens)
-- Unique ID check
-- Title length and format
-- Description length
-- Valid parent topic (if specified)
+- ID format and uniqueness
+- Title and description length
+- Valid parent topic
 - Valid icon name

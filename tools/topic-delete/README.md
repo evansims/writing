@@ -1,38 +1,39 @@
 # Topic Delete Tool
 
-A tool for safely removing topics and their associated content from the content management system.
-
-## Features
-
-- Safe topic deletion
-- Content handling options
-- Dependency checking
-- Backup creation
-- Dry run mode
-- Recovery support
-- Batch deletion
+Tool for safely removing topics from the content management system.
 
 ## Usage
 
 ```bash
-# Delete topic
-topic-delete strategy
+# Interactive mode
+./topic-delete
 
-# Delete with content
-topic-delete strategy --with-content
-
-# Dry run (preview changes)
-topic-delete strategy --dry-run
-
-# Delete with backup
-topic-delete strategy --backup
-
-# Force delete (skip checks)
-topic-delete strategy --force
-
-# Delete multiple topics
-topic-delete "strategy,business"
+# Direct deletion
+./topic-delete --id "strategy"
 ```
+
+## Features
+
+- Interactive deletion
+- Confirmation prompts
+- Validation checks
+- Dependency checking
+- Backup creation
+
+## Validation
+
+- Topic existence check
+- Content dependency check
+- Child topic check
+- Backup verification
+
+## Safety Features
+
+- Automatic backup creation
+- Dependency validation
+- Confirmation prompts
+- Dry run capability
+- Recovery support
 
 ## Deletion Options
 

@@ -1,101 +1,46 @@
 # Image Build Tool
 
-A tool for building and generating responsive image assets for content.
-
-## Features
-
-- Responsive image generation
-- Multiple format support
-- Quality optimization
-- Metadata handling
-- Asset organization
-- Build caching
-- Progress tracking
+Tool for generating responsive images.
 
 ## Usage
 
 ```bash
-# Build all images
-image-build
+# Build images
+./image-build "path/to/image.jpg"
 
-# Build specific directory
-image-build --dir "content/strategy"
+# Build with sizes
+./image-build "path/to/image.jpg" --sizes "800,1200,1600"
 
-# Build with custom settings
-image-build \
-  --quality 85 \
-  --max-width 1920 \
-  --formats "webp,jpg"
-
-# Force rebuild
-image-build --force
-
-# Dry run (preview changes)
-image-build --dry-run
+# Build with formats
+./image-build "path/to/image.jpg" --formats "webp,avif"
 ```
 
-## Build Process
+## Features
 
-1. **Image Analysis**
+- Responsive images
+- Multiple formats
+- Multiple sizes
+- Quality control
+- Batch processing
+- Progress reporting
 
-   - Read source image
-   - Extract metadata
-   - Determine dimensions
-   - Check cache
-
-2. **Image Processing**
-
-   - Resize images
-   - Convert formats
-   - Optimize quality
-   - Strip metadata
-
-3. **Asset Generation**
-   - Create responsive variants
-   - Generate thumbnails
-   - Update references
-   - Save to output
-
-## Output Structure
+## Output
 
 ```
-public/
-  └── images/
-      └── [topic]/
-          └── [image_name]/
-              ├── original.jpg     # Original file
-              ├── optimized.jpg    # Optimized original
-              ├── optimized.webp   # WebP variant
-              └── responsive/      # Responsive variants
-                  ├── 480w.jpg
-                  ├── 768w.jpg
-                  └── 1024w.jpg
+output/
+  image-800.webp
+  image-800.avif
+  image-1200.webp
+  image-1200.avif
+  image-1600.webp
+  image-1600.avif
 ```
 
-## Configuration
+## Options
 
-Default settings:
-
-```yaml
-image:
-  quality:
-    jpg: 85
-    webp: 80
-    png: 9
-  max_width: 1920
-  formats: ["webp", "jpg"]
-  responsive:
-    enabled: true
-    breakpoints: [480, 768, 1024, 1920]
-  cache:
-    enabled: true
-    timeout: 3600
-```
-
-## Performance
-
-- Incremental builds
-- Parallel processing
-- Memory optimization
-- Disk caching
-- Progress tracking
+- Image sizes
+- Output formats
+- Quality levels
+- Batch mode
+- Progress display
+- Output directory

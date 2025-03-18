@@ -1,74 +1,41 @@
-# LLMs Generate Tool
+# LLM Training Data Generator
 
-A specialized tool for generating training data for Large Language Models (LLMs) from your content.
-
-## Features
-
-- Generates LLM-friendly text formats
-- Supports LLMS.txt format specification
-- Includes metadata and context
-- Handles draft content appropriately
-- Configurable site URL
-- Custom output directory support
+Tool for generating training data from content.
 
 ## Usage
 
 ```bash
-# Generate with default settings
-llms-generate
+# Generate training data
+./llms-generate
 
-# Include draft content
-llms-generate --include-drafts
+# Generate for topic
+./llms-generate --topic "strategy"
 
-# Specify site URL
-llms-generate --site-url "https://example.com"
-
-# Custom output directory
-llms-generate --output "./llm-data"
+# Generate with format
+./llms-generate --format "jsonl"
 ```
+
+## Features
+
+- Training data generation
+- Topic filtering
+- Format conversion
+- Metadata inclusion
+- Content cleaning
+- Batch processing
 
 ## Output Format
 
-The tool generates two main files:
-
-1. `llms.txt` - Core content in LLMS.txt format
-2. `llms-full.txt` - Extended content with additional context
-
-### LLMS.txt Format
-
-```
-# TITLE: Article Title
-# URL: https://example.com/article
-# TOPIC: Strategy
-# TAGS: productivity, focus
-# DATE: 2024-03-18
-
-Article content in plain text format...
-
-# SECTION: Subheading
-Section content...
+```jsonl
+{"text": "Article content...", "metadata": {"title": "Title", "topic": "strategy"}}
+{"text": "Another article...", "metadata": {"title": "Title", "topic": "strategy"}}
 ```
 
-## Output Structure
+## Options
 
-```
-[output_dir]/
-  ├── llms.txt       # Core content
-  ├── llms-full.txt  # Extended content
-  └── metadata.json  # Build metadata
-```
-
-## Metadata
-
-The generated metadata.json includes:
-
-```json
-{
-  "site": "https://example.com",
-  "include_drafts": false,
-  "timestamp": "2024-03-18T12:00:00Z",
-  "content_count": 42,
-  "topics": ["strategy", "productivity"],
-  "format_version": "1.0"
-}
-```
+- Topic filtering
+- Output format
+- Metadata fields
+- Content cleaning
+- Batch size
+- Output location

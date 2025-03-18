@@ -1,35 +1,40 @@
 # Topic Rename Tool
 
-A tool for renaming topics while maintaining content organization and references.
-
-## Features
-
-- Topic renaming
-- Content path updates
-- Reference updates
-- Asset path updates
-- Dry run mode
-- Backup creation
-- Recovery support
+Tool for renaming topics in the content management system.
 
 ## Usage
 
 ```bash
-# Rename topic
-topic-rename strategy strategic-planning
+# Interactive mode
+./topic-rename
 
-# Dry run (preview changes)
-topic-rename strategy strategic-planning --dry-run
-
-# Rename with backup
-topic-rename strategy strategic-planning --backup
-
-# Force rename (skip checks)
-topic-rename strategy strategic-planning --force
-
-# Update references only
-topic-rename strategy strategic-planning --references-only
+# Direct rename
+./topic-rename --old-id "strategy" --new-id "business-strategy"
 ```
+
+## Features
+
+- Interactive renaming
+- Validation checks
+- Metadata updates
+- Backup creation
+- Dry run mode
+
+## Validation
+
+- Topic existence check
+- New ID format validation
+- Duplicate ID check
+- Content dependency check
+- Child topic check
+
+## Safety Features
+
+- Automatic backup creation
+- Validation checks
+- Confirmation prompts
+- Dry run capability
+- Recovery support
 
 ## Rename Process
 
@@ -62,14 +67,6 @@ The tool automatically updates:
 - Navigation paths
 - Search indices
 - Build configurations
-
-## Safety Features
-
-- Automatic backup creation
-- Dry run capability
-- Reference validation
-- Link checking
-- Recovery support
 
 ## Recovery
 

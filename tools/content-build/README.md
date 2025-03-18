@@ -1,50 +1,42 @@
 # Content Build Tool
 
-A specialized tool for building content files into their final formats for production use.
-
-## Features
-
-- Converts content from MDX to various output formats:
-  - HTML for web display
-  - JSON for API consumption
-  - RSS for feed readers
-  - Sitemap for search engines
-- Supports draft content handling
-- Topic-based filtering
-- Incremental builds via caching
-- Verbose output option for debugging
+Specialized tool for building content files into production formats.
 
 ## Usage
 
 ```bash
 # Build all content
-content-build
+./content-build
 
 # Build specific topic
-content-build --topic "strategy"
+./content-build --topic "strategy"
 
-# Build with drafts included
-content-build --include-drafts
+# Include drafts
+./content-build --include-drafts
 
-# Force rebuild all content
-content-build --force
+# Force rebuild
+./content-build --force
 
-# Skip certain output formats
-content-build --skip-html --skip-json
+# Skip formats
+./content-build --skip-html --skip-json
 
-# Specify custom output directory
-content-build --output "./dist"
+# Custom output
+./content-build --output "./dist"
 ```
+
+## Features
+
+- MDX to HTML/JSON/RSS/Sitemap conversion
+- Draft content handling
+- Topic-based filtering
+- Incremental builds via caching
+- Verbose output option
 
 ## Output Structure
 
 ```
-[output_dir]/
-  ├── content/
-  │   ├── [topic]/
-  │   │   └── [slug]/
-  │   │       ├── index.html
-  │   │       └── index.json
-  ├── feed.xml
-  └── sitemap.xml
+output/
+  content/     # Built content files
+  feed/        # RSS feed
+  sitemap/     # Sitemap files
 ```

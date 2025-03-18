@@ -1,81 +1,42 @@
 # Content Edit Tool
 
-A tool for editing existing content and its metadata.
-
-## Features
-
-- Interactive content editing
-- Metadata modification
-- Content validation
-- Draft management
-- Tag management
-- Asset handling
-- Change tracking
+Tool for editing content files.
 
 ## Usage
 
 ```bash
-# Interactive mode
-content-edit strategy/my-article
+# Edit content
+./content-edit "content/strategy/article.mdx"
 
-# Edit specific fields
-content-edit strategy/my-article \
-  --title "Updated Title" \
-  --tagline "New tagline" \
-  --tags "productivity,focus,strategy"
+# Edit with editor
+./content-edit "content/strategy/article.mdx" --editor "vim"
 
-# Change status
-content-edit strategy/my-article --status "draft"
-
-# Update content file
-content-edit strategy/my-article --edit
-
-# Move to different topic
-content-edit strategy/my-article --move-to "business"
+# Edit metadata
+./content-edit "content/strategy/article.mdx" --meta "status:published"
 ```
 
-## Editable Components
+## Features
 
-### Metadata (`metadata.yml`)
-
-```yaml
-title: "Article Title"
-tagline: "Article tagline"
-tags: ["tag1", "tag2"]
-status: "draft|published"
-updated: "2024-03-18T12:00:00Z"
-```
-
-### Content (`index.mdx`)
-
-- Main content file
-- Supports MDX format
-- Asset references
-- Code blocks
-- Interactive components
-
-### Assets
-
-- Image management
-- File attachments
-- Resource linking
+- Content editing
+- Metadata editing
+- Frontmatter editing
+- Editor integration
+- Backup creation
+- Validation
 
 ## Validation
 
-The tool validates:
-
-- Metadata format
+- Content format
+- Frontmatter format
 - Required fields
-- Tag format
-- Status values
-- Asset references
-- MDX syntax
+- Link validity
+- Image references
+- Topic references
 
-## Change Tracking
+## Safety Features
 
-Each edit is tracked with:
-
-- Timestamp
-- Modified fields
-- Previous values
-- Editor information
+- Automatic backup
+- Validation checks
+- Confirmation prompts
+- Dry run mode
+- Recovery support

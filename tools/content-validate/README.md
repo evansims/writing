@@ -1,37 +1,51 @@
 # Content Validate Tool
 
-A tool for validating content structure, metadata, and references.
-
-## Features
-
-- Content structure validation
-- Metadata verification
-- Link checking
-- Asset validation
-- MDX syntax checking
-- Reference validation
-- Custom validation rules
+Tool for validating content files and their structure.
 
 ## Usage
 
 ```bash
 # Validate all content
-content-validate
+./content-validate
 
-# Validate specific content
-content-validate strategy/my-article
+# Validate specific topic
+./content-validate --topic "strategy"
 
-# Validate with custom rules
-content-validate --rules "custom-rules.yaml"
+# Validate with detailed output
+./content-validate --verbose
+```
 
-# Validate specific aspects
-content-validate --check "links,assets,mdx"
+## Features
 
-# Fix auto-fixable issues
-content-validate --fix
+- Content validation
+- Link checking
+- Image validation
+- Metadata validation
+- Structure validation
+- Detailed reporting
 
-# Generate validation report
-content-validate --report
+## Validation Checks
+
+- Frontmatter format
+- Required fields
+- Link validity
+- Image existence
+- Topic references
+- Content structure
+
+## Output
+
+```json
+{
+  "total_files": 100,
+  "valid_files": 95,
+  "errors": [
+    {
+      "file": "content/strategy/article.mdx",
+      "error": "Missing required field: description"
+    }
+  ]
+}
 ```
 
 ## Validation Checks
