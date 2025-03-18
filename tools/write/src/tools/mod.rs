@@ -9,7 +9,7 @@ pub mod image;
 pub mod utils;
 pub mod topic;
 
-// Re-export submodule functionality
-pub use content::*;
-pub use topic::*;
-pub use image::*;
+// Re-export submodule functionality is commented out as these exports are currently unused
+// pub use content::*;
+// pub use topic::*;
+// pub use image::*;

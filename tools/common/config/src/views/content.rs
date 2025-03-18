@@ -173,12 +173,14 @@ content:
   base_dir: "./content"
   topics:
     blog:
-      path: "blog"
-      title: "Blog"
+      directory: "blog"
+      name: "Blog"
+      description: "Blog Posts"
     articles:
-      path: "articles"
-      title: "Articles"
-image:
+      directory: "articles"
+      name: "Articles"
+      description: "Technical Articles"
+images:
   formats:
     - "webp"
     - "jpg"
