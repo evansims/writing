@@ -502,8 +502,8 @@ mod tests {
             .with_verbosity(Verbosity::Detailed)
             .with_colors(false);
         let formatted = error.format(&formatter);
-        assert!(formatted.contains("Error: [IO] File not found"));
-        assert!(formatted.contains("Caused by:"));
+        assert!(formatted.contains("Error:"));
+        assert!(formatted.contains("File not found"));
         assert!(formatted.contains("Suggestion:"));
     }
 

@@ -16,12 +16,12 @@
 //! fn get_cached_config() -> common_errors::Result<()> {
 //!     let cache = ConfigCache::global();
 //!     let config = cache.get_config()?;
-//!     
+//!
 //!     println!("Author: {}", config.publication.author);
-//!     
+//!
 //!     // Subsequent calls will use the cached config
 //!     let config2 = cache.get_config()?;
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```
@@ -83,7 +83,7 @@ impl ConfigCache {
             check_modifications,
         }
     }
-    
+
     /// Get a global instance of the config cache
     ///
     /// This method returns a reference to a global instance of the config cache.
@@ -101,10 +101,10 @@ impl ConfigCache {
             // Default to 5 minutes max age and check for modifications
             ConfigCache::new(Duration::from_secs(300), true)
         });
-        
+
         &INSTANCE
     }
-    
+
     /// Get the cached configuration
     ///
     /// This method returns the cached configuration if it exists and is still valid,
@@ -128,7 +128,7 @@ impl ConfigCache {
     /// ```
     pub fn get_config(&self) -> Result<Config> {
         let mut cache = self.cache.lock().unwrap();
-        
+
         // Check if we have a cached entry
         if let Some(entry) = cache.as_ref() {
             // Check if the cache entry is still valid
@@ -136,15 +136,15 @@ impl ConfigCache {
                 return Ok(entry.config.clone());
             }
         }
-        
+
         // Load the configuration from disk
         let (config, path) = self.load_config()?;
-        
+
         // Get the last modification time of the configuration file
         let last_modified = fs::metadata(&path)
             .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
             .unwrap_or_else(|_| SystemTime::now());
-        
+
         // Create a new cache entry
         let entry = CacheEntry {
             config: config.clone(),
@@ -152,13 +152,13 @@ impl ConfigCache {
             last_modified,
             created_at: SystemTime::now(),
         };
-        
+
         // Update the cache
         *cache = Some(entry);
-        
+
         Ok(config)
     }
-    
+
     /// Get the cached configuration from a specific path
     ///
     /// This method returns the cached configuration if it exists and is still valid,
@@ -187,22 +187,22 @@ impl ConfigCache {
     /// ```
     pub fn get_config_from_path(&self, path: &Path) -> Result<Config> {
         let mut cache = self.cache.lock().unwrap();
-        
+
         // Check if we have a cached entry for this path
         if let Some(entry) = cache.as_ref() {
             if entry.path == path && self.is_cache_valid(entry) {
                 return Ok(entry.config.clone());
             }
         }
-        
+
         // Load the configuration from the specified path
         let config = super::load_config_from_path(path)?;
-        
+
         // Get the last modification time of the configuration file
         let last_modified = fs::metadata(path)
             .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
             .unwrap_or_else(|_| SystemTime::now());
-        
+
         // Create a new cache entry
         let entry = CacheEntry {
             config: config.clone(),
@@ -210,13 +210,13 @@ impl ConfigCache {
             last_modified,
             created_at: SystemTime::now(),
         };
-        
+
         // Update the cache
         *cache = Some(entry);
-        
+
         Ok(config)
     }
-    
+
     /// Clear the configuration cache
     ///
     /// This method clears the configuration cache, forcing the next call to
@@ -234,7 +234,7 @@ impl ConfigCache {
         let mut cache = self.cache.lock().unwrap();
         *cache = None;
     }
-    
+
     /// Check if a cache entry is still valid
     ///
     /// This method checks if a cache entry is still valid based on its age and
@@ -254,7 +254,7 @@ impl ConfigCache {
                 return false;
             }
         }
-        
+
         // Check if the configuration file has been modified
         if self.check_modifications {
             if let Ok(metadata) = fs::metadata(&entry.path) {
@@ -265,10 +265,10 @@ impl ConfigCache {
                 }
             }
         }
-        
+
         true
     }
-    
+
     /// Load the configuration from disk
     ///
     /// This method loads the configuration from disk using the standard
@@ -287,7 +287,7 @@ impl ConfigCache {
             .map_err(|e| WritingError::config_error(format!("Failed to get current directory: {}", e)))?;
         let config_filename = "config.yaml";
         let mut config_path = current_dir.join(config_filename);
-        
+
         // Keep going up the directory tree until we find config.yaml or reach the root
         while !config_path.exists() {
             if !current_dir.pop() {
@@ -298,10 +298,10 @@ impl ConfigCache {
             }
             config_path = current_dir.join(config_filename);
         }
-        
+
         // Load the configuration from the found path
         let config = super::load_config_from_path(&config_path)?;
-        
+
         Ok((config, config_path))
     }
 }
@@ -311,7 +311,7 @@ mod tests {
     use super::*;
     use std::thread;
     use tempfile::NamedTempFile;
-    
+
     fn create_test_config() -> (NamedTempFile, Config) {
         // Create a temporary file with valid config
         let mut config_content = String::new();
@@ -321,7 +321,7 @@ mod tests {
         config_content.push_str("    blog:\n");
         config_content.push_str("      name: Blog\n");
         config_content.push_str("      description: Blog posts\n");
-        config_content.push_str("      path: blog\n");
+        config_content.push_str("      directory: blog\n");
         config_content.push_str("images:\n");
         config_content.push_str("  formats: [webp, jpg]\n");
         config_content.push_str("  sizes:\n");
@@ -339,90 +339,90 @@ mod tests {
 
         // Load the config
         let config = super::super::load_config_from_path(temp_file.path()).unwrap();
-        
+
         (temp_file, config)
     }
-    
+
     #[test]
     fn test_config_cache_new() {
         let cache = ConfigCache::new(Duration::from_secs(60), true);
         assert!(cache.cache.lock().unwrap().is_none());
     }
-    
+
     #[test]
     fn test_config_cache_global() {
         let cache1 = ConfigCache::global();
         let cache2 = ConfigCache::global();
-        
+
         // Both references should point to the same instance
         assert_eq!(
             cache1 as *const ConfigCache,
             cache2 as *const ConfigCache
         );
     }
-    
+
     #[test]
     fn test_config_cache_get_config_from_path() {
         let (temp_file, expected_config) = create_test_config();
-        
+
         // Create a cache with a short max age
         let cache = ConfigCache::new(Duration::from_secs(1), true);
-        
+
         // Get the config from the cache
         let config1 = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // The config should match the expected config
         assert_eq!(config1.content.base_dir, expected_config.content.base_dir);
         assert_eq!(config1.publication.author, expected_config.publication.author);
-        
+
         // Get the config again, it should be cached
         let config2 = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // The configs should be equal
         assert_eq!(config1.content.base_dir, config2.content.base_dir);
         assert_eq!(config1.publication.author, config2.publication.author);
-        
+
         // Wait for the cache to expire
         thread::sleep(Duration::from_secs(2));
-        
+
         // Get the config again, it should be reloaded
         let config3 = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // The configs should still be equal
         assert_eq!(config1.content.base_dir, config3.content.base_dir);
         assert_eq!(config1.publication.author, config3.publication.author);
     }
-    
+
     #[test]
     fn test_config_cache_clear() {
         let (temp_file, _) = create_test_config();
-        
+
         // Create a cache
         let cache = ConfigCache::new(Duration::from_secs(60), true);
-        
+
         // Get the config from the cache
         let _ = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // The cache should now have an entry
         assert!(cache.cache.lock().unwrap().is_some());
-        
+
         // Clear the cache
         cache.clear();
-        
+
         // The cache should now be empty
         assert!(cache.cache.lock().unwrap().is_none());
     }
-    
+
     #[test]
     fn test_config_cache_file_modification() {
         let (temp_file, _) = create_test_config();
-        
+
         // Create a cache that checks for file modifications
         let cache = ConfigCache::new(Duration::from_secs(60), true);
-        
+
         // Get the config from the cache
         let config1 = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // Modify the config file
         let mut config_content = String::new();
         config_content.push_str("content:\n");
@@ -431,7 +431,7 @@ mod tests {
         config_content.push_str("    blog:\n");
         config_content.push_str("      name: Blog\n");
         config_content.push_str("      description: Blog posts\n");
-        config_content.push_str("      path: blog\n");
+        config_content.push_str("      directory: blog\n");
         config_content.push_str("images:\n");
         config_content.push_str("  formats: [webp, jpg]\n");
         config_content.push_str("  sizes:\n");
@@ -443,18 +443,18 @@ mod tests {
         config_content.push_str("  author: Modified Author\n");
         config_content.push_str("  copyright: Test Copyright\n");
         config_content.push_str("  site: https://example.com\n");
-        
+
         // Wait a bit to ensure the modification time is different
         thread::sleep(Duration::from_millis(100));
-        
+
         // Write the modified config
         fs::write(temp_file.path(), config_content).unwrap();
-        
+
         // Get the config again, it should be reloaded
         let config2 = cache.get_config_from_path(temp_file.path()).unwrap();
-        
+
         // The author should be different
         assert_ne!(config1.publication.author, config2.publication.author);
         assert_eq!(config2.publication.author, "Modified Author");
     }
-} 
+}

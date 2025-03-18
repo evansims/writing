@@ -27,11 +27,11 @@ content:
     blog:
       name: "Blog"
       description: "Blog posts"
-      path: "content/blog"
+      directory: "content/blog"
     notes:
       name: "Notes"
       description: "Quick notes and thoughts"
-      path: "content/notes"
+      directory: "content/notes"
 
 images:
   formats:
@@ -405,7 +405,7 @@ fn test_image_view_sizes() {
     let thumbnail = view.size("thumbnail").unwrap();
     assert_eq!(thumbnail.width, 200);
     assert_eq!(thumbnail.height, 200);
-    assert_eq!(thumbnail.description, "Thumbnail size");
+    assert_eq!(thumbnail.description, "Thumbnail image");
 
     let medium = view.size("medium").unwrap();
     assert_eq!(medium.width, 800);

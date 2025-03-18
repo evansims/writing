@@ -70,7 +70,7 @@ pub fn execute_content_command(command: ContentCommands) -> Result<()> {
         ContentCommands::Delete { slug, topic, force } => {
             content::delete_content(Some(slug), topic, force)
         },
-        ContentCommands::Validate { slug, topic, all, fix } => {
+        ContentCommands::Validate { slug, topic, all: _, fix } => {
             let validation_types = None;
             content::validate_content(
                 slug,
@@ -86,7 +86,7 @@ pub fn execute_content_command(command: ContentCommands) -> Result<()> {
         ContentCommands::List { topic, drafts, format } => {
             content::list_content_with_options(topic, drafts, &format)
         },
-        ContentCommands::Search { query, topic, drafts, format } => {
+        ContentCommands::Search { query, topic, drafts, format: _ } => {
             content::search_content(
                 query.unwrap_or_default(),
                 topic,
@@ -170,7 +170,7 @@ pub fn execute_build_command(command: BuildCommands) -> Result<()> {
                 true,  // Verbose output
             )
         },
-        BuildCommands::Toc { topic } => {
+        BuildCommands::Toc { topic: _ } => {
             // Topic is ignored for now, as the TOC is generated for all content
             build::generate_toc(None)
         },
