@@ -72,7 +72,6 @@ pub use error_formatter::{
 
 use std::path::{Path, PathBuf};
 use std::error::Error;
-use std::fmt;
 
 /// Error kind for categorizing errors
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

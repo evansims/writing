@@ -5,10 +5,8 @@
 
 use anyhow::Result;
 use colored::*;
-use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::path::PathBuf;
-use std::fs;
 use std::time::Instant;
 use crate::ui;
 
@@ -92,7 +90,7 @@ pub fn build_images(
         BATCH_SIZE,
         true, // show progress
         "Building images in parallel...",
-        |image_path| {
+        |_image_path| {
             // Simulate image building work
             std::thread::sleep(std::time::Duration::from_millis(150));
 
@@ -164,7 +162,7 @@ pub fn optimize_images(topic: Option<String>, reoptimize: bool) -> Result<()> {
         BATCH_SIZE,
         true, // show progress
         "Optimizing images in parallel...",
-        |image_path| {
+        |_image_path| {
             // Simulate image optimization work
             std::thread::sleep(std::time::Duration::from_millis(100));
 
@@ -240,7 +238,7 @@ pub fn optimize_image(
     let output_quality = quality.unwrap_or(80);
 
     // Use default metadata preservation if none provided
-    let keep_metadata = preserve_metadata.unwrap_or(false);
+    let _keep_metadata = preserve_metadata.unwrap_or(false);
 
     // Show progress
     ui::show_info(&format!(

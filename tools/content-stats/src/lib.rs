@@ -445,10 +445,11 @@ pub fn get_content_stats(options: &StatsOptions) -> Result<ContentStats> {
     Ok(stats)
 }
 
-fn validate_draft_status(frontmatter: &Frontmatter) -> Result<()> {
-    if frontmatter.is_draft.unwrap_or(false) {
-        Ok(())
-    } else {
-        // ... existing code ...
-    }
-}
+// Function is unused, so we can remove or comment it out
+// fn validate_draft_status(frontmatter: &Frontmatter) -> Result<()> {
+//     if frontmatter.is_draft.unwrap_or(false) {
+//         Ok(())
+//     } else {
+//         Ok(())
+//     }
+// }

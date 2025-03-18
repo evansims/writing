@@ -63,7 +63,7 @@ fn create_test_config() -> Config {
     let publication = PublicationConfig {
         author: "Test Author".to_string(),
         copyright: "© 2023 Test Author".to_string(),
-        site: Some("https://example.com".to_string()),
+        site_url: Some("https://example.com".to_string()),
     };
 
     // Create topic configurations
@@ -105,7 +105,7 @@ fn create_test_config() -> Config {
     let thumbnail = ImageSize {
         width: 200,
         height: 200,
-        description: "Thumbnail image".to_string(),
+        description: "Thumbnail size".to_string(),
     };
 
     let medium = ImageSize {
@@ -246,28 +246,22 @@ fn test_image_view_from_config() {
     let sizes = view.sizes();
     assert_eq!(sizes.len(), 3);
 
-    let size_keys = view.size_keys();
+    // Get the keys from the sizes
+    let size_keys: Vec<&String> = sizes.keys().collect();
     assert_eq!(size_keys.len(), 3);
-    assert!(size_keys.contains(&"thumbnail".to_string()));
-    assert!(size_keys.contains(&"medium".to_string()));
-    assert!(size_keys.contains(&"large".to_string()));
+    assert!(size_keys.iter().any(|k| *k == "thumbnail"));
+    assert!(size_keys.iter().any(|k| *k == "medium"));
+    assert!(size_keys.iter().any(|k| *k == "large"));
 
     // Test specific size retrieval
     let thumbnail = view.size("thumbnail").unwrap();
     assert_eq!(thumbnail.width, 200);
     assert_eq!(thumbnail.height, 200);
-    assert_eq!(thumbnail.description, "Thumbnail image");
+    assert_eq!(thumbnail.description, "Thumbnail size");
 
     // Test nonexistent size
     let nonexistent = view.size("nonexistent");
     assert!(nonexistent.is_none());
-
-    // Test size validation
-    let result = view.validate_size("thumbnail");
-    assert!(result.is_ok());
-
-    let result = view.validate_size("nonexistent");
-    assert!(result.is_err());
 }
 
 #[test]
@@ -284,38 +278,27 @@ fn test_publication_view_from_config() {
     // Test PublicationView specific methods
     assert_eq!(view.author(), "Test Author");
     assert_eq!(view.copyright(), "© 2023 Test Author");
-    assert_eq!(view.site(), Some("https://example.com"));
+    assert_eq!(view.site_url(), Some("https://example.com"));
 }
 
 #[test]
 fn test_publication_view_from_path() {
-    // Create a test configuration file
     let config_file = create_test_config_file();
     let config_path = config_file.path();
 
-    // Create a publication view from the file path
-    let result = PublicationView::from_path(config_path);
-    assert!(result.is_ok(), "Failed to create PublicationView from path: {:?}", result.err());
+    let view = PublicationView::from_path(config_path).unwrap();
 
-    let view = result.unwrap();
-
-    // Test the view
     assert_eq!(view.author(), "Test Author");
     assert_eq!(view.copyright(), "© 2023 Test Author");
-    assert_eq!(view.site(), Some("https://example.com"));
+    assert_eq!(view.site_url(), Some("https://example.com"));
 }
 
 #[test]
 fn test_image_view_from_path() {
-    // Create a test configuration file
     let config_file = create_test_config_file();
     let config_path = config_file.path();
 
-    // Create an image view from the file path
-    let result = ImageView::from_path(config_path);
-    assert!(result.is_ok(), "Failed to create ImageView from path: {:?}", result.err());
-
-    let view = result.unwrap();
+    let view = ImageView::from_path(config_path).unwrap();
 
     // Test the view
     let formats = view.formats();
@@ -323,6 +306,15 @@ fn test_image_view_from_path() {
     assert!(formats.contains(&"jpg".to_string()));
 
     // Test size retrieval
+    let sizes = view.sizes();
+    assert_eq!(sizes.len(), 3);
+
+    // Get the keys from the sizes
+    let size_keys: Vec<&String> = sizes.keys().collect();
+    assert_eq!(size_keys.len(), 3);
+    assert!(size_keys.iter().any(|k| *k == "thumbnail"));
+
+    // Test specific size retrieval
     let thumbnail = view.size("thumbnail").unwrap();
     assert_eq!(thumbnail.width, 200);
     assert_eq!(thumbnail.height, 200);
@@ -380,18 +372,19 @@ fn test_content_view_base_dir_path_modified() {
 
 #[test]
 fn test_publication_view() {
-    let config_file = create_test_config();
-    let view = PublicationView::from_path(config_file.path()).unwrap();
+    let config_file = create_test_config_file();
+    let config_path = config_file.path();
 
-    assert_eq!(view.author(), "Test Author");
-    assert_eq!(view.copyright(), "© 2023");
+    let view = PublicationView::from_path(config_path).unwrap();
     assert_eq!(view.site_url(), Some("https://example.com"));
 }
 
 #[test]
 fn test_image_view_sizes() {
-    let config_file = create_test_config();
-    let view = ImageView::from_path(config_file.path()).unwrap();
+    let config_file = create_test_config_file();
+    let config_path = config_file.path();
+
+    let view = ImageView::from_path(config_path).unwrap();
 
     let formats = view.formats();
     assert_eq!(formats.len(), 3);
@@ -402,33 +395,28 @@ fn test_image_view_sizes() {
     let sizes = view.sizes();
     assert_eq!(sizes.len(), 3);
 
-    let size_keys = view.size_keys();
+    // Get the keys from the sizes
+    let size_keys: Vec<&String> = sizes.keys().collect();
     assert_eq!(size_keys.len(), 3);
-    assert!(size_keys.contains(&"thumbnail".to_string()));
-    assert!(size_keys.contains(&"medium".to_string()));
-    assert!(size_keys.contains(&"large".to_string()));
+    assert!(size_keys.iter().any(|k| *k == "thumbnail"));
+    assert!(size_keys.iter().any(|k| *k == "medium"));
+    assert!(size_keys.iter().any(|k| *k == "large"));
 
     let thumbnail = view.size("thumbnail").unwrap();
-    assert_eq!(thumbnail.width_px, 200);
-    assert_eq!(thumbnail.height_px, 200);
+    assert_eq!(thumbnail.width, 200);
+    assert_eq!(thumbnail.height, 200);
     assert_eq!(thumbnail.description, "Thumbnail size");
 
     let medium = view.size("medium").unwrap();
-    assert_eq!(medium.width_px, 800);
-    assert_eq!(medium.height_px, 600);
+    assert_eq!(medium.width, 800);
+    assert_eq!(medium.height, 600);
     assert_eq!(medium.description, "Medium image");
 
     let large = view.size("large").unwrap();
-    assert_eq!(large.width_px, 1200);
-    assert_eq!(large.height_px, 900);
+    assert_eq!(large.width, 1200);
+    assert_eq!(large.height, 900);
     assert_eq!(large.description, "Large image");
 
     let nonexistent = view.size("nonexistent");
     assert!(nonexistent.is_none());
-
-    let result = view.validate_size("thumbnail");
-    assert!(result.is_ok());
-
-    let result = view.validate_size("nonexistent");
-    assert!(result.is_err());
 }

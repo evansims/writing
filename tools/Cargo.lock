@@ -539,6 +539,7 @@ dependencies = [
 name = "common-test-utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "common-config",
  "common-errors",
  "common-fs",

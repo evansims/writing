@@ -1,7 +1,7 @@
 //! # Write CLI Tool
 //!
 //! This is a CLI tool for managing writing content.
-use common_errors::{WritingError, print_error_detailed};
+use common_errors::{WritingError, print_error};
 use clap::Parser;
 
 mod cli;
@@ -17,7 +17,7 @@ fn main() {
     // Parse command line arguments and execute the
     // corresponding command or return an error.
     if let Err(e) = run() {
-        print_error_detailed(&e);
+        print_error(&e);
         std::process::exit(1);
     }
 }

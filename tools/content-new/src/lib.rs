@@ -34,56 +34,56 @@ pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
     let slug = options.slug.as_ref().ok_or_else(|| anyhow::anyhow!("Content slug is required"))?;
     let topic = options.topic.as_ref().ok_or_else(|| anyhow::anyhow!("Topic is required"))?;
     let title = options.title.as_ref().ok_or_else(|| anyhow::anyhow!("Title is required"))?;
-    
+
     // Load config
     let config = load_config()?;
-    
+
     // Check if topic exists
     let topic_config = config.content.topics.get(topic)
         .ok_or_else(|| anyhow::anyhow!("Topic not found: {}", topic))?;
-    
+
     // Create content directory
     let content_dir = PathBuf::from(&config.content.base_dir)
         .join(&topic_config.directory)
         .join(slug);
-    
+
     if content_dir.exists() {
         return Err(anyhow::anyhow!("Content already exists: {}", slug));
     }
-    
+
     create_dir_all(&content_dir)?;
-    
+
     // Create content file
     let default_template = String::from("default");
     let template_name = options.template.as_ref().unwrap_or(&default_template);
     let mut template = common_templates::load_template(template_name)?;
-    
+
     // Create frontmatter
     let topics = vec![topic.clone()];
-    
+
     let frontmatter = Frontmatter {
         title: title.clone(),
-        published: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
-        updated: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
+        published_at: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
+        updated_at: Some(chrono::Local::now().format("%Y-%m-%d").to_string()),
         slug: Some(slug.clone()),
         tagline: options.description.clone(),
         tags: options.tags.clone(),
         topics: Some(topics),
-        draft: options.draft,
-        featured_image: None,
+        is_draft: options.draft,
+        featured_image_path: None,
     };
-    
+
     // Convert frontmatter to YAML
     let frontmatter_yaml = serde_yaml::to_string(&frontmatter)?;
-    
+
     // Create content with frontmatter
     let template_content = template.get_content()?;
     let content = format!("---\n{}---\n\n{}", frontmatter_yaml, template_content);
-    
+
     // Write content to file
     let content_file = content_dir.join("index.md");
     write_file(&content_file, &content)?;
-    
+
     Ok(content_file)
 }
 
@@ -115,12 +115,12 @@ pub fn list_templates() -> Result<Vec<common_templates::Template>> {
 /// Returns an error if the topics cannot be listed
 pub fn get_available_topics() -> Result<Vec<(String, TopicConfig)>> {
     let config = load_config()?;
-    
+
     let topics: Vec<(String, TopicConfig)> = config.content.topics
         .iter()
         .map(|(key, config)| (key.clone(), config.clone()))
         .collect();
-    
+
     Ok(topics)
 }
 
@@ -132,10 +132,10 @@ mod tests {
     fn test_get_available_topics() -> Result<()> {
         // This test just verifies that the function doesn't panic
         let topics = get_available_topics()?;
-        
+
         // We should have at least one topic
         assert!(!topics.is_empty());
-        
+
         Ok(())
     }
 }

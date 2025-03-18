@@ -190,8 +190,8 @@ fn test_load_valid_config() {
 
     // Verify thumbnail size
     let thumbnail = &config.images.sizes["thumbnail"];
-    assert_eq!(thumbnail.width_px, 480);
-    assert_eq!(thumbnail.height_px, 320);
+    assert_eq!(thumbnail.width, 480);
+    assert_eq!(thumbnail.height, 320);
     assert_eq!(thumbnail.description, "Small image");
 }
 

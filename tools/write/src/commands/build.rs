@@ -117,7 +117,7 @@ pub fn execute(args: BuildArgs) -> Result<()> {
                 verbose,
             )
         },
-        BuildCommands::Toc { topic, output } => {
+        BuildCommands::Toc { topic: _topic, output } => {
             // This function already handles both topic-specific and general ToC generation
             build::generate_toc(output)
         },

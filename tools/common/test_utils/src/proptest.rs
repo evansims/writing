@@ -1,19 +1,19 @@
 //! # Property-Based Testing Utilities
-//! 
+//!
 //! This module provides utilities for property-based testing using proptest.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - Generators for common domain types
 //! - Strategies for testing with realistic data
 //! - Helpers for generating test scenarios
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use common_test_utils::proptest::*;
 //! use proptest::prelude::*;
-//! 
+//!
 //! proptest! {
 //!     #[test]
 //!     fn test_slug_validation(slug in valid_slug_strategy()) {
@@ -33,10 +33,10 @@ pub fn valid_slug_strategy() -> impl Strategy<Value = String> {
     // Slugs typically consist of lowercase letters, numbers, and hyphens
     // They must start with a letter or number and end with a letter or number
     // They cannot contain consecutive hyphens
-    
+
     // Generate segments of lowercase letters and numbers
     let segment_strategy = prop::string::string_regex("[a-z0-9]{1,10}").unwrap();
-    
+
     // Generate 1-5 segments separated by single hyphens
     prop::collection::vec(segment_strategy, 1..5)
         .prop_map(|segments| {
@@ -151,13 +151,13 @@ pub fn valid_frontmatter_strategy() -> impl Strategy<Value = Frontmatter> {
         Frontmatter {
             title,
             tagline,
-            published: Some(published.clone()),
-            updated: Some(published),
+            published_at: Some(published.clone()),
+            updated_at: Some(published),
             slug: Some(slug),
             tags,
             topics,
-            featured_image: None,
-            draft: Some(draft),
+            featured_image_path: None,
+            is_draft: Some(draft),
         }
     })
 }
@@ -172,7 +172,7 @@ pub fn valid_article_strategy() -> impl Strategy<Value = Article> {
         let slug = frontmatter.slug.clone().unwrap_or_default();
         let topics = frontmatter.topics.clone();
         let topic = topics.as_ref().and_then(|t| t.first().cloned()).unwrap_or_default();
-        
+
         Article {
             frontmatter,
             content,
@@ -198,4 +198,4 @@ pub fn valid_topic_config_strategy() -> impl Strategy<Value = TopicConfig> {
             directory,
         }
     })
-} 
+}

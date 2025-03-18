@@ -457,7 +457,8 @@ pub fn print_error(error: &WritingError) {
 }
 
 /// A utility function to print an error to stderr with detailed formatting
-pub fn print_error_detailed(error: &WritingError) {
+#[deprecated(since = "0.1.0", note = "Use print_error instead")]
+pub fn _print_error_detailed(error: &WritingError) {
     eprintln!("{}", error.format(&ErrorFormatter::new()
         .with_colors(true)
         .with_verbosity(Verbosity::Detailed)
@@ -465,7 +466,8 @@ pub fn print_error_detailed(error: &WritingError) {
 }
 
 /// A utility function to print an error to stderr with debug formatting
-pub fn print_error_debug(error: &WritingError) {
+#[deprecated(since = "0.1.0", note = "Use print_error instead")]
+pub fn _print_error_debug(error: &WritingError) {
     eprintln!("{}", error.format_debug());
 }
 
@@ -476,40 +478,38 @@ mod tests {
 
     #[test]
     fn test_minimal_formatting() {
-        let error = WritingError::io_error(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"), "Failed to open config file");
+        let error = WritingError::from(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"));
         let formatter = ErrorFormatter::new().with_verbosity(Verbosity::Minimal);
         let formatted = error.format(&formatter);
-        assert_eq!(formatted, "Failed to open config file");
+        assert_eq!(formatted, "File not found");
     }
 
     #[test]
     fn test_standard_formatting() {
-        let error = WritingError::io_error(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"), "Failed to open config file");
+        let error = WritingError::from(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"));
         let formatter = ErrorFormatter::new()
             .with_verbosity(Verbosity::Standard)
             .with_colors(false);
         let formatted = error.format(&formatter);
-        assert!(formatted.contains("Error: Failed to open config file"));
-        assert!(formatted.contains("Context: File not found"));
+        assert!(formatted.contains("Error: File not found"));
         assert!(formatted.contains("Suggestion:"));
     }
 
     #[test]
     fn test_detailed_formatting() {
-        let error = WritingError::io_error(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"), "Failed to open config file");
+        let error = WritingError::from(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"));
         let formatter = ErrorFormatter::new()
             .with_verbosity(Verbosity::Detailed)
             .with_colors(false);
         let formatted = error.format(&formatter);
-        assert!(formatted.contains("Error: [IO] Failed to open config file"));
-        assert!(formatted.contains("Context: File not found"));
+        assert!(formatted.contains("Error: [IO] File not found"));
         assert!(formatted.contains("Caused by:"));
         assert!(formatted.contains("Suggestion:"));
     }
 
     #[test]
     fn test_without_suggestions() {
-        let error = WritingError::io_error(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"), "Failed to open config file");
+        let error = WritingError::from(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"));
         let formatter = ErrorFormatter::new()
             .with_colors(false)
             .with_suggestions(false);
@@ -519,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_with_indentation() {
-        let error = WritingError::io_error(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"), "Failed to open config file");
+        let error = WritingError::from(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found"));
         let formatter = ErrorFormatter::new()
             .with_colors(false)
             .with_indent(4);

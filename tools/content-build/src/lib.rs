@@ -70,11 +70,8 @@ pub fn process_content(
     }
 
     // Read the file content
-    let content = try_with_context!(
-        fs::read_to_string(&file_path),
-        "Failed to read content file: {}",
-        file_path.display()
-    );
+    let content = fs::read_to_string(&file_path)
+        .with_context(|| format!("Failed to read content file: {}", file_path.display()))?;
 
     // Extract frontmatter and markdown content
     let (frontmatter, md_content) = extract_frontmatter_and_content(&content)?;

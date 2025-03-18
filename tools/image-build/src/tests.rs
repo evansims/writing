@@ -59,7 +59,7 @@ fn create_test_config() -> Config {
         publication: common_models::PublicationConfig {
             author: "Test Author".into(),
             copyright: "Test Copyright".into(),
-            site: Some("https://example.com".into()),
+            site_url: Some("https://example.com".into()),
         },
     }
 }
@@ -70,7 +70,7 @@ fn test_basic_image_processing() -> Result<()> {
     let source_path = create_test_image(temp_dir.path())?;
     let output_dir = temp_dir.path().join("output");
     let config = create_test_config();
-    
+
     let result = process_image(
         &source_path,
         "test-article",
@@ -78,18 +78,18 @@ fn test_basic_image_processing() -> Result<()> {
         &output_dir,
         &config,
     )?;
-    
+
     // Should always generate JPEG
     assert!(result.iter().any(|p| p.extension().unwrap() == "jpg"));
-    
+
     // Check WebP generation based on feature flag
     #[cfg(feature = "basic-formats")]
     assert!(result.iter().any(|p| p.extension().unwrap() == "webp"));
-    
+
     // Check AVIF generation based on feature flag
     #[cfg(feature = "avif")]
     assert!(result.iter().any(|p| p.extension().unwrap() == "avif"));
-    
+
     Ok(())
 }
 
@@ -97,22 +97,22 @@ fn test_basic_image_processing() -> Result<()> {
 fn test_supported_formats() {
     // Create a vector to store supported formats
     let mut formats = vec!["jpg"];
-    
+
     #[cfg(feature = "basic-formats")]
     formats.push("webp");
-    
+
     #[cfg(feature = "avif")]
     formats.push("avif");
-    
+
     // JPEG should always be supported
     assert!(formats.contains(&"jpg"));
-    
+
     // Check WebP support based on feature flag
     #[cfg(feature = "basic-formats")]
     assert!(formats.contains(&"webp"));
     #[cfg(not(feature = "basic-formats"))]
     assert!(!formats.contains(&"webp"));
-    
+
     // Check AVIF support based on feature flag
     #[cfg(feature = "avif")]
     assert!(formats.contains(&"avif"));
@@ -125,10 +125,10 @@ fn test_build_article_images() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let article_dir = temp_dir.path().join("content/test-topic/test-article");
     std::fs::create_dir_all(&article_dir)?;
-    
+
     let source_path = create_test_image(&article_dir)?;
     std::fs::rename(&source_path, article_dir.join("index.jpg"))?;
-    
+
     let config = create_test_config();
     let options = BuildImagesOptions {
         output_dir: temp_dir.path().join("output"),
@@ -137,25 +137,25 @@ fn test_build_article_images() -> Result<()> {
         article: Some("test-article".into()),
         topic: Some("test-topic".into()),
     };
-    
+
     let result = build_article_images(
         &config,
         "test-article",
         "test-topic",
         &options,
     )?;
-    
+
     // Should always generate JPEG
     assert!(result.iter().any(|p| p.extension().unwrap() == "jpg"));
-    
+
     // Check WebP generation based on feature flag
     #[cfg(feature = "basic-formats")]
     assert!(result.iter().any(|p| p.extension().unwrap() == "webp"));
-    
+
     // Check AVIF generation based on feature flag
     #[cfg(feature = "avif")]
     assert!(result.iter().any(|p| p.extension().unwrap() == "avif"));
-    
+
     Ok(())
 }
 
@@ -165,16 +165,16 @@ fn test_quality_settings() -> Result<()> {
     let source_path = create_test_image(temp_dir.path())?;
     let output_dir = temp_dir.path().join("output");
     let mut config = create_test_config();
-    
+
     // Add quality settings for all formats
     let mut quality_settings = std::collections::HashMap::new();
-    
+
     // JPEG settings
     let mut jpg_settings = std::collections::HashMap::new();
     jpg_settings.insert("standard".into(), 85);
     jpg_settings.insert("thumbnail".into(), 80);
     quality_settings.insert("jpg".into(), jpg_settings);
-    
+
     #[cfg(feature = "basic-formats")]
     {
         let mut webp_settings = std::collections::HashMap::new();
@@ -182,7 +182,7 @@ fn test_quality_settings() -> Result<()> {
         webp_settings.insert("thumbnail".into(), 75);
         quality_settings.insert("webp".into(), webp_settings);
     }
-    
+
     #[cfg(feature = "avif")]
     {
         let mut avif_settings = std::collections::HashMap::new();
@@ -190,9 +190,9 @@ fn test_quality_settings() -> Result<()> {
         avif_settings.insert("thumbnail".into(), 65);
         quality_settings.insert("avif".into(), avif_settings);
     }
-    
+
     config.images.quality = Some(quality_settings);
-    
+
     let result = process_image(
         &source_path,
         "test-article",
@@ -200,9 +200,9 @@ fn test_quality_settings() -> Result<()> {
         &output_dir,
         &config,
     )?;
-    
+
     // Verify files were generated
     assert!(!result.is_empty());
-    
+
     Ok(())
-} 
+}

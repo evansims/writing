@@ -65,9 +65,9 @@ pub fn extract_links(content: &str) -> Vec<Link> {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
     options.insert(Options::ENABLE_TABLES);
-    
+
     let parser = Parser::new_ext(content, options);
-    
+
     for event in parser {
         if let Event::Start(Tag::Link(_, ref url, _)) = event {
             let kind = if url.starts_with("http://") || url.starts_with("https://") {
@@ -75,7 +75,7 @@ pub fn extract_links(content: &str) -> Vec<Link> {
             } else {
                 LocalLinkKind::Internal
             };
-            
+
             links.push(Link::new(url.to_string(), kind, None, None));
         }
         if let Event::Start(Tag::Image(_, ref url, _)) = event {
@@ -84,11 +84,11 @@ pub fn extract_links(content: &str) -> Vec<Link> {
             } else {
                 LocalLinkKind::Internal
             };
-            
+
             links.push(Link::new(url.to_string(), kind, None, None));
         }
     }
-    
+
     links
 }
 
@@ -97,19 +97,19 @@ pub fn extract_links(content: &str) -> Vec<Link> {
 pub enum ValidationError {
     #[error("Invalid URL: {0}")]
     InvalidUrl(String),
-    
+
     #[error("Broken link: {0}")]
     BrokenLink(String),
-    
+
     #[error("Missing resource: {0}")]
     MissingResource(String),
-    
+
     #[error("Markdown error: {0}")]
     MarkdownError(String),
-    
+
     #[error("Article not found: {0}")]
     ArticleNotFound(String),
-    
+
     #[error("Topic not found: {0}")]
     TopicNotFound(String),
 }
@@ -177,7 +177,7 @@ pub enum ValidationIssueType {
 pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationResult>> {
     let config = load_config()?;
     let mut results = Vec::new();
-    
+
     // If a specific article is requested, only validate that article
     if let Some(article_slug) = &options.article_slug {
         if let Some(topic_key) = &options.topic {
@@ -185,22 +185,22 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
             if let Some(topic_config) = config.content.topics.get(topic_key) {
                 let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
                 let article_dir = topic_dir.join(article_slug);
-                
+
                 if !article_dir.exists() {
                     return Err(ValidationError::ArticleNotFound(article_slug.clone()).into());
                 }
-                
+
                 let index_file = article_dir.join("index.md");
-                
+
                 if !index_file.exists() {
                     return Err(ValidationError::ArticleNotFound(article_slug.clone()).into());
                 }
-                
+
                 let content = read_file(&index_file)?;
-                
+
                 // Validate the article
                 let mut issues = Vec::new();
-                
+
                 for validation_type in &options.validation_types {
                     match validation_type {
                         ValidationType::Links => {
@@ -215,7 +215,7 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                         }
                     }
                 }
-                
+
                 results.push(ValidationResult {
                     file_path: index_file,
                     issues,
@@ -226,21 +226,21 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
         } else {
             // Validate a specific article in any topic
             let mut found = false;
-            
+
             for (_topic_key, topic_config) in &config.content.topics {
                 let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
                 let article_dir = topic_dir.join(article_slug);
-                
+
                 if article_dir.exists() {
                     let index_file = article_dir.join("index.md");
-                    
+
                     if index_file.exists() {
                         found = true;
                         let content = read_file(&index_file)?;
-                        
+
                         // Validate the article
                         let mut issues = Vec::new();
-                        
+
                         for validation_type in &options.validation_types {
                             match validation_type {
                                 ValidationType::Links => {
@@ -255,17 +255,17 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                                 }
                             }
                         }
-                        
+
                         results.push(ValidationResult {
                             file_path: index_file,
                             issues,
                         });
-                        
+
                         break;
                     }
                 }
             }
-            
+
             if !found {
                 return Err(ValidationError::ArticleNotFound(article_slug.clone()).into());
             }
@@ -274,29 +274,29 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
         // Validate all articles in a specific topic
         if let Some(topic_config) = config.content.topics.get(topic_key) {
             let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
-            
+
             if !topic_dir.exists() {
                 return Err(ValidationError::TopicNotFound(topic_key.clone()).into());
             }
-            
+
             let markdown_files = find_files_with_extension(&topic_dir, ".md")?;
-            
+
             for file_path in markdown_files {
                 if file_path.file_name().unwrap_or_default() == "index.md" {
                     let content = read_file(&file_path)?;
-                    
+
                     // Skip drafts if not included
                     if !options.include_drafts {
                         if let Ok((frontmatter, _)) = extract_frontmatter_and_content(&content) {
-                            if frontmatter.draft.unwrap_or(false) {
+                            if frontmatter.is_draft.unwrap_or(false) {
                                 continue;
                             }
                         }
                     }
-                    
+
                     // Validate the article
                     let mut issues = Vec::new();
-                    
+
                     for validation_type in &options.validation_types {
                         match validation_type {
                             ValidationType::Links => {
@@ -311,7 +311,7 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                             }
                         }
                     }
-                    
+
                     results.push(ValidationResult {
                         file_path,
                         issues,
@@ -325,29 +325,29 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
         // Validate all articles in all topics
         for (_topic_key, topic_config) in &config.content.topics {
             let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
-            
+
             if !topic_dir.exists() {
                 continue;
             }
-            
+
             let markdown_files = find_files_with_extension(&topic_dir, ".md").unwrap_or_default();
-            
+
             for file_path in markdown_files {
                 if file_path.file_name().unwrap_or_default() == "index.md" {
                     let content = read_file(&file_path)?;
-                    
+
                     // Skip drafts if not included
                     if !options.include_drafts {
                         if let Ok((frontmatter, _)) = extract_frontmatter_and_content(&content) {
-                            if frontmatter.draft.unwrap_or(false) {
+                            if frontmatter.is_draft.unwrap_or(false) {
                                 continue;
                             }
                         }
                     }
-                    
+
                     // Validate the article
                     let mut issues = Vec::new();
-                    
+
                     for validation_type in &options.validation_types {
                         match validation_type {
                             ValidationType::Links => {
@@ -362,7 +362,7 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                             }
                         }
                     }
-                    
+
                     results.push(ValidationResult {
                         file_path,
                         issues,
@@ -371,7 +371,7 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
             }
         }
     }
-    
+
     Ok(results)
 }
 
@@ -385,7 +385,7 @@ fn validate_links(
 ) -> Result<()> {
     // Extract links from content
     let links = extract_links(content);
-    
+
     // Check each link
     for link in &links {
         // Check if the link is a URL
@@ -397,9 +397,9 @@ fn validate_links(
                     let client = Client::builder()
                         .timeout(Duration::from_secs(options.timeout.unwrap_or(10)))
                         .build()?;
-                    
+
                     let response = client.head(url.clone()).send();
-                    
+
                     if let Err(e) = response {
                         issues.push(ValidationIssue {
                             issue_type: ValidationIssueType::BrokenLink,
@@ -422,7 +422,7 @@ fn validate_links(
         } else {
             // Check if the internal link exists
             let target_path = PathBuf::from(link.url());
-            
+
             if !target_path.exists() {
                 issues.push(ValidationIssue {
                     issue_type: ValidationIssueType::MissingInternalLink,
@@ -434,7 +434,7 @@ fn validate_links(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -445,7 +445,7 @@ fn validate_markdown(
     _issues: &mut Vec<ValidationIssue>,
 ) -> Result<()> {
     // TODO: Implement markdown validation
-    
+
     Ok(())
 }
 
@@ -459,20 +459,20 @@ fn validate_resources(
 ) -> Result<()> {
     // Get the article directory
     let article_dir = file_path.parent().unwrap_or(Path::new(""));
-    
+
     // Get all files in the article directory
     let _all_files = find_files_with_extension(&article_dir, "")?;
-    
+
     // Check if there's a build directory
     let build_dir = article_dir.join("build");
-    
+
     if build_dir.exists() {
         // Get all files in the build directory
         let _build_files = find_files_with_extension(&build_dir, "")?;
-        
+
         // TODO: Validate resources
     }
-    
+
     Ok(())
 }
 
@@ -495,7 +495,7 @@ fn validate_frontmatter_fields(
             return Err(ValidationError::MarkdownError(format!("Unknown content type: {}", content_type)).into());
         }
     }
-    
+
     Ok(())
 }
 
@@ -504,7 +504,7 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::tempdir;
-    
+
     fn create_test_config() -> Config {
         Config {
             content: common_models::ContentConfig {
@@ -522,16 +522,16 @@ mod tests {
             publication: common_models::PublicationConfig {
                 author: "Test Author".to_string(),
                 copyright: "Test Copyright".to_string(),
-                site: None,
+                site_url: None,
             },
         }
     }
-    
+
     #[test]
     fn test_validate_resources() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test.md");
-        
+
         // Create a test markdown file with a missing resource
         let content = r#"# Test Heading
 
@@ -539,7 +539,7 @@ This is a test with a [missing link](missing.html) and an ![missing image](missi
 
 "#;
         fs::write(&file_path, content).unwrap();
-        
+
         // Validate resources
         let mut issues = Vec::new();
         validate_markdown(
@@ -547,22 +547,22 @@ This is a test with a [missing link](missing.html) and an ![missing image](missi
             content,
             &mut issues,
         ).unwrap();
-        
+
         assert!(!issues.is_empty()); // At least one issue
-        
+
         // Since ValidationIssue is not an enum with variants, we need to check differently
-        let missing_resource = issues.iter().find(|issue| 
+        let missing_resource = issues.iter().find(|issue|
             issue.description.contains("missing") || issue.description.contains("Missing")
         );
-        
+
         assert!(missing_resource.is_some());
     }
-    
+
     #[test]
     fn test_validate_markdown() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test.md");
-        
+
         // Create a test markdown file with various issues
         let content = r#"# Test Heading
 ## Heading 2
@@ -583,7 +583,7 @@ This is a test with a [missing link](missing.html).
 
 "#;
         fs::write(&file_path, content).unwrap();
-        
+
         // Validate markdown
         let mut issues = Vec::new();
         validate_markdown(
@@ -591,19 +591,19 @@ This is a test with a [missing link](missing.html).
             content,
             &mut issues,
         ).unwrap();
-        
+
         assert!(!issues.is_empty());
-        
+
         // Check for heading issue
-        let heading_issue = issues.iter().find(|issue| 
+        let heading_issue = issues.iter().find(|issue|
             issue.description.contains("heading") || issue.description.contains("Heading")
         );
-        
+
         // Check for nesting issue
-        let nesting_issue = issues.iter().find(|issue| 
+        let nesting_issue = issues.iter().find(|issue|
             issue.description.contains("nest") || issue.description.contains("Nest")
         );
-        
+
         assert!(heading_issue.is_some() || nesting_issue.is_some());
     }
 }

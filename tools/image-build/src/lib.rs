@@ -137,13 +137,13 @@ pub fn process_image(
                 let y = (height - width) / 2;
                 img.crop_imm(0, y, width, width)
             };
-            square.resize(size_config.width_px, size_config.height_px, image::imageops::FilterType::Lanczos3)
+            square.resize(size_config.width, size_config.height, image::imageops::FilterType::Lanczos3)
         } else {
             // For other types, maintain aspect ratio
             let aspect_ratio = img.width() as f32 / img.height() as f32;
-            let target_height = (size_config.width_px as f32 / aspect_ratio) as u32;
+            let target_height = (size_config.width as f32 / aspect_ratio) as u32;
 
-            img.resize(size_config.width_px, target_height, image::imageops::FilterType::Lanczos3)
+            img.resize(size_config.width, target_height, image::imageops::FilterType::Lanczos3)
         };
 
         // Define supported formats based on features
@@ -195,8 +195,8 @@ pub fn process_image(
                 config,
                 article_slug,
                 &type_key,
-                size_config.width_px,
-                size_config.height_px,
+                size_config.width,
+                size_config.height,
                 format_name,
             );
 

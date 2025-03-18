@@ -116,7 +116,7 @@ pub struct ContentConfig {
 /// Configuration structure for a topic
 ///
 /// This struct contains configuration for a single topic,
-/// including its name, description, and path.
+/// including its name, description, and directory.
 ///
 /// # Example
 ///
@@ -136,7 +136,6 @@ pub struct TopicConfig {
     /// Description of the topic
     pub description: String,
     /// Path to the topic directory
-    #[serde(rename = "path")]
     pub directory: String,
 }
 
@@ -193,19 +192,17 @@ pub struct ImageConfig {
 /// use common_models::ImageSize;
 ///
 /// let size = ImageSize {
-///     width_px: 1200,
-///     height_px: 630,
+///     width: 1200,
+///     height: 630,
 ///     description: "Featured image".to_string(),
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ImageSize {
     /// Width of the image in pixels
-    #[serde(rename = "width")]
-    pub width_px: u32,
+    pub width: u32,
     /// Height of the image in pixels
-    #[serde(rename = "height")]
-    pub height_px: u32,
+    pub height: u32,
     /// Description of the image size
     pub description: String,
 }
