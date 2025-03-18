@@ -4,7 +4,7 @@
 //! success messages, errors, warnings, and informational messages.
 
 use colored::*;
-use common_errors::{WritingError, print_error_detailed};
+use common_errors::{WritingError, print_error};
 
 /// Display a success message
 ///
@@ -63,7 +63,7 @@ pub fn show_error(message: &str) {
 /// show_detailed_error(&error);
 /// ```
 pub fn show_detailed_error(error: &WritingError) {
-    print_error_detailed(error);
+    print_error(error);
 }
 
 /// Display a warning message

@@ -4,17 +4,17 @@
 
 /// Add context to a result based on a pattern
 ///
-//! # Examples
+/// # Examples
 ///
-//! ```
-//! use common_errors::{Result, with_context};
-//! use std::fs;
-//! use std::path::Path;
-//!
-//! fn read_config(path: &Path) -> Result<String> {
-//!     with_context!(fs::read_to_string(path), "Failed to read config file: {}", path.display())
-//! }
-//! ```
+/// ```
+/// use common_errors::{Result, with_context};
+/// use std::fs;
+/// use std::path::Path;
+///
+/// fn read_config(path: &Path) -> Result<String> {
+///     with_context!(fs::read_to_string(path), "Failed to read config file: {}", path.display())
+/// }
+/// ```
 #[macro_export]
 macro_rules! with_context {
     ($expr:expr, $msg:expr) => {
@@ -27,18 +27,18 @@ macro_rules! with_context {
 
 /// Propagate an error with added context if it occurs
 ///
-//! # Examples
+/// # Examples
 ///
-//! ```
-//! use common_errors::{Result, try_with_context};
-//! use std::fs;
-//! use std::path::Path;
-//!
-//! fn read_config(path: &Path) -> Result<String> {
-//!     let content = try_with_context!(fs::read_to_string(path), "Failed to read config file: {}", path.display());
-//!     Ok(content)
-//! }
-//! ```
+/// ```
+/// use common_errors::{Result, try_with_context};
+/// use std::fs;
+/// use std::path::Path;
+///
+/// fn read_config(path: &Path) -> Result<String> {
+///     let content = try_with_context!(fs::read_to_string(path), "Failed to read config file: {}", path.display());
+///     Ok(content)
+/// }
+/// ```
 #[macro_export]
 macro_rules! try_with_context {
     ($expr:expr, $msg:expr) => {

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::fmt;
 use colored::Colorize;
 
-use crate::{Result, WritingError, ErrorKind};
+use crate::{WritingError, ErrorKind};
 
 /// Formats errors with detailed context and user-friendly suggestions
 pub struct ErrorFormatter {
@@ -82,7 +82,7 @@ impl ErrorFormatter {
 
     /// Formats an error with minimal information
     fn format_minimal<'a>(&self, error: &'a WritingError) -> Cow<'a, str> {
-        Cow::Borrowed(error.message())
+        Cow::Owned(error.message())
     }
 
     /// Formats an error with standard information
@@ -255,6 +255,10 @@ impl ErrorFormatter {
 
     /// Gets a user-friendly suggestion for an error
     fn get_suggestion(&self, error: &WritingError) -> Option<&'static str> {
+        if !self.include_suggestions {
+            return None;
+        }
+
         match error.kind() {
             ErrorKind::IoError => match error.message() {
                 message if message.contains("permission denied") => {
@@ -270,59 +274,102 @@ impl ErrorFormatter {
             },
             ErrorKind::SerializationError => {
                 Some("Verify that the data format is correct and matches the expected schema.")
-            }
+            },
             ErrorKind::DeserializationError => {
                 Some("Check the file format and ensure it matches the expected schema.")
-            }
+            },
             ErrorKind::ValidationError => {
-                Some("Review the input data and ensure it meets the required constraints.")
-            }
+                Some("Ensure the input meets all validation requirements.")
+            },
             ErrorKind::ConfigurationError => {
                 Some("Check your configuration file for errors and ensure it's properly formatted.")
-            }
+            },
             ErrorKind::PluginError => {
                 Some("Verify that the plugin is compatible with the current version of the application.")
-            }
+            },
             ErrorKind::ExecutionError => {
                 Some("Check that all required dependencies are installed and properly configured.")
-            }
+            },
             ErrorKind::ParsingError => {
                 Some("Review the syntax of the input file and ensure it's properly formatted.")
-            }
+            },
             ErrorKind::NetworkError => {
                 Some("Check your internet connection and ensure the target server is accessible.")
-            }
+            },
             ErrorKind::TimeoutError => {
                 Some("The operation timed out. Try again, or increase the timeout duration.")
-            }
+            },
             ErrorKind::NotFoundError => {
                 Some("Verify that the resource exists and that the path is correct.")
-            }
+            },
             ErrorKind::InvalidInputError => {
                 Some("Review the input data and ensure it meets the expected format and constraints.")
-            }
+            },
             ErrorKind::UnauthorizedError => {
                 Some("Check your credentials and ensure you have the necessary permissions.")
-            }
+            },
             ErrorKind::LockError => {
                 Some("Wait for other processes to release the lock, or force unlock if safe to do so.")
-            }
+            },
             ErrorKind::UnsupportedOperationError => {
                 Some("This operation is not supported in the current context or configuration.")
-            }
+            },
             ErrorKind::UnknownError => {
                 Some("An unexpected error occurred. Check the logs for more information.")
-            }
+            },
+            ErrorKind::ConfigError => {
+                Some("Configuration error. Check your configuration file for errors.")
+            },
+            ErrorKind::ContentNotFound => {
+                Some("The content was not found. Verify the path and ensure the content exists.")
+            },
+            ErrorKind::TopicError => {
+                Some("Topic error. Verify the topic and ensure it's correctly configured.")
+            },
+            ErrorKind::FormatError => {
+                Some("Format error. Verify the format and ensure it's correctly specified.")
+            },
+            ErrorKind::InvalidArgument => {
+                Some("Invalid argument. Verify the input and ensure it's correctly provided.")
+            },
+            ErrorKind::CommandError => {
+                Some("Command error. Verify the command and ensure it's correctly executed.")
+            },
+            ErrorKind::TemplateError => {
+                Some("Template error. Verify the template and ensure it's correctly used.")
+            },
+            ErrorKind::ContentParsingError => {
+                Some("Content parsing error. Verify the content and ensure it's correctly parsed.")
+            },
+            ErrorKind::Other => {
+                Some("An unexpected error occurred. Check the logs for more information.")
+            },
+            ErrorKind::FileNotFound => {
+                Some("The file was not found. Verify the path and ensure the file exists.")
+            },
+            ErrorKind::DirectoryNotFound => {
+                Some("The directory was not found. Verify the path and ensure the directory exists.")
+            },
+            ErrorKind::PermissionDenied => {
+                Some("Permission denied. Verify your file permissions and user access rights.")
+            },
+            ErrorKind::ContentAlreadyExists => {
+                Some("The content already exists. Use a different name or path.")
+            },
         }
     }
 
     /// Formats an error kind as a user-friendly string
     fn format_error_kind(&self, kind: ErrorKind) -> &'static str {
         match kind {
-            ErrorKind::IoError => "IO",
+            ErrorKind::IoError => "I/O",
+            ErrorKind::ValidationError => "Validation",
+            ErrorKind::FileNotFound => "File Not Found",
+            ErrorKind::DirectoryNotFound => "Directory Not Found",
+            ErrorKind::PermissionDenied => "Permission Denied",
             ErrorKind::SerializationError => "Serialization",
             ErrorKind::DeserializationError => "Deserialization",
-            ErrorKind::ValidationError => "Validation",
+            ErrorKind::ContentAlreadyExists => "Content Already Exists",
             ErrorKind::ConfigurationError => "Configuration",
             ErrorKind::PluginError => "Plugin",
             ErrorKind::ExecutionError => "Execution",
@@ -335,6 +382,15 @@ impl ErrorFormatter {
             ErrorKind::LockError => "Lock",
             ErrorKind::UnsupportedOperationError => "Unsupported Operation",
             ErrorKind::UnknownError => "Unknown",
+            ErrorKind::ConfigError => "Configuration",
+            ErrorKind::ContentNotFound => "Content Not Found",
+            ErrorKind::TopicError => "Topic",
+            ErrorKind::FormatError => "Format",
+            ErrorKind::InvalidArgument => "Invalid Argument",
+            ErrorKind::CommandError => "Command",
+            ErrorKind::TemplateError => "Template",
+            ErrorKind::ContentParsingError => "Content Parsing",
+            ErrorKind::Other => "Other",
         }
     }
 }
