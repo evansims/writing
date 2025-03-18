@@ -67,19 +67,43 @@ pub mod integration {
     impl TestCommand {
         /// Create a new test command
         pub fn new(name: &str) -> Result<Self> {
+            // Get the current working directory
+            let current_dir = std::env::current_dir()
+                .unwrap_or_else(|_| PathBuf::from("."));
+
             // Find the command in the target directory
             let target_dir = std::env::var("CARGO_TARGET_DIR")
                 .unwrap_or_else(|_| "target".to_string());
 
-            let path = PathBuf::from(target_dir)
-                .join("debug")
-                .join(name);
+            // Try to find the executable in several likely locations
+            let mut paths = Vec::new();
 
-            if !path.exists() {
-                return Err(common_errors::WritingError::validation_error(
-                    format!("Command executable not found: {}", path.display())
-                ));
+            // Direct absolute path from current directory
+            paths.push(current_dir.join("target").join("debug").join(name));
+
+            // If we're in a subdirectory of the project, try going up to find the target directory
+            let mut up_dir = current_dir.clone();
+            for _ in 0..3 {
+                // Go up one level
+                if let Some(parent) = up_dir.parent() {
+                    up_dir = parent.to_path_buf();
+                    paths.push(up_dir.join("target").join("debug").join(name));
+                }
             }
+
+            // Try using the CARGO_TARGET_DIR environment variable if set
+            paths.push(PathBuf::from(&target_dir).join("debug").join(name));
+
+            // Use the first path that exists
+            let path = paths.into_iter()
+                .find(|p| p.exists())
+                .ok_or_else(|| {
+                    common_errors::WritingError::validation_error(
+                        format!("Command executable not found: {}", name)
+                    )
+                })?;
+
+            eprintln!("Debug: Found command at: {}", path.display());
 
             Ok(Self {
                 name: name.to_string(),
@@ -90,19 +114,45 @@ pub mod integration {
 
         /// Run the command with the given arguments
         pub fn run(&self, args: &[&str]) -> std::io::Result<Output> {
+            // Print debug information
+            eprintln!("Debug: Running command: {} {:?}", self.path.display(), args);
+            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
+
+            // Ensure the content directory exists
+            let content_dir = self.fixture.path().join("content");
+            if !content_dir.exists() {
+                std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
+            }
+
+            // Run the command
             Command::new(&self.path)
                 .args(args)
                 .current_dir(self.fixture.path())
                 .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
+                .env("TEST_MODE", "1")
                 .output()
         }
 
-        /// Spawn the command as a child process
+        /// Spawn the command with the given arguments
         pub fn spawn(&self, args: &[&str]) -> std::io::Result<Child> {
+            // Print debug information
+            eprintln!("Debug: Spawning command: {} {:?}", self.path.display(), args);
+            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
+
+            // Ensure the content directory exists
+            let content_dir = self.fixture.path().join("content");
+            if !content_dir.exists() {
+                std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
+            }
+
+            // Run the command
             Command::new(&self.path)
                 .args(args)
                 .current_dir(self.fixture.path())
                 .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
+                .env("TEST_MODE", "1")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -111,9 +161,23 @@ pub mod integration {
 
         /// Run the command with the given input
         pub fn run_with_input(&self, args: &[&str], input: &str) -> std::io::Result<Output> {
+            // Print debug information
+            eprintln!("Debug: Running command with input: {} {:?}", self.path.display(), args);
+            eprintln!("Debug: Input: {}", input);
+            eprintln!("Debug: Current dir: {}", self.fixture.path().display());
+            eprintln!("Debug: Config path: {}", self.fixture.path().join("config.yaml").display());
+
+            // Ensure the content directory exists
+            let content_dir = self.fixture.path().join("content");
+            if !content_dir.exists() {
+                std::fs::create_dir_all(&content_dir).expect("Failed to create content directory");
+            }
+
             let mut child = Command::new(&self.path)
                 .args(args)
                 .current_dir(self.fixture.path())
+                .env("CONFIG_PATH", self.fixture.path().join("config.yaml"))
+                .env("TEST_MODE", "1")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

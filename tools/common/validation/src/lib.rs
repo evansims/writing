@@ -475,6 +475,11 @@ mod tests {
                 name: "Strategy".to_string(),
                 description: "Strategic content".to_string(),
                 directory: "strategy".to_string(),
+            }),
+            ("blog".to_string(), TopicConfig {
+                name: "Blog".to_string(),
+                description: "Blog content".to_string(),
+                directory: "blog".to_string(),
             })
         ]);
 
@@ -485,8 +490,9 @@ mod tests {
         let topics = topic::get_available_topics().unwrap();
 
         // Check that topics match our expected set
-        assert_eq!(topics.len(), 2);
+        assert_eq!(topics.len(), 3);
         assert!(topics.iter().any(|(name, _)| name == "creativity"));
         assert!(topics.iter().any(|(name, _)| name == "strategy"));
+        assert!(topics.iter().any(|(name, _)| name == "blog"));
     }
 }

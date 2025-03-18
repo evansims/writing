@@ -274,6 +274,7 @@ impl TestFixture {
         let config_yaml = r#"
 content:
   base_dir: content
+  templates_dir: templates
   topics:
     creativity:
       name: Creativity
@@ -283,6 +284,10 @@ content:
       name: Strategy
       description: Strategic content
       directory: strategy
+    blog:
+      name: Blog
+      description: Blog posts
+      directory: blog
   tags:
     test:
       - Test tag
@@ -314,6 +319,37 @@ publication:
         fs::create_dir_all(&content_dir)?;
         fs::create_dir_all(content_dir.join("creativity"))?;
         fs::create_dir_all(content_dir.join("strategy"))?;
+        fs::create_dir_all(content_dir.join("blog"))?;
+
+        // Create templates directory and a default template
+        let templates_dir = temp_dir.path().join("templates");
+        fs::create_dir_all(&templates_dir)?;
+
+        // Create a default article template
+        let default_template = r#"---
+title: "{{title}}"
+tagline: "{{tagline}}"
+date: {{date}}
+draft: {{draft}}
+tags:
+{{#if tags}}
+{{#each tags}}
+  - "{{this}}"
+{{/each}}
+{{/if}}
+---
+
+# {{title}}
+
+{{#if introduction}}
+{{introduction}}
+{{else}}
+Write your content here...
+{{/if}}
+"#;
+
+        let template_path = templates_dir.join("article.hbs");
+        std::fs::write(&template_path, default_template)?;
 
         // Parse the config into a Config struct
         let config_str = fs::read_to_string(&config_path)?;

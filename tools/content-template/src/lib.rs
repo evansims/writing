@@ -1,4 +1,4 @@
-/*! 
+/*!
 # Content Template Library
 
 This library provides functionality for creating and managing content templates.
@@ -40,16 +40,16 @@ use thiserror::Error;
 pub enum TemplateError {
     #[error("Template name cannot be empty")]
     EmptyName,
-    
+
     #[error("Invalid content type: {0}")]
     InvalidContentType(String),
-    
+
     #[error("Template '{0}' already exists")]
     TemplateExists(String),
-    
+
     #[error("Template '{0}' not found")]
     TemplateNotFound(String),
-    
+
     #[error("Failed to read template directory: {0}")]
     ReadDirError(#[from] std::io::Error),
 }
@@ -59,10 +59,10 @@ pub enum TemplateError {
 pub struct CreateTemplateOptions {
     /// The name of the template
     pub name: String,
-    
+
     /// The content type for the template (article, note, etc.)
     pub content_type: String,
-    
+
     /// The template content
     pub content: Option<String>,
 }
@@ -85,24 +85,24 @@ pub fn create_template(options: CreateTemplateOptions) -> Result<Template> {
     if options.name.is_empty() {
         return Err(TemplateError::EmptyName.into());
     }
-    
+
     let valid_content_types = ["article", "note", "tutorial", "review"];
     if !valid_content_types.contains(&options.content_type.as_str()) {
         return Err(TemplateError::InvalidContentType(options.content_type.clone()).into());
     }
-    
+
     // Load config
     let config = load_config()?;
-    
+
     // Ensure templates directory exists
     let templates_dir = get_templates_dir(&config)?;
     if !templates_dir.exists() {
         create_dir_all(&templates_dir)?;
     }
-    
+
     // Create template file
     let template_path = templates_dir.join(format!("{}.md", options.name));
-    
+
     // Use provided content or create default content
     let content = options.content.unwrap_or_else(|| {
         format!(
@@ -110,10 +110,10 @@ pub fn create_template(options: CreateTemplateOptions) -> Result<Template> {
             options.content_type
         )
     });
-    
+
     // Write template file
     write_file(&template_path, &content)?;
-    
+
     // Create and return template object
     Ok(Template::new(&options.name, "Template description", &options.content_type, &template_path))
 }
@@ -132,25 +132,25 @@ pub fn get_template(name: &str) -> Result<String> {
     if name.is_empty() {
         return Err(TemplateError::EmptyName.into());
     }
-    
+
     // Load config
     let config = load_config()?;
-    
+
     // Get the templates directory
     let templates_dir = get_templates_dir(&config)?;
-    
+
     // Create the template file path
     let template_path = templates_dir.join(format!("{}.md", name));
-    
+
     // Check if the template exists
     if !template_path.exists() {
         return Err(TemplateError::TemplateNotFound(name.to_string()).into());
     }
-    
+
     // Read the template file
     let content = read_file(&template_path)
         .with_context(|| format!("Failed to read template file: {:?}", template_path))?;
-    
+
     Ok(content)
 }
 
@@ -168,25 +168,25 @@ pub fn delete_template(name: &str) -> Result<()> {
     if name.is_empty() {
         return Err(TemplateError::EmptyName.into());
     }
-    
+
     // Load config
     let config = load_config()?;
-    
+
     // Get the templates directory
     let templates_dir = get_templates_dir(&config)?;
-    
+
     // Create the template file path
     let template_path = templates_dir.join(format!("{}.md", name));
-    
+
     // Check if the template exists
     if !template_path.exists() {
         return Err(TemplateError::TemplateNotFound(name.to_string()).into());
     }
-    
+
     // Delete the template file
     std::fs::remove_file(&template_path)
         .with_context(|| format!("Failed to delete template file: {:?}", template_path))?;
-    
+
     Ok(())
 }
 
@@ -198,32 +198,32 @@ pub fn delete_template(name: &str) -> Result<()> {
 pub fn list_templates() -> Result<Vec<Template>> {
     // Load config
     let config = load_config()?;
-    
+
     // Get the templates directory
     let templates_dir = get_templates_dir(&config)?;
-    
+
     // Check if the templates directory exists
     if !templates_dir.exists() {
         return Ok(Vec::new());
     }
-    
+
     // Find all template files
     let template_files = std::fs::read_dir(&templates_dir)
         .with_context(|| format!("Failed to read templates directory: {:?}", templates_dir))?;
-    
+
     let mut templates = Vec::new();
-    
+
     for entry in template_files {
         let entry = entry?;
         let path = entry.path();
-        
+
         // Only process markdown files
         if path.extension().is_some_and(|ext| ext == "md") {
             let name = path.file_stem().unwrap().to_string_lossy().to_string();
-            
+
             // Read the file to determine content type
             let content = read_file(&path)?;
-            
+
             // Simple content type extraction - a more robust implementation would use proper YAML parsing
             let content_type = if content.contains("type: article") {
                 "article"
@@ -234,11 +234,11 @@ pub fn list_templates() -> Result<Vec<Template>> {
             } else {
                 "unknown"
             };
-            
+
             templates.push(Template::new(&name, "Template description", content_type, &path));
         }
     }
-    
+
     Ok(templates)
 }
 
@@ -254,7 +254,7 @@ mod tests {
     use super::*;
     use common_test_utils::with_temp_dir;
     use std::fs;
-    
+
     #[test]
     fn test_create_template_validation() {
         // Test empty name validation
@@ -263,70 +263,73 @@ mod tests {
             content_type: "article".to_string(),
             content: None,
         });
-        
+
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("Template name cannot be empty"));
-        
+
         // Test invalid content type
         let result = create_template(CreateTemplateOptions {
             name: "test-template".to_string(),
             content_type: "invalid".to_string(),
             content: None,
         });
-        
+
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("Invalid content type"));
     }
-    
+
     #[test]
     fn test_template_lifecycle() {
         with_temp_dir(|temp_dir| {
             // Create a mock config file
             let config_path = temp_dir.join("config.yaml");
             let config_content = format!(
-                "content:\n  base_dir: {}\n",
+                "content:\n  base_dir: {}\n  topics: {{}}\nimages:\n  formats: []\n  sizes: {{}}\npublication:\n  author: Test Author\n  copyright: Test Copyright",
                 temp_dir.to_string_lossy()
             );
             fs::write(&config_path, config_content).unwrap();
-            
+
             // Create templates directory
             let templates_dir = temp_dir.join("templates");
             fs::create_dir_all(&templates_dir).unwrap();
-            
+
             // Set the config path in the environment
             std::env::set_var("CONFIG_PATH", &config_path);
-            
+
             // Create a template
             let result = create_template(CreateTemplateOptions {
                 name: "test-template".to_string(),
                 content_type: "article".to_string(),
                 content: Some("Test content".to_string()),
             });
-            
+
+            if result.is_err() {
+                println!("Template creation error: {}", result.as_ref().unwrap_err());
+            }
             assert!(result.is_ok());
             let template = result.unwrap();
             assert_eq!(template.name, "test-template");
             assert_eq!(template.content_type, "article");
-            
+
             // Get the template
             let content = get_template("test-template").unwrap();
             assert_eq!(content, "Test content");
-            
+
             // List templates
             let templates = list_templates().unwrap();
             assert_eq!(templates.len(), 1);
             assert_eq!(templates[0].name, "test-template");
-            
+
             // Delete the template
             let result = delete_template("test-template");
             assert!(result.is_ok());
-            
+
             // Verify it's gone
             let result = get_template("test-template");
             assert!(result.is_err());
-            
+
             Ok::<(), anyhow::Error>(())
         })
         .unwrap();
