@@ -1,41 +1,38 @@
-use anyhow::Result;
+//! # Write CLI Tool
+//!
+//! This is a CLI tool for managing writing content.
+use common_errors::{WritingError, print_error_detailed};
 use clap::Parser;
-use colored::*;
 
 mod cli;
-mod ui;
 mod tools;
-mod config;
+mod commands;
+mod ui;
 
-use cli::{Cli, Commands};
+use cli::Cli;
+use commands::executor::execute_command;
 
-fn main() -> Result<()> {
-    // Parse command line arguments
-    let cli = Cli::parse();
-    
-    // If no command is provided, show the interactive menu
-    let command = match cli.command {
-        Some(cmd) => Some(cmd),
-        None => ui::show_main_menu()?,
-    };
-    
-    // Execute the command if one was provided or selected
-    if let Some(cmd) = command {
-        execute_command(cmd)?;
+/// Main entry point for the Write CLI tool
+fn main() {
+    // Parse command line arguments and execute the
+    // corresponding command or return an error.
+    if let Err(e) = run() {
+        print_error_detailed(&e);
+        std::process::exit(1);
     }
-    
-    Ok(())
 }
 
-/// Execute a command
-fn execute_command(command: Commands) -> Result<()> {
-    match command {
-        Commands::Content(cmd) => tools::execute_content_command(cmd),
-        Commands::Topic(cmd) => tools::execute_topic_command(cmd),
-        Commands::Image(cmd) => tools::execute_image_command(cmd),
-        Commands::Build(cmd) => tools::execute_build_command(cmd),
-        Commands::Stats { slug, topic, include_drafts, sort_by, detailed } => {
-            tools::execute_stats_command(slug, topic, include_drafts, &sort_by, detailed)
-        }
-    }
+/// Run the CLI tool with the provided arguments
+fn run() -> Result<(), WritingError> {
+    // Parse command line arguments
+    let cli = Cli::parse();
+
+    // Set up error handling
+    let result = match cli.command {
+        // Execute the command using our command executor
+        command => execute_command(command),
+    };
+
+    // Convert anyhow::Error to WritingError
+    result.map_err(|e| WritingError::format_error(format!("{:#}", e)))
 }

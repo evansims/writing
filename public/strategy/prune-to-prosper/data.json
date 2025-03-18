@@ -1,0 +1,40 @@
+{
+  "published": "2025-02-16",
+  "references": [
+    {
+      "author": "Greg McKeown",
+      "title": "Essentialism: The Disciplined Pursuit of Less",
+      "url": "https://gregmckeown.com/book/essentialism/"
+    },
+    {
+      "author": "Cal Newport",
+      "title": "Digital Minimalism: Choosing a Focused Life in a Noisy World",
+      "url": "https://www.calnewport.com/books/digital-minimalism/"
+    },
+    {
+      "author": "Marie Kondo",
+      "title": "The Life-Changing Magic of Tidying Up: The Japanese Art of Decluttering and Organizing",
+      "url": "https://konmari.com/products/the-life-changing-magic-of-tidying-up"
+    }
+  ],
+  "slug": "prune-to-prosper",
+  "tagline": "Growth isn’t about adding more—it’s about removing what holds you back.",
+  "tags": [
+    "minimalism",
+    "productivity",
+    "stoicism",
+    "decluttering",
+    "efficiency",
+    "intentional living",
+    "personal growth",
+    "Epictetus",
+    "Marcus Aurelius",
+    "self-improvement"
+  ],
+  "title": "Prune to Prosper",
+  "topics": [
+    "mindset",
+    "strategy",
+    "focus"
+  ]
+}

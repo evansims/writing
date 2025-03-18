@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+    <title>Example Site</title>
+    <link>https://example.com</link>
+    <description>Example site description</description>
+    <language>en-us</language>
+    <item>
+        <title>Sample Item</title>
+        <link>https://example.com/sample</link>
+        <description>Sample item description</description>
+    </item>
+</channel>
+</rss>

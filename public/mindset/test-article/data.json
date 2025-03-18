@@ -1,0 +1,20 @@
+{
+  "published": "2025-03-08",
+  "references": [
+    {
+      "author": "Author Name",
+      "title": "Reference Title",
+      "url": "https://example.com/reference"
+    }
+  ],
+  "slug": "test-article",
+  "tagline": "A test article",
+  "tags": [
+    "test",
+    "article"
+  ],
+  "title": "Test Article",
+  "topics": [
+    "mindset"
+  ]
+}

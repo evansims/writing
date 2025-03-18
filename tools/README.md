@@ -133,4 +133,26 @@ For more details on each command, use `--help`:
 
 ```bash
 ./write new --help
-``` 
+```
+
+## Recent Improvements
+
+### Incremental Building
+
+The `write build` command now supports incremental building, which significantly improves performance when working with large content repositories. Only files that have changed since the last build will be processed, resulting in much faster builds.
+
+To force a full rebuild of all content:
+
+```bash
+./write build --rebuild
+```
+
+See [docs/INCREMENTAL-BUILD.md](../docs/INCREMENTAL-BUILD.md) for more details.
+
+### Lazy Configuration Loading
+
+Configuration is now loaded lazily, which improves memory usage and startup time. The configuration is only loaded when it's actually needed, rather than at application startup.
+
+### Parallel Image Processing
+
+Image operations now use parallel processing, which significantly improves performance when working with multiple images.

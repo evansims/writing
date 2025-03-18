@@ -13,15 +13,15 @@ name = "content-edit"
 path = "src/main.rs"
 
 [dependencies]
-clap.workspace = true
-anyhow.workspace = true
-serde.workspace = true
-serde_yaml.workspace = true
-colored.workspace = true
-walkdir.workspace = true
-dialoguer.workspace = true
-fs_extra.workspace = true
-tempfile.workspace = true
+clap = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+colored = { workspace = true }
+walkdir = { workspace = true }
+dialoguer = { workspace = true }
+fs_extra = { workspace = true }
+tempfile = { workspace = true }
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs", features = ["find"] }
@@ -29,4 +29,4 @@ common-markdown = { path = "../common/markdown" }
 common-errors = { path = "../common/errors" }
 
 [dev-dependencies]
-common-test-utils = { path = "../common/test_utils" } 
+common-test-utils = { path = "../common/test_utils" }

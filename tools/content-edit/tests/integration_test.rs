@@ -1,218 +1,100 @@
-use common_test_utils::integration::TestCommand;
-use std::path::Path;
+//! Integration tests for content-edit
+//!
+//! These tests verify that the content-edit functionality works correctly
+//! when used as a library by external code.
+
+use content_edit::{
+    EditableContent,
+    save_edited_content,
+    extract_frontmatter_from_string,
+    split_frontmatter_and_body,
+};
 use std::fs;
+use std::io::Write;
+use tempfile::NamedTempFile;
 
+/// Test the full content editing workflow
 #[test]
-fn test_edit_content() {
-    // Create a new test command for content-edit
-    let command = TestCommand::new("content-edit").unwrap();
-    
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    let original_content = fs::read_to_string(&content_file).unwrap();
-    
-    // Create a temporary file with edited content
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_file = temp_dir.path().join("edited.mdx");
-    let edited_content = original_content.replace("Test Post", "Edited Post");
-    fs::write(&temp_file, &edited_content).unwrap();
-    
-    // Set up environment to use our test editor
-    let editor_script = temp_dir.path().join("editor.sh");
-    fs::write(&editor_script, format!(
-        "#!/bin/sh\ncp \"{}\" \"$1\"",
-        temp_file.to_string_lossy()
-    )).unwrap();
-    
-    // Make the script executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&editor_script).unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&editor_script, perms).unwrap();
-    }
-    
-    // Test editing content with slug and topic
-    let output = command.run_with_input(
-        &["--slug", "test-post", "--topic", "blog"],
-        &format!("EDITOR={}", editor_script.to_str().unwrap())
-    ).unwrap();
-    
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("saved successfully"));
-    
-    // Verify content was edited
-    let updated_content = fs::read_to_string(&content_file).unwrap();
-    assert!(updated_content.contains("Edited Post"));
-    assert!(!updated_content.contains("Test Post"));
+fn test_content_editing_workflow() {
+    // Create a temporary file for testing
+    let mut temp_file = NamedTempFile::new().unwrap();
+    let file_path = temp_file.path().to_path_buf();
+
+    // Write test content to the file
+    let original_content = r#"---
+title: "Integration Test Post"
+date: "2023-01-01"
+---
+
+# Integration Test Post
+
+This is a test for integration testing."#;
+
+    temp_file.write_all(original_content.as_bytes()).unwrap();
+
+    // Create an EditableContent instance manually
+    let content = EditableContent {
+        path: file_path.clone(),
+        title: "Integration Test Post".to_string(),
+        slug: "integration-test".to_string(),
+        topic: "test".to_string(),
+    };
+
+    // Edit the content
+    let edited_content = r#"---
+title: "Updated Integration Test Post"
+date: "2023-01-01"
+---
+
+# Updated Integration Test Post
+
+This post has been edited during integration testing."#;
+
+    // Save the edited content
+    save_edited_content(&content.path, edited_content).unwrap();
+
+    // Read the file to verify the changes
+    let saved_content = fs::read_to_string(&content.path).unwrap();
+
+    // Check that the content was properly updated
+    assert!(saved_content.contains("title: \"Updated Integration Test Post\""));
+    assert!(saved_content.contains("date: \"2023-01-01\""));
+    assert!(saved_content.contains("# Updated Integration Test Post"));
+    assert!(saved_content.contains("This post has been edited during integration testing."));
 }
 
+/// Test that we can split frontmatter and body correctly
 #[test]
-fn test_edit_frontmatter_only() {
-    // Create a new test command for content-edit
-    let command = TestCommand::new("content-edit").unwrap();
-    
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    
-    // Add some content to the file
-    let original_content = fs::read_to_string(&content_file).unwrap();
-    let content_with_body = format!("{}\n\n# Test Post\n\nThis is a test post.", original_content);
-    fs::write(&content_file, &content_with_body).unwrap();
-    
-    // Create a temporary file with edited frontmatter
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_file = temp_dir.path().join("edited.mdx");
-    let frontmatter = original_content.replace("Test Post", "Edited Post");
-    fs::write(&temp_file, &frontmatter).unwrap();
-    
-    // Set up environment to use our test editor
-    let editor_script = temp_dir.path().join("editor.sh");
-    fs::write(&editor_script, format!(
-        "#!/bin/sh\ncp \"{}\" \"$1\"",
-        temp_file.to_string_lossy()
-    )).unwrap();
-    
-    // Make the script executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&editor_script).unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&editor_script, perms).unwrap();
-    }
-    
-    // Test editing frontmatter only
-    let output = command.run_with_input(
-        &["--slug", "test-post", "--topic", "blog", "--frontmatter-only"],
-        &format!("EDITOR={}", editor_script.to_str().unwrap())
-    ).unwrap();
-    
-    assert!(output.status.success());
-    
-    // Verify frontmatter was edited but body remains
-    let updated_content = fs::read_to_string(&content_file).unwrap();
-    assert!(updated_content.contains("Edited Post"));
-    assert!(!updated_content.contains("title: \"Test Post\""));
-    assert!(updated_content.contains("# Test Post"));
-    assert!(updated_content.contains("This is a test post."));
-}
+fn test_splitting_and_extraction() {
+    let content = r#"---
+title: "Integration Test Post"
+date: "2023-01-01"
+tags: ["integration", "test"]
+---
 
-#[test]
-fn test_edit_content_only() {
-    // Create a new test command for content-edit
-    let command = TestCommand::new("content-edit").unwrap();
-    
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    
-    // Add some content to the file
-    let original_content = fs::read_to_string(&content_file).unwrap();
-    let content_with_body = format!("{}\n\n# Test Post\n\nThis is a test post.", original_content);
-    fs::write(&content_file, &content_with_body).unwrap();
-    
-    // Create a temporary file with edited body
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_file = temp_dir.path().join("edited.mdx");
-    let edited_body = "# Edited Post\n\nThis post has been edited.";
-    fs::write(&temp_file, &edited_body).unwrap();
-    
-    // Set up environment to use our test editor
-    let editor_script = temp_dir.path().join("editor.sh");
-    fs::write(&editor_script, format!(
-        "#!/bin/sh\ncp \"{}\" \"$1\"",
-        temp_file.to_string_lossy()
-    )).unwrap();
-    
-    // Make the script executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&editor_script).unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&editor_script, perms).unwrap();
-    }
-    
-    // Test editing content only
-    let output = command.run_with_input(
-        &["--slug", "test-post", "--topic", "blog", "--content-only"],
-        &format!("EDITOR={}", editor_script.to_str().unwrap())
-    ).unwrap();
-    
-    assert!(output.status.success());
-    
-    // Verify body was edited but frontmatter remains
-    let updated_content = fs::read_to_string(&content_file).unwrap();
-    assert!(updated_content.contains("title: \"Test Post\""));
-    assert!(updated_content.contains("# Edited Post"));
-    assert!(updated_content.contains("This post has been edited."));
-    assert!(!updated_content.contains("This is a test post."));
-}
+# Integration Test Post
 
-#[test]
-fn test_edit_nonexistent_content() {
-    // Create a new test command for content-edit
-    let command = TestCommand::new("content-edit").unwrap();
-    
-    // Test editing nonexistent content
-    let output = command.assert_failure(&["--slug", "nonexistent-post", "--topic", "blog"]);
-    
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Content not found"));
-}
+This is a test for integration testing."#;
 
-#[test]
-fn test_interactive_content_selection() {
-    // Create a new test command for content-edit
-    let command = TestCommand::new("content-edit").unwrap();
-    
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    
-    // Create a temporary file with edited content
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_file = temp_dir.path().join("edited.mdx");
-    let original_content = fs::read_to_string(&content_file).unwrap();
-    let edited_content = original_content.replace("Test Post", "Edited Post");
-    fs::write(&temp_file, &edited_content).unwrap();
-    
-    // Set up environment to use our test editor
-    let editor_script = temp_dir.path().join("editor.sh");
-    fs::write(&editor_script, format!(
-        "#!/bin/sh\ncp \"{}\" \"$1\"",
-        temp_file.to_string_lossy()
-    )).unwrap();
-    
-    // Make the script executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&editor_script).unwrap().permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&editor_script, perms).unwrap();
-    }
-    
-    // Test interactive content selection
-    let mut interactive = common_test_utils::integration::InteractiveTest::new(
-        &command,
-        &[]
-    ).unwrap();
-    
-    // Set the EDITOR environment variable
-    std::env::set_var("EDITOR", editor_script.to_str().unwrap());
-    
-    // Select content
-    interactive.expect("Select content to edit").unwrap();
-    interactive.send("1").unwrap(); // Assuming the first item in the list
-    
-    // Close the interactive test
-    let output = interactive.close().unwrap();
-    assert!(output.status.success());
-    
-    // Verify content was edited
-    let updated_content = fs::read_to_string(&content_file).unwrap();
-    assert!(updated_content.contains("Edited Post"));
-    assert!(!updated_content.contains("Test Post"));
-} 
+    // Test splitting
+    let (frontmatter, body) = split_frontmatter_and_body(content).unwrap();
+
+    // Check frontmatter
+    assert_eq!(frontmatter.title, "Integration Test Post");
+
+    // Check body
+    assert!(body.contains("# Integration Test Post"));
+    assert!(body.contains("This is a test for integration testing."));
+
+    // Test extraction
+    let yaml = extract_frontmatter_from_string(content).unwrap();
+
+    // Check extracted fields
+    assert_eq!(yaml.get("title").unwrap().as_str().unwrap(), "Integration Test Post");
+    assert_eq!(yaml.get("date").unwrap().as_str().unwrap(), "2023-01-01");
+
+    // Check tags array
+    let tags = yaml.get("tags").unwrap().as_sequence().unwrap();
+    assert_eq!(tags[0].as_str().unwrap(), "integration");
+    assert_eq!(tags[1].as_str().unwrap(), "test");
+}

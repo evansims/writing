@@ -1,0 +1,21 @@
+{
+  "published": "2025-03-08",
+  "references": [
+    {
+      "author": "Author Name",
+      "title": "Reference Title",
+      "url": "https://example.com/reference"
+    }
+  ],
+  "slug": "direct-library-test",
+  "tagline": "Testing direct library calls",
+  "tags": [
+    "test",
+    "direct",
+    "library"
+  ],
+  "title": "Direct Library Test",
+  "topics": [
+    "mindset"
+  ]
+}
