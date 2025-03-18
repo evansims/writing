@@ -118,7 +118,8 @@ pub fn resolve_path<P: AsRef<Path>, B: AsRef<Path>>(path: P, base: B) -> PathBuf
 pub fn delete_file<P: AsRef<Path>>(path: P) -> Result<()> {
     let path = path.as_ref();
     if !file_exists(path) {
-        return Err(WritingError::file_not_found(path));
+        // Non-existent file is already deleted, so return success
+        return Ok(());
     }
 
     fs::remove_file(path)

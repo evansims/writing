@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use tempfile::{tempdir, TempDir};
 use serde_yaml;
 use crate::mocks::{MockFileSystem, MockConfigLoader};
+use common_config;
 
 /// Fixture for validation testing
 pub struct ValidationFixture {
@@ -273,11 +274,30 @@ impl TestFixture {
         // Create a basic file system mock
         let fs = MockFileSystem::new();
 
+        // Create topic configurations
+        let mut topics = HashMap::new();
+        topics.insert(
+            "creativity".to_string(),
+            common_models::TopicConfig {
+                name: "Creativity".to_string(),
+                description: "Creative content".to_string(),
+                directory: "creativity".to_string(),
+            }
+        );
+        topics.insert(
+            "strategy".to_string(),
+            common_models::TopicConfig {
+                name: "Strategy".to_string(),
+                description: "Strategic content".to_string(),
+                directory: "strategy".to_string(),
+            }
+        );
+
         // Create basic configuration
         let config = Config {
             content: ContentConfig {
                 base_dir: "content".to_string(),
-                topics: HashMap::new(),
+                topics,
                 tags: None,
             },
             images: ImageConfig {
@@ -294,7 +314,28 @@ impl TestFixture {
             },
         };
 
-        let config_loader = MockConfigLoader::new(config);
+        let config_loader = MockConfigLoader::new(config.clone());
+
+        // Create a real config.yaml file
+        let config_yaml = serde_yaml::to_string(&config).unwrap();
+        let config_path = temp_dir.path().join("config.yaml");
+        std::fs::write(&config_path, &config_yaml)?;
+
+        // Debug: Print the config.yaml content
+        println!("DEBUG - TestFixture created config.yaml:\n{}", config_yaml);
+        println!("DEBUG - Config path: {}", config_path.display());
+
+        // Set the CONFIG_PATH environment variable to point to our test config
+        std::env::set_var("CONFIG_PATH", config_path.to_string_lossy().to_string());
+
+        // Clear the config cache to make sure our new config is loaded
+        common_config::clear_config_cache();
+
+        // Create the content directory structure
+        let content_dir = temp_dir.path().join("content");
+        std::fs::create_dir_all(&content_dir)?;
+        std::fs::create_dir_all(content_dir.join("creativity"))?;
+        std::fs::create_dir_all(content_dir.join("strategy"))?;
 
         Ok(Self {
             fs,

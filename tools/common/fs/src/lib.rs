@@ -60,7 +60,8 @@ pub fn read_file_if_exists(path: &Path) -> Result<Option<String>> {
 /// Delete a directory and all its contents
 pub fn delete_dir_all(path: &Path) -> Result<()> {
     if !path.exists() {
-        return Err(WritingError::directory_not_found(path));
+        // Non-existent directory is already deleted, so return success
+        return Ok(());
     }
 
     fs::remove_dir_all(path)
@@ -215,8 +216,10 @@ mod tests {
         // Create some files with different extensions
         let txt_file = dir_path.join("test.txt");
         let md_file = dir_path.join("test.md");
-        let nested_txt = dir_path.join("subdir").join("nested.txt");
+        let subdir = dir_path.join("subdir");
+        let nested_txt = subdir.join("nested.txt");
 
+        fs::create_dir_all(&subdir).unwrap();
         write_file(&txt_file, "test").unwrap();
         write_file(&md_file, "test").unwrap();
         write_file(&nested_txt, "test").unwrap();
@@ -241,9 +244,11 @@ mod tests {
     fn test_copy_file() {
         let temp_dir = tempdir().unwrap();
         let source_file = temp_dir.path().join("source.txt");
-        let dest_file = temp_dir.path().join("subdir").join("dest.txt");
+        let subdir = temp_dir.path().join("subdir");
+        let dest_file = subdir.join("dest.txt");
         let content = "Hello, world!";
 
+        fs::create_dir_all(&subdir).unwrap();
         write_file(&source_file, content).unwrap();
 
         let result = copy_file(&source_file, &dest_file);
