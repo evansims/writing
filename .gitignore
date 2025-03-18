@@ -1,4 +1,4 @@
-.write-cache/
-build/
-drafts/
-tools/target/
+/.write-cache/
+/build/
+/drafts/
+/tools/target/

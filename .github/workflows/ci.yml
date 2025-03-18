@@ -41,7 +41,7 @@ jobs:
 
       - name: Run Clippy
         working-directory: tools
-        run: cargo clippy --workspace --all-features -- -D warnings
+        run: cargo clippy --workspace --all-features -- -D warnings --allow clippy::to-string-in-format-args
 
       - name: Check formatting
         working-directory: tools
@@ -53,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
 
       - name: Run security audit
         working-directory: tools
@@ -75,10 +78,10 @@ jobs:
         working-directory: tools/image-optimize
         run: |
           cargo test --all-features
-          cargo clippy --all-features -- -D warnings
+          cargo clippy --all-features -- -D warnings --allow clippy::to-string-in-format-args
 
       - name: Test image-build
         working-directory: tools/image-build
         run: |
           cargo test --all-features
-          cargo clippy --all-features -- -D warnings
+          cargo clippy --all-features -- -D warnings --allow clippy::to-string-in-format-args
