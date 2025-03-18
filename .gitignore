@@ -1,4 +1,64 @@
+# Project-specific
 /.write-cache/
 /build/
 /drafts/
+/public/
+/dist/
+
+# Rust
 /tools/target/
+**/*.rs.bk
+.cargo-ok
+
+# Node/Next.js
+node_modules/
+.next/
+out/
+.env*.local
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.pem
+.env
+
+# Debug and Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# Testing and Coverage
+coverage/
+.nyc_output/
+
+# Cache directories
+.npm/
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

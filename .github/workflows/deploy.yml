@@ -4,30 +4,31 @@ on:
   push:
     branches: [main]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  setup:
-    uses: ./.github/workflows/rust-setup.yml
-    with:
-      rust-toolchain: stable
-      components: llvm-tools-preview
-
   deploy:
-    needs: setup
+    name: Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm
+
+      - name: Build tools
+        working-directory: tools
         run: cargo build --release --workspace
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./tools/write
-          vercel-args: "--prod"
+          vercel-org-id: ${{ secrets.ORG_ID}}
+          vercel-project-id: ${{ secrets.PROJECT_ID}}
+          working-directory: ./
