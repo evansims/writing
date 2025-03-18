@@ -1,0 +1,13 @@
+[package]
+name = "common_macros"
+version = "0.1.0"
+edition = "2021"
+description = "Common macros for the writing toolkit"
+authors = ["Evan Sims <hello@evansims.com>"]
+
+[dependencies]
+# No external dependencies for this crate
+
+[dev-dependencies]
+# Dependencies for testing only
+trybuild = "1.0"

@@ -1,27 +1,27 @@
 //! # Common Error Handling
-//! 
+//!
 //! This module provides common error handling utilities for the writing tools.
-//! 
+//!
 //! ## Features
-//! 
+//!
 //! - Custom error types for different error scenarios
 //! - Error context for better error messages
 //! - Utility traits for working with Result and Option types
 //! - Conversion from standard error types
 //! - Standardized option validation patterns
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ```rust
 //! use common_errors::{Result, WritingError, ResultExt, OptionValidationExt};
 //! use std::path::Path;
-//! 
+//!
 //! fn read_config(path: &Path) -> Result<String> {
 //!     std::fs::read_to_string(path)
 //!         .map_err(WritingError::from)
 //!         .with_context(|| format!("Failed to read config file: {}", path.display()))
 //! }
-//! 
+//!
 //! fn get_required_value(value: Option<String>) -> Result<String> {
 //!     value.validate_required("Value is required")
 //! }
@@ -35,6 +35,12 @@ mod context;
 mod category;
 // Add the reporting module definition
 mod reporting;
+// Add the macros module definition
+mod macros;
+// Add the error module definition
+mod error;
+// Add the error formatter module definition
+mod error_formatter;
 
 // Add comprehensive test modules
 #[cfg(test)]
@@ -47,8 +53,23 @@ pub use context::{ErrorContext, IoResultExt};
 // Re-export the category types
 pub use category::{ErrorCategory};
 // Re-export the reporting types and functions
-pub use reporting::{ErrorReporter, ErrorDisplayStyle, get_default_reporter, 
+pub use reporting::{ErrorReporter, ErrorDisplayStyle, get_default_reporter,
                     print_error_simple, print_error_detailed, print_error_debug};
+// Re-export macros for convenient usage
+#[doc(inline)]
+pub use crate::with_context;
+#[doc(inline)]
+pub use crate::try_with_context;
+#[doc(inline)]
+pub use crate::error;
+
+// Re-export the error types and functions
+pub use error::{ErrorKind, WritingError};
+pub use context::ResultExt;
+pub use error_formatter::{
+    ErrorFormatter, ErrorFormatterExt, Verbosity,
+    print_error, print_error_detailed, print_error_debug,
+};
 
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -101,7 +122,7 @@ pub enum WritingError {
     /// Error when a file is not found
     #[error("File not found: {0}")]
     FileNotFound(PathBuf),
-    
+
     /// Error when a directory is not found
     #[error("Directory not found: {0}")]
     DirectoryNotFound(PathBuf),
@@ -109,27 +130,27 @@ pub enum WritingError {
     /// Error for validation failures
     #[error("Validation error: {0}")]
     ValidationError(String),
-    
+
     /// Error for permission denied
     #[error("Permission denied: {0}")]
     PermissionDenied(PathBuf),
-    
+
     /// Error when content already exists
     #[error("Content already exists: {0}")]
     ContentAlreadyExists(String),
-    
+
     /// Error for invalid arguments
     #[error("Invalid argument: {0}")]
     InvalidArgument(String),
-    
+
     /// Error for command execution failures
     #[error("Command error: {0}")]
     CommandError(String),
-    
+
     /// Error for template processing failures
     #[error("Template error: {0}")]
     TemplateError(String),
-    
+
     /// Error for content parsing failures
     #[error("Content parsing error: {0}")]
     ContentParsingError(String),
@@ -423,13 +444,13 @@ impl<T, E: std::error::Error + Send + Sync + 'static> ResultExt<T, E> for std::r
     fn file_not_found_if_not_exists<P: AsRef<Path>>(self, path: P) -> Result<T> {
         self.map_err(|e| {
             // Check if the error is an IO error with NotFound kind
-            let is_not_found = std::any::type_name::<E>().contains("std::io::Error") && 
+            let is_not_found = std::any::type_name::<E>().contains("std::io::Error") &&
                 format!("{:?}", e).contains("NotFound");
-            
+
             if is_not_found {
                 return WritingError::file_not_found(path);
             }
-            
+
             WritingError::Other(format!("{}", e))
         })
     }
@@ -459,7 +480,7 @@ pub trait OptionExt<T> {
     ///
     /// A Result with the value or a ContentNotFound error
     fn content_not_found<S: AsRef<str>>(self, msg: S) -> Result<T>;
-    
+
     /// Convert None to a ValidationError
     ///
     /// # Parameters
@@ -476,8 +497,8 @@ impl<T> OptionExt<T> for Option<T> {
     fn content_not_found<S: AsRef<str>>(self, msg: S) -> Result<T> {
         self.ok_or_else(|| WritingError::content_not_found(msg))
     }
-    
+
     fn or_validation_error<S: AsRef<str>>(self, msg: S) -> Result<T> {
         self.ok_or_else(|| WritingError::validation_error(msg))
     }
-} 
+}

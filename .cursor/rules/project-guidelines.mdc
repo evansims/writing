@@ -43,3 +43,15 @@ This is the personal website, blog and podcast of Evan Sims (hello@evansims.com)
       - We dont need a database: store all the data inside the backend itself in as easily accessible and efficient a manner as possible.
       - It should be ultra-lightweight and be as simple and minimal as possible, while respecting DRY principles and best practices.
    - When a new "build" is requested by me (either via the CLI or via a new GitHub release) it should automatically build the new frontend and backend code, and update the build on Vercel.
+
+6. THIS PROJECT IS OPEN SOURCE FOR EDUCATIONABLE PURPOSES, BUT ONLY PRACTICALLY INTENDED FOR PERSONAL USE:
+   - All documentation (including API and usage documents) should be stored in the /docs directory, except:
+     - A single README.md providing an overview, quick start usage details, and links to the more detailed documentation.
+     - The GAMEPLAN.md file, if present/applicable.
+     - The CHANGELOG.md file.
+   - Please keep this usage in mind when creating documentation.
+   - Detailed documenting (i.e. for things public APIs) are unnecessary, except in situations where it might help LLVMs understand the code better.
+   - Documentation should be brief, clear, and straightforward.
+   - NEVER create demonstration or example code. This is always unnecessary.
+   - NEVER craete migration guides or scripts. This is also always unnecessary.
+   - Assume a high level of technical expertise from the reader of any documentation.
