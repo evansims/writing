@@ -1,10 +1,7 @@
 use std::path::PathBuf;
 use clap::Parser;
 use anyhow::Result;
-use colored::*;
-
-mod lib;
-use lib::{collect_results, generate_report, output_json_report, output_markdown_report};
+use benchmark_analyze::{collect_results, generate_report, output_json_report, output_markdown_report};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

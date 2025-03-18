@@ -35,11 +35,9 @@ jobs:
           toolchain: ${{ inputs.rust-toolchain }}
           components: ${{ inputs.components }}
           targets: ${{ inputs.targets }}
-          profile: minimal
-          override: true
-          cache: "cargo"
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: tools -> target
+          prefix-key: rust-cache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}

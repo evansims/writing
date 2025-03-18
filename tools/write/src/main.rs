@@ -4,7 +4,6 @@
 use clap::Parser;
 use cli::{Cli, Commands};
 use common_errors::{Result, WritingError};
-use std::path::PathBuf;
 use crate::tools::build;
 
 mod cli;

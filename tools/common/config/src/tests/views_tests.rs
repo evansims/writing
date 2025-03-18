@@ -4,7 +4,6 @@
 //! and access to configuration data.
 
 use std::fs;
-use std::path::Path;
 use tempfile::NamedTempFile;
 use crate::views::{ConfigView, ContentView, ImageView, PublicationView};
 use common_errors::WritingError;

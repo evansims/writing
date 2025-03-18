@@ -1,5 +1,5 @@
 //! # Mock Config Loader Implementation
-//! 
+//!
 //! This module provides a mock implementation of config loading operations for testing.
 
 use std::path::Path;
@@ -20,13 +20,22 @@ impl MockConfigLoader {
             config: Arc::new(Mutex::new(config)),
         }
     }
-    
+
     /// Set the config to be returned by the loader
     pub fn set_config(&mut self, config: Config) {
         let mut current_config = self.config.lock().unwrap();
         *current_config = config;
     }
-    
+
+    /// Set the expected topics in the config
+    pub fn set_expected_topics(&self, topics: Vec<(String, common_models::TopicConfig)>) {
+        let mut config = self.config.lock().unwrap();
+        config.content.topics.clear();
+        for (key, topic_config) in topics {
+            config.content.topics.insert(key, topic_config);
+        }
+    }
+
     /// Load the config from a path (path is ignored in the mock)
     pub fn load_config(&self, _path: &str) -> Result<Config> {
         let config = self.config.lock().unwrap();
@@ -46,4 +55,4 @@ impl ConfigLoader for MockConfigLoader {
         let config = self.config.lock().unwrap();
         Ok(config.clone())
     }
-} 
+}

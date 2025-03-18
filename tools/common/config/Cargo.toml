@@ -11,10 +11,11 @@ anyhow.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 once_cell.workspace = true
+dirs.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
 
 [features]
 default = ["cache"]
-cache = [] 
+cache = []

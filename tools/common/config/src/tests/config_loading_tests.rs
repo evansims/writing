@@ -4,12 +4,10 @@
 //! and validated from various sources.
 
 use std::fs;
-use std::path::Path;
 use tempfile::{tempdir, NamedTempFile};
-use crate::{load_config_from_path, get_topics, get_topic_keys, get_topic_by_key, validate_topic};
+use crate::load_config_from_path;
 use common_errors::{WritingError, Result};
-use common_models::{Config, TopicConfig, PublicationConfig, ImageConfig, ImageSize};
-use std::collections::HashMap;
+use common_models::{Config, TopicConfig};
 
 /// Create a test configuration file with valid content
 fn create_valid_config_file() -> NamedTempFile {

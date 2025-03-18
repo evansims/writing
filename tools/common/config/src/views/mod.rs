@@ -65,7 +65,7 @@ pub trait ConfigView {
 mod tests {
     use super::*;
     use common_errors::Result;
-    use std::fs::File;
+    
     use std::io::Write;
     use tempfile::NamedTempFile;
 

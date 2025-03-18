@@ -60,10 +60,56 @@ pub use views::ConfigView;
 #[cfg(test)]
 mod tests;
 
-/// Load the configuration file from the current or parent directories
+/// Get the path to the configuration file
+fn get_config_path() -> Result<std::path::PathBuf> {
+    // Try to get the path from the environment variable CONFIG_PATH
+    if let Ok(path) = std::env::var("CONFIG_PATH") {
+        let path = std::path::PathBuf::from(path);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    // Look in the current directory
+    let path = std::path::PathBuf::from("config.yaml");
+    if path.exists() {
+        return Ok(path);
+    }
+
+    // Look in the user's home directory
+    if let Some(home_dir) = dirs::home_dir() {
+        let path = home_dir.join(".writing").join("config.yaml");
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Err(WritingError::config_error("Configuration file not found"))
+}
+
+/// Load configuration from the default path
 pub fn load_config() -> Result<Config> {
-    // Use the global cache instance to get the config
-    cache::ConfigCache::global().get_config()
+    // Check if we're in a test environment
+    #[cfg(test)]
+    {
+        use std::sync::Once;
+        static TEST_INIT: Once = Once::new();
+        static mut TEST_CONFIG: Option<Config> = None;
+
+        // For tests, retrieve the mock config if available
+        TEST_INIT.call_once(|| {
+            // Initialize the test config once
+        });
+
+        // Return the test config if it's set
+        if let Some(test_config) = unsafe { TEST_CONFIG.as_ref() } {
+            return Ok(test_config.clone());
+        }
+    }
+
+    // Default loading behavior
+    let config_path = get_config_path()?;
+    load_config_from_path(&config_path)
 }
 
 /// Load the configuration file from a specific path

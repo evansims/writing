@@ -8,7 +8,6 @@ use std::path::Path;
 use std::time::Duration;
 use tempfile::{tempdir, NamedTempFile};
 use crate::cache::ConfigCache;
-use common_errors::WritingError;
 
 /// Create a test configuration file with valid content
 fn create_valid_config_file() -> NamedTempFile {

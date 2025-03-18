@@ -14,35 +14,24 @@ pub struct BenchmarkResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
-    #[serde(rename = "regressions")]
     pub regressions: Vec<Regression>,
-    #[serde(rename = "improvements")]
     pub improvements: Vec<Improvement>,
-    #[serde(rename = "unchanged")]
     pub unchanged: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Regression {
-    #[serde(rename = "name")]
     pub name: String,
-    #[serde(rename = "baseline")]
     pub baseline: f64,
-    #[serde(rename = "current")]
     pub current: f64,
-    #[serde(rename = "percentage")]
     pub percentage: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Improvement {
-    #[serde(rename = "name")]
     pub name: String,
-    #[serde(rename = "baseline")]
     pub baseline: f64,
-    #[serde(rename = "current")]
     pub current: f64,
-    #[serde(rename = "percentage")]
     pub percentage: f64,
 }
 
@@ -302,10 +291,12 @@ mod tests {
 
         // Verify JSON output
         let json_content = fs::read_to_string(&json_path)?;
-        assert!(json_content.contains("\"name\":\"test\""));
-        assert!(json_content.contains("\"baseline\":100.0"));
-        assert!(json_content.contains("\"current\":110.0"));
-        assert!(json_content.contains("\"percentage\":10.0"));
+        let parsed_json: serde_json::Value = serde_json::from_str(&json_content)?;
+
+        assert_eq!(parsed_json["regressions"][0]["name"], "test");
+        assert_eq!(parsed_json["regressions"][0]["baseline"], 100.0);
+        assert_eq!(parsed_json["regressions"][0]["current"], 110.0);
+        assert_eq!(parsed_json["regressions"][0]["percentage"], 10.0);
 
         // Verify Markdown output
         let md_content = fs::read_to_string(&md_path)?;
@@ -333,9 +324,11 @@ mod tests {
 
         // Verify JSON output
         let json_content = fs::read_to_string(&json_path)?;
-        assert!(json_content.contains("\"regressions\":[]"));
-        assert!(json_content.contains("\"improvements\":[]"));
-        assert!(json_content.contains("\"unchanged\":[]"));
+        let parsed_json: serde_json::Value = serde_json::from_str(&json_content)?;
+
+        assert!(parsed_json["regressions"].as_array().unwrap().is_empty());
+        assert!(parsed_json["improvements"].as_array().unwrap().is_empty());
+        assert!(parsed_json["unchanged"].as_array().unwrap().is_empty());
 
         // Verify Markdown output
         let md_content = fs::read_to_string(&md_path)?;

@@ -3,7 +3,6 @@
 //! This module contains tests for the error reporting system.
 
 use crate::{WritingError, ErrorReporter, ErrorDisplayStyle};
-use std::path::Path;
 
 #[test]
 fn test_simple_error_formatting() {
