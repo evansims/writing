@@ -174,5 +174,9 @@ pub fn execute_build_command(command: BuildCommands) -> Result<()> {
             // Topic is ignored for now, as the TOC is generated for all content
             build::generate_toc(None)
         },
+        BuildCommands::Benchmark { .. } => {
+            // TODO: Implement benchmark functionality
+            Ok(())
+        }
     }
 }

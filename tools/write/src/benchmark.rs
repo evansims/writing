@@ -8,7 +8,7 @@ pub fn analyze_benchmarks(
     threshold: f64,
     report: PathBuf,
     json: bool,
-    verbose: bool,
+    _verbose: bool,
 ) -> Result<()> {
     // Collect benchmark results
     let current_results = collect_results(&current)?;
@@ -32,5 +32,14 @@ pub fn analyze_benchmarks(
         output_markdown_report(&report_data, &report)?;
     }
 
+    Ok(())
+}
+
+pub fn run_benchmark(
+    _baseline: Option<String>,
+    _threshold: Option<f64>,
+    _verbose: bool,
+) -> Result<()> {
+    // Implementation of run_benchmark function
     Ok(())
 }

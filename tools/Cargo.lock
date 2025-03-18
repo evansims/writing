@@ -4194,6 +4194,7 @@ name = "write"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "benchmark-analyze",
  "chrono",
  "clap",
  "colored",
@@ -4212,6 +4213,7 @@ dependencies = [
  "serde_yaml",
  "tempfile",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]

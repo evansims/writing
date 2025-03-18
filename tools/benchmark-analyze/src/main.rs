@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     };
 
     // Generate report
-    let report = generate_report(&current_results, baseline_results.as_ref(), args.threshold);
+    let report = generate_report(&current_results, baseline_results.as_ref().map(|v| &**v), args.threshold);
 
     // Output report
     if args.json {

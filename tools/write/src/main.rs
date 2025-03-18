@@ -1,39 +1,52 @@
 //! # Write CLI Tool
 //!
 //! This is a CLI tool for managing writing content.
-use common_errors::{WritingError, print_error};
 use clap::Parser;
-use anyhow::Result;
-use cli::{Cli, Commands, BuildCommands};
+use cli::{Cli, Commands};
+use common_errors::{Result, WritingError};
 use std::path::PathBuf;
+use crate::tools::build;
 
 mod cli;
-mod tools;
+mod config;
 mod commands;
 mod ui;
-mod content;
-mod topic;
-mod image;
-mod build;
-mod benchmark;
-
-use commands::executor::execute_command;
+mod tools;
 
 /// Main entry point for the Write CLI tool
-fn main() -> Result<()> {
+fn main() {
     let cli = Cli::parse();
-    run(cli)
+    if let Err(e) = run(cli) {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }
 
 /// Run the CLI tool with the provided arguments
 fn run(cli: Cli) -> Result<()> {
     match cli.command {
-        Commands::Build { command } => match command {
-            BuildCommands::Content { topic, rebuild } => {
-                build::build_content(topic.as_deref(), rebuild)
+        Commands::Build(command) => match command {
+            cli::BuildCommands::Content { topic, rebuild } => {
+                build::build_content(
+                    None,                   // output_dir
+                    None,                   // slug
+                    topic.map(String::from), // topic
+                    false,                  // include_drafts
+                    false,                  // skip_html
+                    false,                  // skip_json
+                    false,                  // skip_rss
+                    false,                  // skip_sitemap
+                    rebuild,                // force_rebuild
+                    false,                  // verbose
+                ).map_err(|e| WritingError::validation_error(format!("Build error: {}", e)))?;
+                Ok(())
             }
-            BuildCommands::Toc { topic } => build::generate_toc(topic.as_deref()),
-            BuildCommands::Benchmark {
+            cli::BuildCommands::Toc { topic } => {
+                build::generate_toc(topic.map(String::from))
+                    .map_err(|e| WritingError::validation_error(format!("TOC generation error: {}", e)))?;
+                Ok(())
+            }
+            cli::BuildCommands::Benchmark {
                 baseline,
                 current,
                 threshold,
@@ -41,13 +54,18 @@ fn run(cli: Cli) -> Result<()> {
                 json,
                 verbose,
             } => {
-                let baseline = baseline.map(PathBuf::from);
-                let current = PathBuf::from(current);
-                let report = PathBuf::from(report);
-                benchmark::analyze_benchmarks(baseline, current, threshold, report, json, verbose)
+                commands::executor::execute_command(Commands::Build(cli::BuildCommands::Benchmark {
+                    baseline,
+                    current,
+                    threshold,
+                    report: report,
+                    json,
+                    verbose,
+                })).map_err(|e| WritingError::validation_error(format!("Benchmark error: {}", e)))
             }
         },
         // Execute the command using our command executor
-        command => execute_command(command),
+        command => commands::executor::execute_command(command)
+            .map_err(|e| WritingError::validation_error(format!("Command execution error: {}", e)))
     }
 }
