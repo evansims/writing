@@ -14,24 +14,35 @@ pub struct BenchmarkResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Report {
+    #[serde(rename = "regressions")]
     pub regressions: Vec<Regression>,
+    #[serde(rename = "improvements")]
     pub improvements: Vec<Improvement>,
+    #[serde(rename = "unchanged")]
     pub unchanged: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Regression {
+    #[serde(rename = "name")]
     pub name: String,
+    #[serde(rename = "baseline")]
     pub baseline: f64,
+    #[serde(rename = "current")]
     pub current: f64,
+    #[serde(rename = "percentage")]
     pub percentage: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Improvement {
+    #[serde(rename = "name")]
     pub name: String,
+    #[serde(rename = "baseline")]
     pub baseline: f64,
+    #[serde(rename = "current")]
     pub current: f64,
+    #[serde(rename = "percentage")]
     pub percentage: f64,
 }
 
