@@ -1,69 +1,80 @@
-# Writing CLI
+# Write Tool
 
-A beautiful, interactive CLI for managing your writing project.
+The `write` tool is the primary interface for managing content in this project. It provides a comprehensive set of commands for creating, editing, building, and managing content, topics, and images.
 
 ## Features
 
-- Interactive TUI (Text User Interface) for easy navigation
-- Command-line interface for scripting and automation
-- Integrates with all existing writing management tools
-- Beautiful, colorful output
-- Easy to use and install
+- Content Management
 
-## Installation
+  - Create new content
+  - Edit existing content
+  - Move/rename content
+  - Delete content
+  - Search content
+  - View content statistics
+  - Validate content
+  - Build content for production
 
-To install the Writing CLI, run the installation script:
+- Topic Management
 
-```bash
-cd tools
-./install.sh
-```
+  - Add new topics
+  - Edit topic metadata
+  - Rename topics
+  - Delete topics
 
-This will:
-1. Build the CLI tool
-2. Install it to `~/.local/bin/write`
-3. Add `~/.local/bin` to your PATH (if needed)
+- Image Management
+
+  - Optimize images
+  - Build image assets
+
+- Build Tools
+  - Generate table of contents
+  - Generate LLM training data
+  - Build search indices
+  - Build content for production
 
 ## Usage
 
-### Interactive Mode
-
-To launch the interactive TUI:
+The tool can be used either interactively through menus or directly via command-line arguments:
 
 ```bash
-write interactive
+# Interactive mode
+write
+
+# Direct commands
+write content new      # Create new content
+write content edit    # Edit existing content
+write content build   # Build content for production
+write topic add      # Add a new topic
+write image optimize # Optimize images
 ```
 
-This will open a beautiful, interactive interface where you can:
-- Manage content (create, edit, move, delete, list)
-- Manage topics (list, add, edit, rename, delete)
-- Manage images (optimize, build)
-- Build operations (content, table of contents, LLMs)
-- View content statistics
+## Build Cache
 
-### Command-line Mode
+The tool implements a sophisticated build cache system to improve performance:
 
-You can also use the CLI in command-line mode for scripting and automation:
+- LazyBuildCache: Provides thread-safe caching with automatic invalidation
+- Intelligent rebuild detection: Only rebuilds modified content
+- Cache persistence: Saves build state between runs
 
-```bash
-# Create new content
-write new --title "My New Article" --topic "strategy" --tagline "A great article" --tags "productivity,focus" --content-type "article"
+## Configuration
 
-# Get help
-write --help
+The tool reads configuration from the following sources (in order of precedence):
+
+1. Command line arguments
+2. Environment variables
+3. Configuration file (`.write.yaml` in project root)
+
+## Output
+
+By default, all built content is placed in the `public` directory with the following structure:
+
 ```
-
-## Development
-
-To build the CLI tool:
-
-```bash
-cd tools
-cargo build --release
+public/
+  ├── content/      # Built content files
+  ├── topics/       # Topic metadata and indices
+  ├── images/       # Optimized images
+  ├── toc.json      # Table of contents
+  ├── search.json   # Search index
+  └── llm/          # LLM training data
 ```
-
-The binary will be available at `tools/target/release/write`.
-
-## License
-
-This project is licensed under the same license as the main writing project. 
