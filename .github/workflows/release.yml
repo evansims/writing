@@ -3,124 +3,36 @@ name: Release
 on:
   push:
     tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v*"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    name: Build
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      rust-toolchain: stable
+      components: llvm-tools-preview
+
+  release:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          fetch-tags: true
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build release binaries
-        run: |
-          for dir in tools/*/; do
-            if [ -f "${dir}Cargo.toml" ]; then
-              echo "Building $dir"
-              cd "$dir"
-              cargo build --release
-              cd ../..
-            fi
-          done
-
-      - name: Create release archive
-        run: |
-          mkdir -p release
-          for dir in tools/*/; do
-            if [ -f "${dir}Cargo.toml" ]; then
-              tool_name=$(basename "$dir")
-              cp "$dir/target/release/$tool_name" "release/$tool_name"
-            fi
-          done
-          tar czf release.tar.gz -C release .
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release
-          path: release.tar.gz
-
-  publish:
-    name: Publish
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Download release artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release
-          path: release
+      - name: Build
+        run: cargo build --release --workspace
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref_name }}
+          files: |
+            tools/*/target/release/*
+            tools/*/target/release/*.exe
           draft: false
           prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release/release.tar.gz
-          asset_name: tools-${{ github.ref_name }}.tar.gz
-          asset_content_type: application/gzip
-
-  publish-crates:
-    name: Publish Crates
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Publish to crates.io
-        run: |
-          for dir in tools/*/; do
-            if [ -f "${dir}Cargo.toml" ]; then
-              echo "Publishing $dir"
-              cd "$dir"
-              cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-              cd ../..
-            fi
-          done
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
