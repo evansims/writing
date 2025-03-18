@@ -1,93 +1,81 @@
-# Common Utilities Crate
+# Common Libraries
 
-This crate provides a collection of common utilities used across various tools in the writing project. It serves as a shared foundation for building consistent, reliable tools.
+Shared libraries used across all content management tools.
 
-## Modules
+## Components
 
-### `common-fs`
+### Models (`common-models`)
 
-File system operations with proper error handling and resource management.
+Core data structures and types used throughout the tools:
 
-- File operations: read, write, copy, delete
-- Directory operations: create, copy, move, delete
-- Path normalization and cleanup
-- Safe file handling with proper resource cleanup
+- Content models
+- Topic models
+- Image models
+- Build configuration
+- Cache structures
 
-[See detailed documentation](fs/README.md)
+### Errors (`common-errors`)
 
-### `common-errors`
+Standardized error handling:
 
-Consistent error handling and reporting mechanisms.
+- Custom error types
+- Error formatting
+- Result type aliases
+- Error conversion traits
 
-- Custom error types for different error categories
-- Context-aware error handling
-- Enhanced error reporting with file information
-- Result extensions for better error handling
+### Config (`common-config`)
 
-### `common-models`
+Configuration management:
 
-Shared data models and structures.
+- YAML configuration parsing
+- Environment variable support
+- Default configuration values
+- Configuration validation
 
-- Configuration structures
-- Content and metadata models
-- Shared types and enums
-- Serialization/deserialization support
+## Usage
 
-### `common-cli`
+Add these as dependencies in your `Cargo.toml`:
 
-Command-line interface utilities and argument parsing.
+```toml
+[dependencies]
+common-models = { path = "../common/models" }
+common-errors = { path = "../common/errors" }
+common-config = { path = "../common/config" }
+```
 
-- Standardized CLI argument handling
-- Common command-line options
-- Help text generation
-- Version information formatting
+## Example
 
-### `common-markdown`
+```rust
+use common_models::Content;
+use common_errors::WritingError;
+use common_config::Config;
 
-Markdown parsing and manipulation utilities.
+fn process_content() -> Result<(), WritingError> {
+    let config = Config::load()?;
+    let content = Content::new(
+        "title",
+        "slug",
+        "topic",
+        vec!["tag1", "tag2"],
+    )?;
 
-- Frontmatter extraction and parsing
-- Markdown rendering
-- Link validation and manipulation
-- Content structure analysis
+    // Process content...
+    Ok(())
+}
+```
 
-### `common-templates`
+## Best Practices
 
-Template handling and rendering utilities.
+1. Always use the common error types for error handling
+2. Use the shared models to ensure consistency
+3. Load configuration through the common config module
+4. Follow the established patterns in the codebase
 
-- Template loading and parsing
-- Variable substitution
-- Conditional rendering
-- Template validation
+## Development
 
-### `common-validation`
+When modifying these libraries:
 
-Input validation and sanitization utilities.
-
-- Content validation rules
-- Slug validation and normalization
-- String sanitization
-- Schema validation
-
-### `common-test-utils`
-
-Utilities for testing and mocking.
-
-- Mock file system operations
-- Test data generators
-- Assertion helpers
-- Test configuration
-
-## Design Philosophy
-
-The common utilities are designed with the following principles in mind:
-
-1. **Consistency**: Provide consistent interfaces across all tools
-2. **Reliability**: Robust error handling and resource management
-3. **Testability**: Easy to test and mock
-4. **Performance**: Efficient operations that scale well
-5. **Usability**: Intuitive interfaces with good documentation
-
-## Usage Examples
-
-Check each module's README for specific usage examples. 
+1. Ensure changes are backward compatible
+2. Update all dependent tools
+3. Run the full test suite
+4. Update documentation as needed
