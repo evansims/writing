@@ -1,0 +1,46 @@
+name: Rust Setup
+
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        required: true
+        type: string
+        default: "stable"
+      components:
+        required: false
+        type: string
+        default: ""
+    outputs:
+      cache-key:
+        value: ${{ jobs.setup.outputs.cache-key }}
+      toolchain:
+        value: ${{ jobs.setup.outputs.toolchain }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache.outputs.cache-key }}
+      toolchain: ${{ steps.rust.outputs.toolchain }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        id: rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ inputs.rust-toolchain }}
+          override: true
+          components: ${{ inputs.components }}
+
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}

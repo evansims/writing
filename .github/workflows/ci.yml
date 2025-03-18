@@ -10,27 +10,22 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      components: clippy,rustfmt,llvm-tools-preview
+
   test:
     name: Test
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
 
       - name: Run tests
         run: |
@@ -45,17 +40,10 @@ jobs:
 
   lint:
     name: Lint
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: clippy,rustfmt
 
       - name: Run Clippy
         run: |
@@ -81,18 +69,37 @@ jobs:
 
   security:
     name: Security Check
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
 
       - name: Run security audit
         uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  image-tests:
+    name: Image Processing Tests
+    needs: setup
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'tools/image-optimize/') || contains(github.event.head_commit.modified, 'tools/image-build/')
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Test image-optimize
+        working-directory: tools/image-optimize
+        run: |
+          cargo test --all-features
+          cargo clippy --all-features -- -D warnings
+
+      - name: Test image-build
+        working-directory: tools/image-build
+        run: |
+          cargo test --all-features
+          cargo clippy --all-features -- -D warnings

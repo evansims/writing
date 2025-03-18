@@ -1,36 +1,32 @@
-name: Dependency Updates
+name: Dependencies
 
 on:
   schedule:
     - cron: "0 0 * * 0" # Run weekly on Sunday
+  workflow_dispatch: # Allow manual trigger
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      components: llvm-tools-preview
+
   update:
-    name: Update Dependencies
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
       - name: Update dependencies
         run: |
-          for dir in tools/*/; do
-            if [ -f "${dir}Cargo.toml" ]; then
-              echo "Updating dependencies in $dir"
-              cd "$dir"
-              cargo update
-              cd ../..
-            fi
-          done
+          cargo update --workspace
+
+      - name: Check for security vulnerabilities
+        run: |
+          cargo audit
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
@@ -38,35 +34,8 @@ jobs:
           commit-message: "chore: update dependencies"
           title: "chore: update dependencies"
           body: |
-            Automated dependency update
+            Automated dependency update.
 
-            This PR updates dependencies across all tools.
+            This PR updates dependencies to their latest compatible versions.
 
             Please review the changes before merging.
-          branch: update-deps
-          delete-branch: true
-
-      - name: Check for security advisories
-        uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  notify:
-    name: Notify on Security Issues
-    needs: update
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Issue
-        uses: actions/github-script@v6
-        with:
-          script: |
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Security Issues Found in Dependencies',
-              body: `Security issues were found during the dependency update check.
-
-              Please review the security advisories and update the affected dependencies.`,
-              labels: ['security', 'dependencies']
-            });

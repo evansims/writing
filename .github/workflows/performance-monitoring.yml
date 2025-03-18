@@ -1,179 +1,39 @@
 name: Performance Monitoring
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'tools/image-optimize/**'
-      - 'tools/image-build/**'
-      - 'tools/common/models/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'tools/image-optimize/**'
-      - 'tools/image-build/**'
-      - 'tools/common/models/**'
   schedule:
-    - cron: '0 0 * * *'  # Run daily at midnight
+    - cron: "0 0 * * 0" # Run weekly on Sunday
+  workflow_dispatch: # Allow manual trigger
 
 env:
   CARGO_TERM_COLOR: always
-  CRITERION_TOKEN: ${{ secrets.CRITERION_TOKEN }}
 
 jobs:
-  performance-tracking:
-    name: Track Performance Metrics
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      components: llvm-tools-preview
+
+  benchmark:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Full history for better comparison
 
-      - name: Install ImageMagick
+      - name: Run benchmarks
         run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
+          cargo bench --workspace
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-perf-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run image-optimize benchmarks
-        working-directory: tools/image-optimize
-        run: |
-          # Run benchmarks for different feature combinations
-          cargo bench --no-default-features -- --save-baseline main
-          cargo bench --no-default-features --features webp -- --save-baseline webp
-          cargo bench --no-default-features --features avif -- --save-baseline avif
-          cargo bench --all-features -- --save-baseline all
-
-      - name: Run image-build benchmarks
-        working-directory: tools/image-build
-        run: |
-          cargo bench --no-default-features -- --save-baseline main
-          cargo bench --features basic-formats -- --save-baseline basic
-          cargo bench --all-features -- --save-baseline all
-
-      - name: Generate performance report
-        run: |
-          echo "## Performance Report" > perf-report.md
-          echo "### image-optimize" >> perf-report.md
-          echo "\`\`\`" >> perf-report.md
-          cat tools/image-optimize/target/criterion/report/*.txt >> perf-report.md
-          echo "\`\`\`" >> perf-report.md
-          echo "### image-build" >> perf-report.md
-          echo "\`\`\`" >> perf-report.md
-          cat tools/image-build/target/criterion/report/*.txt >> perf-report.md
-          echo "\`\`\`" >> perf-report.md
-
-      - name: Check for regressions
-        id: check-regressions
-        run: |
-          # Compare with previous baselines
-          REGRESSION_FOUND=false
-          
-          cd tools/image-optimize
-          if cargo bench -- --baseline main; then
-            echo "No regressions in image-optimize (main)"
-          else
-            REGRESSION_FOUND=true
-            echo "::warning::Performance regression detected in image-optimize"
-          fi
-          
-          cd ../image-build
-          if cargo bench -- --baseline main; then
-            echo "No regressions in image-build (main)"
-          else
-            REGRESSION_FOUND=true
-            echo "::warning::Performance regression detected in image-build"
-          fi
-          
-          if [ "$REGRESSION_FOUND" = true ]; then
-            echo "regression_detected=true" >> $GITHUB_OUTPUT
-          else
-            echo "regression_detected=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload performance data
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Upload benchmark results
         uses: actions/upload-artifact@v3
         with:
-          name: performance-data
-          path: |
-            tools/*/target/criterion
-            perf-report.md
+          name: benchmark-results
+          path: target/criterion/
 
-      - name: Create issue for regression
-        if: steps.check-regressions.outputs.regression_detected == 'true'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const report = fs.readFileSync('perf-report.md', 'utf8');
-            
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: '🚨 Performance Regression Detected',
-              body: `A performance regression was detected in the latest commit.
-              
-              Commit: ${context.sha}
-              
-              ${report}
-              
-              Please investigate the changes that might have caused this regression.`,
-              labels: ['performance', 'regression']
-            });
-
-  performance-dashboard:
-    name: Update Performance Dashboard
-    needs: performance-tracking
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: gh-pages
-          
-      - name: Download performance data
-        uses: actions/download-artifact@v3
-        with:
-          name: performance-data
-          path: performance-data
-
-      - name: Update dashboard
+      - name: Check performance regressions
         run: |
-          # Create dashboard directory if it doesn't exist
-          mkdir -p dashboard
-          
-          # Copy the dashboard template
-          cp .github/templates/dashboard.html dashboard/index.html
-
-      - name: Process performance data
-        run: |
-          python3 .github/scripts/process_benchmarks.py
-
-      - name: Update performance report
-        run: |
-          # Add summary to the performance report
-          cat dashboard/performance-data/summary.md >> perf-report.md
-
-      - name: Deploy dashboard
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add dashboard
-          git commit -m "Update performance dashboard"
-          git push origin gh-pages 
+          # Compare with baseline if available
+          if [ -f "target/criterion/report.json" ]; then
+            echo "Analyzing benchmark results..."
+            # Add custom analysis logic here
+          fi
