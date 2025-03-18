@@ -8,18 +8,34 @@
 //! This file contains tests for the topic-related functionality.
 
 use anyhow::Result;
-use std::fs;
 use tempfile::tempdir;
-use std::path::PathBuf;
 
 // Import the module under test - fix the imports to use the specific topic functions
 use write::tools::topic::{add_topic_with_base_path, delete_topic, edit_topic, rename_topic};
 
-/// Set up a test environment with a temporary directory
 fn setup() -> Result<tempfile::TempDir> {
+    // Create a temporary directory for testing
     let temp_dir = tempdir()?;
-    let content_dir = temp_dir.path().join("content");
-    fs::create_dir_all(&content_dir)?;
+
+    // Set up the config
+    let config_str = r#"
+content:
+  base_dir: content
+  topics: {}
+images:
+  formats: ["jpg"]
+publication:
+  author: Test Author
+  copyright: Test Copyright
+  site: https://example.com
+"#;
+
+    // Create and configure a minimal config.yaml in the temp directory
+    let config_path = temp_dir.path().join("config.yaml");
+    std::fs::write(&config_path, config_str)?;
+
+    // Set the CONFIG_PATH environment variable to point to our test config
+    std::env::set_var("CONFIG_PATH", config_path.to_str().unwrap());
 
     Ok(temp_dir)
 }
@@ -27,18 +43,12 @@ fn setup() -> Result<tempfile::TempDir> {
 #[test]
 fn test_add_topic() -> Result<()> {
     let temp_dir = setup()?;
-    let current_dir = std::env::current_dir()?;
+    let _current_dir = std::env::current_dir()?;
 
     // Store temp_dir path for later reference
     let temp_dir_path = temp_dir.path().to_path_buf();
 
-    println!("Test starting in directory: {:?}", current_dir);
-    println!("Test temp directory: {:?}", temp_dir_path);
-
-    // We no longer need to change the current directory
-    // Instead, we explicitly pass the base path
-
-    // Add a new topic with explicit base path
+    // Create the topic
     add_topic_with_base_path(
         Some("blog".to_string()),
         Some("Blog".to_string()),
@@ -60,7 +70,7 @@ fn test_add_topic() -> Result<()> {
 #[test]
 fn test_add_topic_with_custom_directory() -> Result<()> {
     let temp_dir = setup()?;
-    let current_dir = std::env::current_dir()?;
+    let _current_dir = std::env::current_dir()?;
 
     // Store temp_dir path for later reference
     let temp_dir_path = temp_dir.path().to_path_buf();
@@ -73,10 +83,9 @@ fn test_add_topic_with_custom_directory() -> Result<()> {
     std::fs::create_dir_all(&content_dir)?;
 
     // Verify the content directory exists
-    println!("Does content directory exist? {}", content_dir.exists());
+    assert!(content_dir.exists(), "Content directory was not created at: {:?}", content_dir);
 
-    // Add a new topic with a custom directory and explicit base path
-    println!("Calling add_topic with custom-blog-dir...");
+    // Create the topic with a custom directory name
     add_topic_with_base_path(
         Some("blog".to_string()),
         Some("Blog".to_string()),
@@ -85,43 +94,27 @@ fn test_add_topic_with_custom_directory() -> Result<()> {
         Some(temp_dir_path.clone()),
     )?;
 
-    // Debug: List contents of content directory
-    println!("Listing content directory:");
-    if let Ok(entries) = fs::read_dir(&content_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                println!("  Found: {:?}", entry.path());
-            }
-        }
-    } else {
-        println!("  Could not read content directory");
-    }
+    // The directory should be at "content/custom-blog-dir" not "content/blog"
+    let custom_topic_dir = temp_dir_path.join("content").join("custom-blog-dir");
+    println!("Checking path: {:?}", custom_topic_dir);
+    assert!(custom_topic_dir.exists(), "Custom topic directory does not exist at: {:?}", custom_topic_dir);
 
-    // Check if the custom directory was created - using absolute path stored earlier
-    let topic_path = content_dir.join("custom-blog-dir");
-    println!("Checking path: {:?}", topic_path);
-    println!("Does topic path exist? {}", topic_path.exists());
-
-    // Get the current working directory in case it's changed
-    println!("Current working directory: {:?}", std::env::current_dir()?);
-
-    assert!(topic_path.exists(), "Custom topic directory does not exist at: {:?}", topic_path);
+    // The standard path should not exist
+    let standard_topic_dir = temp_dir_path.join("content").join("blog");
+    assert!(!standard_topic_dir.exists(), "Standard topic directory should not exist at: {:?}", standard_topic_dir);
 
     Ok(())
 }
 
 #[test]
-#[ignore] // Ignoring this test as it's hanging - the delete_topic function may have issues
+#[ignore]
 fn test_delete_topic() -> Result<()> {
-    // Set up a temporary directory for testing
     let temp_dir = setup()?;
-    let current_dir = std::env::current_dir()?;
 
-    // Change to the temp directory for the test
-    std::env::set_current_dir(temp_dir.path())?;
-    println!("Changed to directory: {:?}", std::env::current_dir()?);
+    // Store temp_dir path for later reference
+    let temp_dir_path = temp_dir.path().to_path_buf();
 
-    // Create a topic - use the correct function signature
+    // First, add a topic
     add_topic_with_base_path(
         Some("blog".to_string()),    // key
         Some("Blog".to_string()),    // name
@@ -130,14 +123,9 @@ fn test_delete_topic() -> Result<()> {
         None,
     )?;
 
-    // Verify the topic was created
-    let topic_path = temp_dir.path().join("content").join("blog");
-    assert!(topic_path.exists(), "Topic directory does not exist at: {:?}", topic_path);
-
-    // Add some content to the topic
-    let article_path = topic_path.join("test-article");
-    fs::create_dir_all(&article_path)?;
-    fs::write(article_path.join("index.mdx"), "Test content")?;
+    // Verify topic directory was created
+    let topic_path = temp_dir_path.join("content").join("blog");
+    assert!(topic_path.exists(), "Topic directory was not created before deletion");
 
     // Delete the topic
     delete_topic(
@@ -146,11 +134,8 @@ fn test_delete_topic() -> Result<()> {
         true, // Force deletion
     )?;
 
-    // Check if the directory was deleted
-    assert!(!topic_path.exists(), "Topic directory should be deleted at: {:?}", topic_path);
-
-    // Restore the current directory
-    std::env::set_current_dir(current_dir)?;
+    // Verify topic directory was deleted
+    assert!(!topic_path.exists(), "Topic directory was not deleted");
 
     Ok(())
 }
@@ -158,18 +143,20 @@ fn test_delete_topic() -> Result<()> {
 #[test]
 fn test_rename_topic() -> Result<()> {
     let temp_dir = setup()?;
-    let current_dir = std::env::current_dir()?;
 
-    // Change to the temp directory for the test
-    std::env::set_current_dir(temp_dir.path())?;
-    println!("Changed to directory: {:?}", std::env::current_dir()?);
+    // Store temp_dir path for later reference
+    let temp_dir_path = temp_dir.path().to_path_buf();
 
-    // Create a topic directory
-    let topic_path = temp_dir.path().join("content").join("blog");
-    fs::create_dir_all(&topic_path)?;
+    // First, add a topic
+    add_topic_with_base_path(
+        Some("blog".to_string()),
+        Some("Blog".to_string()),
+        None,
+        None,
+        Some(temp_dir_path.clone()),
+    )?;
 
-    // The rename_topic function is mostly a stub at this point, so we'll just
-    // test that it doesn't crash
+    // Rename the topic
     rename_topic(
         Some("blog".to_string()),
         Some("articles".to_string()),
@@ -177,8 +164,12 @@ fn test_rename_topic() -> Result<()> {
         None,
     )?;
 
-    // Restore the current directory
-    std::env::set_current_dir(current_dir)?;
+    // Verify old directory doesn't exist and new one does
+    let old_path = temp_dir_path.join("content").join("blog");
+    let new_path = temp_dir_path.join("content").join("articles");
+
+    assert!(!old_path.exists(), "Old topic directory still exists");
+    assert!(new_path.exists(), "New topic directory does not exist");
 
     Ok(())
 }
@@ -186,38 +177,35 @@ fn test_rename_topic() -> Result<()> {
 #[test]
 fn test_edit_topic() -> Result<()> {
     let temp_dir = setup()?;
-    let current_dir = std::env::current_dir()?;
 
-    // Change to the temp directory for the test
-    std::env::set_current_dir(temp_dir.path())?;
-    println!("Changed to directory: {:?}", std::env::current_dir()?);
+    // Store temp_dir path for later reference
+    let temp_dir_path = temp_dir.path().to_path_buf();
 
-    // Create a topic directory
-    let topic_path = temp_dir.path().join("content").join("blog");
-    fs::create_dir_all(&topic_path)?;
+    // First, add a topic
+    add_topic_with_base_path(
+        Some("blog".to_string()),
+        Some("Blog".to_string()),
+        None,
+        None,
+        Some(temp_dir_path.clone()),
+    )?;
 
-    // The edit_topic function is mostly a stub at this point, so we'll just
-    // test that it doesn't crash
+    // Edit the topic
     edit_topic(
         Some("blog".to_string()),
         Some("Updated Blog".to_string()),
         Some("Updated description".to_string()),
     )?;
 
-    // Restore the current directory
-    std::env::set_current_dir(current_dir)?;
+    // TODO: Verify the changes were made
+    // This would require reading the config file
 
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use anyhow::Result;
-
-    // A simple placeholder test
-    #[test]
-    fn test_topic_placeholder() -> Result<()> {
-        // This test is just a placeholder for future tests
-        Ok(())
-    }
+#[test]
+fn test_topic_placeholder() -> Result<()> {
+    // Placeholder test for when the topics module is modified
+    assert!(true);
+    Ok(())
 }

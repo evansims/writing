@@ -505,6 +505,7 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
+    #[allow(dead_code)]
     fn create_test_config() -> Config {
         Config {
             content: common_models::ContentConfig {

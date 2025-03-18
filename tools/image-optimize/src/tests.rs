@@ -1,8 +1,6 @@
 use super::*;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use std::fs;
-use std::io::Write;
 
 /// Helper function to create a test image
 fn create_test_image(dir: &Path) -> Result<PathBuf> {

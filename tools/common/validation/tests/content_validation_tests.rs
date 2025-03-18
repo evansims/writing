@@ -3,12 +3,9 @@
 // This file has been commented out because it uses interfaces that don't exist or have changed.
 */
 
-use common_errors::WritingError;
 // use common_models::Frontmatter;
 use common_validation::{validate_content, validate_content_body};
-use std::path::PathBuf;
 // use proptest::prelude::*;
-use common_markdown;
 
 // Remove all strategy-related functions and imports
 

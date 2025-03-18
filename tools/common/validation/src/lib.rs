@@ -242,6 +242,7 @@ mod mock_functions {
         Ok(PathBuf::from(format!("/mock/content/path/{}/index.md", slug)))
     }
 
+    #[allow(dead_code)]
     pub fn mock_content_exists(slug: &str, _topic: Option<&str>) -> Result<bool> {
         // Always return true for test-post, false for others
         Ok(slug == "test-post")

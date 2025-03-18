@@ -5,7 +5,7 @@ use std::fs;
 #[test]
 fn test_basic_config_loading() -> Result<()> {
     // Set up a fixture
-    let fixture = TestFixture::new()?;
+    let _fixture = TestFixture::new()?;
 
     // Print the current working directory
     println!("Current working directory: {:?}", std::env::current_dir()?);
