@@ -475,8 +475,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "colored",
+ "fs_extra",
  "serde_yaml",
  "thiserror 1.0.69",
+ "walkdir",
 ]
 
 [[package]]

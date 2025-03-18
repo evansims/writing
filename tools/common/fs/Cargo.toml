@@ -14,7 +14,7 @@ find = ["walkdir"]
 directory_ops = ["copy", "find"]
 
 [dependencies]
-common-errors = { path = "../errors" }
+common-errors = { path = "../errors", features = ["fs_extra", "walkdir"] }
 common-models = { path = "../models" }
 anyhow = { workspace = true }
 walkdir = { workspace = true, optional = true }
@@ -30,4 +30,4 @@ path = "tests/file_operations_tests.rs"
 
 [[test]]
 name = "directory_operations_tests"
-path = "tests/directory_operations_tests.rs" 
+path = "tests/directory_operations_tests.rs"

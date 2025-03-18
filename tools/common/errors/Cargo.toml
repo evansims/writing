@@ -7,4 +7,11 @@ edition = "2021"
 thiserror = "1.0"
 serde_yaml.workspace = true
 anyhow.workspace = true
-colored = "2.0.4" 
+colored = "2.0.4"
+walkdir = { workspace = true, optional = true }
+fs_extra = { workspace = true, optional = true }
+
+[features]
+default = []
+fs_extra = ["dep:fs_extra"]
+walkdir = ["dep:walkdir"]

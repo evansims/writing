@@ -99,7 +99,7 @@ pub fn get_topic_by_key(key: &str) -> Result<Option<TopicConfig>> {
 /// Get the site URL from the configuration
 pub fn get_site_url() -> Result<Option<String>> {
     let config = get_config()?;
-    Ok(config.publication.site.clone())
+    Ok(config.publication.site_url.clone())
 }
 
 /// Validate a topic key exists

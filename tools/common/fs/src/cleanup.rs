@@ -6,7 +6,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use common_errors::{Result, ErrorContext, IoResultExt};
+use common_errors::{Result, ErrorContext, IoResultExt, WritingError};
 
 /// A wrapper around `File` that ensures the file is properly closed when it goes out of scope.
 ///
@@ -61,13 +61,13 @@ impl SafeFile {
                     .with_file(&path_buf)
                     .with_details("Unable to open file for reading")
             })?;
-        
+
         Ok(SafeFile {
             file,
             path: path_buf,
         })
     }
-    
+
     /// Opens a file in write-only mode, creating it if it doesn't exist or truncating it if it does.
     ///
     /// # Arguments
@@ -99,13 +99,13 @@ impl SafeFile {
                     .with_file(&path_buf)
                     .with_details("Unable to create file for writing")
             })?;
-        
+
         Ok(SafeFile {
             file,
             path: path_buf,
         })
     }
-    
+
     /// Opens a file with custom options.
     ///
     /// # Arguments
@@ -139,13 +139,13 @@ impl SafeFile {
                     .with_file(&path_buf)
                     .with_details("Unable to open file with specified options")
             })?;
-        
+
         Ok(SafeFile {
             file,
             path: path_buf,
         })
     }
-    
+
     /// Returns a reference to the underlying `File`.
     ///
     /// # Returns
@@ -154,7 +154,7 @@ impl SafeFile {
     pub fn as_file(&self) -> &File {
         &self.file
     }
-    
+
     /// Returns a mutable reference to the underlying `File`.
     ///
     /// # Returns
@@ -163,7 +163,7 @@ impl SafeFile {
     pub fn as_file_mut(&mut self) -> &mut File {
         &mut self.file
     }
-    
+
     /// Returns the path of the file.
     ///
     /// # Returns
@@ -172,7 +172,7 @@ impl SafeFile {
     pub fn path(&self) -> &Path {
         &self.path
     }
-    
+
     /// The underlying `File`.
     ///
     /// # Note
@@ -192,10 +192,10 @@ impl SafeFile {
                     .open(&self.path)
                     .unwrap_or_else(|_| panic!("Failed to open dummy file"))
             });
-        
+
         std::mem::replace(&mut self.file, dummy_file)
     }
-    
+
     /// Creates a buffered reader from the file.
     ///
     /// # Returns
@@ -220,7 +220,7 @@ impl SafeFile {
     pub fn buf_reader(&self) -> BufReader<&File> {
         BufReader::new(&self.file)
     }
-    
+
     /// Creates a buffered writer from the file.
     ///
     /// # Returns
@@ -256,7 +256,7 @@ impl Write for SafeFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.file.write(buf)
     }
-    
+
     fn flush(&mut self) -> io::Result<()> {
         self.file.flush()
     }
@@ -303,7 +303,7 @@ pub fn read_to_string<P: AsRef<Path>>(path: P) -> Result<String> {
                 .with_file(path.as_ref())
                 .with_details("Unable to read file contents")
         })?;
-    
+
     Ok(contents)
 }
 
@@ -339,7 +339,7 @@ pub fn write_string<P: AsRef<Path>>(path: P, contents: &str) -> Result<()> {
                 .with_file(path.as_ref())
                 .with_details("Unable to write contents to file")
         })?;
-    
+
     Ok(())
 }
 
@@ -371,7 +371,7 @@ pub fn write_string<P: AsRef<Path>>(path: P, contents: &str) -> Result<()> {
 pub fn append_string<P: AsRef<Path>>(path: P, contents: &str) -> Result<()> {
     let mut options = OpenOptions::new();
     options.write(true).append(true).create(true);
-    
+
     let mut file = SafeFile::with_options(&path, options)?;
     file.write_all(contents.as_bytes())
         .with_enhanced_context(|| {
@@ -379,7 +379,7 @@ pub fn append_string<P: AsRef<Path>>(path: P, contents: &str) -> Result<()> {
                 .with_file(path.as_ref())
                 .with_details("Unable to append contents to file")
         })?;
-    
+
     Ok(())
 }
 
@@ -412,7 +412,7 @@ pub fn append_string<P: AsRef<Path>>(path: P, contents: &str) -> Result<()> {
 pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<()> {
     let mut source = SafeFile::open(&from)?;
     let mut dest = SafeFile::create(&to)?;
-    
+
     // Use std::io::copy which is more functional than manual buffer management
     std::io::copy(&mut source, &mut dest)
         .with_enhanced_context(|| {
@@ -420,82 +420,114 @@ pub fn copy_file<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<()> {
                 .with_file(from.as_ref())
                 .with_details(format!("Unable to copy file to {}", to.as_ref().display()))
         })?;
-    
+
     Ok(())
+}
+
+/// Copy a file to a new location using the standard library (no fs_extra dependency)
+pub fn copy_file_std<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> Result<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+
+    if let Some(parent) = to.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent)
+                .with_enhanced_context(|| {
+                    ErrorContext::new("create directory")
+                        .with_file(parent)
+                        .with_details("Unable to create directory and parent directories")
+                })?;
+        }
+    }
+
+    if from.is_file() {
+        std::fs::copy(from, to)
+            .map(|_| ())
+            .with_enhanced_context(|| {
+                ErrorContext::new("copy file")
+                    .with_file(from)
+                    .with_details(format!("Failed to copy file to {}", to.display()))
+            })
+    } else {
+        Err(WritingError::other(format!(
+            "Source path is not a file: {}",
+            from.display()
+        )))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use tempfile::NamedTempFile;
-    
+
     #[test]
     fn test_safe_file_open() {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
-        
+
         let file = SafeFile::open(path).unwrap();
         assert_eq!(file.path(), path);
     }
-    
+
     #[test]
     fn test_safe_file_create() {
         let temp_dir = tempfile::tempdir().unwrap();
         let path = temp_dir.path().join("test.txt");
-        
+
         let mut file = SafeFile::create(&path).unwrap();
         file.write_all(b"Hello, world!").unwrap();
-        
+
         // File should be automatically closed when it goes out of scope
         drop(file);
-        
+
         // Verify the file was written correctly
         let contents = std::fs::read_to_string(&path).unwrap();
         assert_eq!(contents, "Hello, world!");
     }
-    
+
     #[test]
     fn test_read_to_string() {
         let mut temp_file = NamedTempFile::new().unwrap();
         std::io::Write::write_all(&mut temp_file, b"Hello, world!").unwrap();
-        
+
         let contents = read_to_string(temp_file.path()).unwrap();
         assert_eq!(contents, "Hello, world!");
     }
-    
+
     #[test]
     fn test_write_string() {
         let temp_dir = tempfile::tempdir().unwrap();
         let path = temp_dir.path().join("test.txt");
-        
+
         write_string(&path, "Hello, world!").unwrap();
-        
+
         let contents = std::fs::read_to_string(&path).unwrap();
         assert_eq!(contents, "Hello, world!");
     }
-    
+
     #[test]
     fn test_append_string() {
         let temp_dir = tempfile::tempdir().unwrap();
         let path = temp_dir.path().join("test.txt");
-        
+
         write_string(&path, "Hello, ").unwrap();
         append_string(&path, "world!").unwrap();
-        
+
         let contents = std::fs::read_to_string(&path).unwrap();
         assert_eq!(contents, "Hello, world!");
     }
-    
+
     #[test]
     fn test_copy_file() {
         let temp_dir = tempfile::tempdir().unwrap();
         let source_path = temp_dir.path().join("source.txt");
         let dest_path = temp_dir.path().join("dest.txt");
-        
+
         write_string(&source_path, "Hello, world!").unwrap();
         copy_file(&source_path, &dest_path).unwrap();
-        
+
         let contents = std::fs::read_to_string(&dest_path).unwrap();
         assert_eq!(contents, "Hello, world!");
     }
-} 
+}

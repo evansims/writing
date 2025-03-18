@@ -17,27 +17,16 @@ pub use directory::{move_dir, copy_dir_all, has_content, copy_content, move_cont
 
 // Re-export from file module
 pub use file::{
-    // ... existing exports ...
+    read_file, write_file, create_dir, file_exists, dir_exists,
+    delete_file, delete_dir, resolve_path
 };
 
 // Re-export from cleanup module
 pub use cleanup::{
-    // ... existing exports ...
+    copy_file, copy_file_std
 };
 
-// Re-export macros for convenient usage
-#[doc(inline)]
-pub use crate::read_file;
-#[doc(inline)]
-pub use crate::write_file;
-#[doc(inline)]
-pub use crate::create_dir;
-#[doc(inline)]
-pub use crate::file_exists;
-#[doc(inline)]
-pub use crate::dir_exists;
-
-use common_errors::{Result, WritingError, ResultExt, ErrorContext, IoResultExt};
+use common_errors::{Result, WritingError, ErrorContext, IoResultExt, ResultExt};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -59,62 +48,27 @@ pub fn create_dir_all(path: &Path) -> Result<()> {
         })
 }
 
-/// Write content to a file, creating the parent directory if it doesn't exist
-pub fn write_file(path: &Path, content: &str) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        create_dir_all(parent)?;
-    }
-
-    // Use the SafeFile wrapper to ensure proper cleanup
-    cleanup::write_string(path, content)
-}
-
-/// Read content from a file
-pub fn read_file(path: &Path) -> Result<String> {
-    if !path.exists() {
-        return Err(WritingError::file_not_found(path));
-    }
-
-    // Use the SafeFile wrapper to ensure proper cleanup
-    cleanup::read_to_string(path)
-}
-
-/// Read content from a file if it exists, return None otherwise
+/// Read content from a file if it exists, returning None if it doesn't
 pub fn read_file_if_exists(path: &Path) -> Result<Option<String>> {
     if !path.exists() {
         return Ok(None);
     }
 
-    // Use the SafeFile wrapper to ensure proper cleanup
-    cleanup::read_to_string(path).map(Some)
-}
-
-/// Delete a file
-pub fn delete_file(path: &Path) -> Result<()> {
-    if path.exists() {
-        fs::remove_file(path)
-            .with_enhanced_context(|| {
-                ErrorContext::new("delete file")
-                    .with_file(path)
-                    .with_details("Unable to remove file")
-            })
-    } else {
-        Ok(())
-    }
+    read_file(path).map(Some)
 }
 
 /// Delete a directory and all its contents
 pub fn delete_dir_all(path: &Path) -> Result<()> {
-    if path.exists() {
-        fs::remove_dir_all(path)
-            .with_enhanced_context(|| {
-                ErrorContext::new("delete directory")
-                    .with_file(path)
-                    .with_details("Unable to remove directory and its contents")
-            })
-    } else {
-        Ok(())
+    if !path.exists() {
+        return Err(WritingError::directory_not_found(path));
     }
+
+    fs::remove_dir_all(path)
+        .with_enhanced_context(|| {
+            ErrorContext::new("delete directory")
+                .with_file(path)
+                .with_details("Unable to delete directory and its contents")
+        })
 }
 
 /// Find all directories in a path that match a specific depth
@@ -166,47 +120,6 @@ pub fn find_files_with_extension(base_path: &Path, extension: &str) -> Result<Ve
     Ok(files)
 }
 
-/// Copy a file from source to destination, creating parent directories if needed
-#[cfg(feature = "copy")]
-pub fn copy_file(source: &Path, destination: &Path) -> Result<()> {
-    if !source.exists() {
-        return Err(WritingError::file_not_found(source));
-    }
-
-    if let Some(parent) = destination.parent() {
-        create_dir_all(parent)?;
-    }
-
-    fs::copy(source, destination)
-        .with_context(|| format!("Failed to copy from {} to {}", source.display(), destination.display()))?;
-
-    Ok(())
-}
-
-/// Copy a file to a new location using the standard library (no fs_extra dependency)
-pub fn copy_file_std(source: &Path, destination: &Path) -> Result<()> {
-    if let Some(parent) = destination.parent() {
-        create_dir_all(parent)?;
-    }
-
-    if source.is_file() {
-        fs::copy(source, destination)
-            .map(|_| ())
-            .with_context(|| {
-                format!(
-                    "Failed to copy file from {} to {}",
-                    source.display(),
-                    destination.display()
-                )
-            })
-    } else {
-        Err(WritingError::other(format!(
-            "Source path is not a file: {}",
-            source.display()
-        )))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,37 +146,6 @@ mod tests {
     }
 
     #[test]
-    fn test_write_file() {
-        let temp_dir = tempdir().unwrap();
-        let file_path = temp_dir.path().join("dir1").join("test.txt");
-        let content = "Hello, world!";
-
-        let result = write_file(&file_path, content);
-        assert!(result.is_ok());
-        assert!(file_path.exists());
-
-        let file_content = fs::read_to_string(&file_path).unwrap();
-        assert_eq!(file_content, content);
-    }
-
-    #[test]
-    fn test_read_file() {
-        let mut temp_file = NamedTempFile::new().unwrap();
-        let content = "Hello, world!";
-        write!(temp_file, "{}", content).unwrap();
-
-        let result = read_file(temp_file.path());
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), content);
-
-        let nonexistent_path = Path::new("/path/to/nonexistent/file.txt");
-        let result = read_file(nonexistent_path);
-        assert!(result.is_err());
-        let err_msg = format!("{}", result.unwrap_err());
-        assert!(err_msg.contains("File not found"));
-    }
-
-    #[test]
     fn test_read_file_if_exists() {
         let mut temp_file = NamedTempFile::new().unwrap();
         let content = "Hello, world!";
@@ -277,21 +159,6 @@ mod tests {
         let result = read_file_if_exists(nonexistent_path);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), None);
-    }
-
-    #[test]
-    fn test_delete_file() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let path = temp_file.path().to_path_buf();
-        assert!(path.exists());
-
-        let result = delete_file(&path);
-        assert!(result.is_ok());
-        assert!(!path.exists());
-
-        // Deleting a non-existent file should not error
-        let result = delete_file(&path);
-        assert!(result.is_ok());
     }
 
     #[test]

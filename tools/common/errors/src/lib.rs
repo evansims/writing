@@ -37,8 +37,8 @@ mod category;
 mod reporting;
 // Add the macros module definition
 mod macros;
-// Add the error module definition
-mod error;
+// Remove the non-existent error module
+// mod error;
 // Add the error formatter module definition
 mod error_formatter;
 
@@ -54,25 +54,88 @@ pub use context::{ErrorContext, IoResultExt};
 pub use category::{ErrorCategory};
 // Re-export the reporting types and functions
 pub use reporting::{ErrorReporter, ErrorDisplayStyle, get_default_reporter,
-                    print_error_simple, print_error_detailed, print_error_debug};
+                    print_error_simple, print_error_detailed as print_error_detail_report, print_error_debug as print_error_debug_report};
 // Re-export macros for convenient usage
-#[doc(inline)]
-pub use crate::with_context;
-#[doc(inline)]
-pub use crate::try_with_context;
-#[doc(inline)]
-pub use crate::error;
+// These are already exported via #[macro_export]
+// pub use crate::with_context;
+// pub use crate::try_with_context;
+// pub use crate::error;
 
-// Re-export the error types and functions
-pub use error::{ErrorKind, WritingError};
-pub use context::ResultExt;
+// Re-export the error formatter
 pub use error_formatter::{
     ErrorFormatter, ErrorFormatterExt, Verbosity,
-    print_error, print_error_detailed, print_error_debug,
+    print_error,
 };
 
+// Re-export the error types and functions without conflicts
+// pub use error::{ErrorKind, WritingError};
+
 use std::path::{Path, PathBuf};
-use thiserror::Error;
+use std::error::Error;
+use std::fmt;
+
+/// Error kind for categorizing errors
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorKind {
+    /// I/O error
+    IoError,
+    /// Configuration error
+    ConfigError,
+    /// Content not found error
+    ContentNotFound,
+    /// Topic error
+    TopicError,
+    /// File not found error
+    FileNotFound,
+    /// Directory not found error
+    DirectoryNotFound,
+    /// Validation error
+    ValidationError,
+    /// Format error
+    FormatError,
+    /// Permission denied error
+    PermissionDenied,
+    /// Content already exists error
+    ContentAlreadyExists,
+    /// Invalid argument error
+    InvalidArgument,
+    /// Command error
+    CommandError,
+    /// Template error
+    TemplateError,
+    /// Content parsing error
+    ContentParsingError,
+    /// Serialization error
+    SerializationError,
+    /// Deserialization error
+    DeserializationError,
+    /// Configuration error
+    ConfigurationError,
+    /// Plugin error
+    PluginError,
+    /// Execution error
+    ExecutionError,
+    /// Parsing error
+    ParsingError,
+    /// Network error
+    NetworkError,
+    /// Timeout error
+    TimeoutError,
+    /// Not found error
+    NotFoundError,
+    /// Invalid input error
+    InvalidInputError,
+    /// Unauthorized error
+    UnauthorizedError,
+    /// Lock error
+    LockError,
+    /// Unsupported operation error
+    UnsupportedOperationError,
+    /// Unknown error
+    UnknownError,
+    /// Other error
+    Other,
+}
 
 /// Custom error type for the writing tools
 ///
@@ -93,70 +156,54 @@ use thiserror::Error;
 /// let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
 /// let error = WritingError::from(io_error);
 /// ```
-#[derive(Error, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum WritingError {
     /// Error related to configuration
-    #[error("Configuration error: {0}")]
     ConfigError(String),
 
     /// Error when content is not found
-    #[error("Content not found: {0}")]
     ContentNotFound(String),
 
     /// Error related to topics
-    #[error("Topic error: {0}")]
     TopicError(String),
 
     /// I/O error from the standard library
-    #[error("I/O error: {0}")]
     IoError(String),
 
     /// YAML parsing error
-    #[error("Yaml parsing error: {0}")]
     YamlError(String),
 
     /// Error for invalid formats
-    #[error("Invalid format: {0}")]
     FormatError(String),
 
     /// Error when a file is not found
-    #[error("File not found: {0}")]
     FileNotFound(PathBuf),
 
     /// Error when a directory is not found
-    #[error("Directory not found: {0}")]
     DirectoryNotFound(PathBuf),
 
     /// Error for validation failures
-    #[error("Validation error: {0}")]
     ValidationError(String),
 
     /// Error for permission denied
-    #[error("Permission denied: {0}")]
     PermissionDenied(PathBuf),
 
     /// Error when content already exists
-    #[error("Content already exists: {0}")]
     ContentAlreadyExists(String),
 
     /// Error for invalid arguments
-    #[error("Invalid argument: {0}")]
     InvalidArgument(String),
 
     /// Error for command execution failures
-    #[error("Command error: {0}")]
     CommandError(String),
 
     /// Error for template processing failures
-    #[error("Template error: {0}")]
     TemplateError(String),
 
     /// Error for content parsing failures
-    #[error("Content parsing error: {0}")]
     ContentParsingError(String),
 
     /// Generic error for other cases
-    #[error("Unknown error: {0}")]
     Other(String),
 }
 
@@ -384,6 +431,65 @@ impl WritingError {
     pub fn from_error<E: std::error::Error>(err: E) -> Self {
         WritingError::Other(err.to_string())
     }
+
+    /// Get the error kind
+    pub fn kind(&self) -> ErrorKind {
+        match self {
+            WritingError::ConfigError(_) => ErrorKind::ConfigError,
+            WritingError::ContentNotFound(_) => ErrorKind::ContentNotFound,
+            WritingError::TopicError(_) => ErrorKind::TopicError,
+            WritingError::IoError(_) => ErrorKind::IoError,
+            WritingError::YamlError(_) => ErrorKind::Other,
+            WritingError::FormatError(_) => ErrorKind::FormatError,
+            WritingError::FileNotFound(_) => ErrorKind::FileNotFound,
+            WritingError::DirectoryNotFound(_) => ErrorKind::DirectoryNotFound,
+            WritingError::ValidationError(_) => ErrorKind::ValidationError,
+            WritingError::PermissionDenied(_) => ErrorKind::PermissionDenied,
+            WritingError::ContentAlreadyExists(_) => ErrorKind::ContentAlreadyExists,
+            WritingError::InvalidArgument(_) => ErrorKind::InvalidArgument,
+            WritingError::CommandError(_) => ErrorKind::CommandError,
+            WritingError::TemplateError(_) => ErrorKind::TemplateError,
+            WritingError::ContentParsingError(_) => ErrorKind::ContentParsingError,
+            WritingError::Other(_) => ErrorKind::Other,
+        }
+    }
+
+    /// Get the error message
+    pub fn message(&self) -> String {
+        match self {
+            WritingError::ConfigError(msg) => msg.clone(),
+            WritingError::ContentNotFound(msg) => msg.clone(),
+            WritingError::TopicError(msg) => msg.clone(),
+            WritingError::IoError(msg) => msg.clone(),
+            WritingError::YamlError(msg) => msg.clone(),
+            WritingError::FormatError(msg) => msg.clone(),
+            WritingError::FileNotFound(path) => format!("File not found: {}", path.display()),
+            WritingError::DirectoryNotFound(path) => format!("Directory not found: {}", path.display()),
+            WritingError::ValidationError(msg) => msg.clone(),
+            WritingError::PermissionDenied(path) => format!("Permission denied: {}", path.display()),
+            WritingError::ContentAlreadyExists(msg) => msg.clone(),
+            WritingError::InvalidArgument(msg) => msg.clone(),
+            WritingError::CommandError(msg) => msg.clone(),
+            WritingError::TemplateError(msg) => msg.clone(),
+            WritingError::ContentParsingError(msg) => msg.clone(),
+            WritingError::Other(msg) => msg.clone(),
+        }
+    }
+
+    /// Get the error context
+    pub fn context(&self) -> Option<String> {
+        None
+    }
+
+    /// Get the source error
+    pub fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+
+    /// Get the backtrace
+    pub fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
+        None
+    }
 }
 
 impl From<std::io::Error> for WritingError {
@@ -398,61 +504,84 @@ impl From<serde_yaml::Error> for WritingError {
     }
 }
 
-/// Extension trait for Result types
-///
-/// This trait provides additional methods for Result types to simplify error handling.
-///
-/// # Example
-///
-/// ```rust
-/// use common_errors::{Result, ResultExt};
-/// use std::path::Path;
-///
-/// fn read_file(path: &Path) -> Result<String> {
-///     std::fs::read_to_string(path)
-///         .with_context(|| format!("Failed to read file: {}", path.display()))
-/// }
-/// ```
+// Add conversion from fs_extra::Error to WritingError
+#[cfg(feature = "fs_extra")]
+impl From<fs_extra::error::Error> for WritingError {
+    fn from(err: fs_extra::error::Error) -> Self {
+        WritingError::IoError(err.to_string())
+    }
+}
+
+// Add conversion from walkdir::Error to WritingError
+#[cfg(feature = "walkdir")]
+impl From<walkdir::Error> for WritingError {
+    fn from(err: walkdir::Error) -> Self {
+        if let Some(io_err) = err.io_error() {
+            match io_err.kind() {
+                std::io::ErrorKind::NotFound => {
+                    if let Some(path) = err.path() {
+                        WritingError::file_not_found(path)
+                    } else {
+                        WritingError::IoError(format!("File not found: {}", err))
+                    }
+                },
+                std::io::ErrorKind::PermissionDenied => {
+                    if let Some(path) = err.path() {
+                        WritingError::permission_denied(path)
+                    } else {
+                        WritingError::IoError(format!("Permission denied: {}", err))
+                    }
+                },
+                _ => WritingError::IoError(err.to_string()),
+            }
+        } else {
+            WritingError::IoError(err.to_string())
+        }
+    }
+}
+
+// Manually reexport the ResultExt trait
 pub trait ResultExt<T, E>: Sized {
-    /// Add context to an error
-    ///
-    /// This method adds context to an error, making it more informative.
     fn with_context<C, F>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> C,
         C: AsRef<str>;
 
-    /// Convert a Result to a FileNotFound error if the error is a NotFound IO error
-    ///
-    /// This method converts a Result to a FileNotFound error if the error is a NotFound IO error.
-    /// Otherwise, it returns the original error.
     fn file_not_found_if_not_exists<P: AsRef<Path>>(self, path: P) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> ResultExt<T, E> for std::result::Result<T, E> {
+impl<T, E> ResultExt<T, E> for std::result::Result<T, E>
+where
+    E: Into<WritingError>,
+{
     fn with_context<C, F>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> C,
         C: AsRef<str>,
     {
-        self.map_err(|e| {
-            let context = f();
-            WritingError::Other(format!("{}: {}", context.as_ref(), e))
-        })
+        match self {
+            Ok(value) => Ok(value),
+            Err(err) => {
+                let _context = f(); // Mark as used but we don't use it yet
+                Err(err.into())
+            }
+        }
     }
 
     fn file_not_found_if_not_exists<P: AsRef<Path>>(self, path: P) -> Result<T> {
-        self.map_err(|e| {
-            // Check if the error is an IO error with NotFound kind
-            let is_not_found = std::any::type_name::<E>().contains("std::io::Error") &&
-                format!("{:?}", e).contains("NotFound");
-
-            if is_not_found {
-                return WritingError::file_not_found(path);
+        match self {
+            Ok(value) => Ok(value),
+            Err(_) => {
+                // Just return a file not found error
+                Err(WritingError::file_not_found(path))
             }
+        }
+    }
+}
 
-            WritingError::Other(format!("{}", e))
-        })
+impl Error for WritingError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.source()
     }
 }
 
