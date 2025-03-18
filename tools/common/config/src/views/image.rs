@@ -137,7 +137,7 @@ content:
   base_dir: "./content"
   topics:
     blog:
-      path: "blog"
+      directory: "blog"
       name: "Blog"
       description: "Blog posts"
 images:

@@ -115,13 +115,22 @@ content:
   base_dir: "./content"
   topics:
     blog:
-      path: "blog"
+      directory: "blog"
       name: "Blog"
       description: "Blog posts"
 images:
   formats:
     - "webp"
     - "jpg"
+  sizes:
+    small:
+      width: 400
+      height: 300
+      description: "Small thumbnail"
+    medium:
+      width: 800
+      height: 600
+      description: "Medium display"
 publication:
   author: "Test Author"
   copyright: "© 2023"

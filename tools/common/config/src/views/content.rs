@@ -188,9 +188,11 @@ images:
     small:
       width: 400
       height: 300
+      description: "Small image"
     medium:
       width: 800
       height: 600
+      description: "Medium image"
 publication:
   author: "Test Author"
   copyright: "© 2023"
