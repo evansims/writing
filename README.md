@@ -57,3 +57,7 @@ A personal writing collection exploring creativity, engineering, focus, mindset,
 - `drafts/` - Work in progress
 - `build/` - Generated files
 - `config.yaml` - Configuration
+
+## License
+
+This project is licensed under the Creative Commons Attribution 4.0 International License - see the [LICENSE](LICENSE) file for details.
