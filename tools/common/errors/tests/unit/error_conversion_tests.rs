@@ -2,7 +2,6 @@
 //!
 //! This file contains tests for converting between error types.
 
-use crate::{ResultExt, WritingError};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -11,12 +10,12 @@ fn test_from_io_error() {
     // Create an IO error
     let io_err = io::Error::new(io::ErrorKind::NotFound, "Test error");
 
-    // Convert to WritingError
-    let writing_err = WritingError::from(io_err);
+    // Convert to WritingError using 'From'
+    let writing_err = crate::WritingError::from(io_err);
 
     // Check that the conversion worked
     match writing_err {
-        WritingError::IoError(_) => (), // Expected
+        crate::WritingError::IoError(_) => (), // Expected
         other => panic!("Expected IoError, got {:?}", other),
     }
 
@@ -27,10 +26,10 @@ fn test_from_io_error() {
 #[test]
 fn test_file_not_found_creation() {
     let path = Path::new("/path/to/file.txt");
-    let err = WritingError::file_not_found(path);
+    let err = crate::WritingError::file_not_found(path);
 
     match err {
-        WritingError::FileNotFound(ref p) => {
+        crate::WritingError::FileNotFound(ref p) => {
             assert_eq!(p.to_str().unwrap(), "/path/to/file.txt");
         }
         other => panic!("Expected FileNotFound, got {:?}", other),
@@ -43,10 +42,10 @@ fn test_file_not_found_creation() {
 #[test]
 fn test_directory_not_found_creation() {
     let path = Path::new("/path/to/directory");
-    let err = WritingError::directory_not_found(path);
+    let err = crate::WritingError::directory_not_found(path);
 
     match err {
-        WritingError::DirectoryNotFound(ref p) => {
+        crate::WritingError::DirectoryNotFound(ref p) => {
             assert_eq!(p.to_str().unwrap(), "/path/to/directory");
         }
         other => panic!("Expected DirectoryNotFound, got {:?}", other),
@@ -58,10 +57,10 @@ fn test_directory_not_found_creation() {
 
 #[test]
 fn test_config_error_creation() {
-    let err = WritingError::config_error("Invalid config");
+    let err = crate::WritingError::config_error("Invalid config");
 
     match err {
-        WritingError::ConfigError(ref msg) => {
+        crate::WritingError::ConfigError(ref msg) => {
             assert_eq!(msg, "Invalid config");
         }
         other => panic!("Expected ConfigError, got {:?}", other),
