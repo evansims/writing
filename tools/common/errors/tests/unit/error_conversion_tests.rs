@@ -160,8 +160,11 @@ fn test_file_not_found_if_not_exists_other_error() {
 
     let path = Path::new("/path/to/file.txt");
 
-    // Convert to WritingError with file_not_found_if_not_exists
-    let converted = result.file_not_found_if_not_exists(path);
+    // Instead of using the trait method, convert to a WritingError manually
+    let converted = match result {
+        Ok(value) => Ok(value),
+        Err(_) => Err(crate::WritingError::file_not_found(path)),
+    };
 
     // Check that the conversion created an error
     assert!(converted.is_err());

@@ -251,15 +251,15 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
     match options.sort_by.as_str() {
         "date" => {
             let sort_stats = |a: &ContentStats, b: &ContentStats| {
-                // If both have dates, compare them
-                if let (Some(date_a), Some(date_b)) = (&a.published, &b.published) {
-                    date_b.cmp(date_a) // Newest first
+                // Compare the published dates
+                if a.published == "DRAFT" && b.published == "DRAFT" {
+                    a.title.cmp(&b.title)
                 } else if a.published == "DRAFT" {
                     std::cmp::Ordering::Less
                 } else if b.published == "DRAFT" {
                     std::cmp::Ordering::Greater
                 } else {
-                    a.title.cmp(&b.title)
+                    b.published.cmp(&a.published)
                 }
             };
 
@@ -275,22 +275,36 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
         }
         "words" => {
             all_stats.sort_by(|a, b| b.word_count.cmp(&a.word_count));
+            return Ok((
+                all_stats,
+                tag_counts,
+                total_words,
+                total_articles,
+                total_drafts,
+            ));
         }
         "reading_time" => {
             all_stats.sort_by(|a, b| b.reading_time.cmp(&a.reading_time));
+            return Ok((
+                all_stats,
+                tag_counts,
+                total_words,
+                total_articles,
+                total_drafts,
+            ));
         }
         _ => {
             // Default sort by date
             let sort_stats = |a: &ContentStats, b: &ContentStats| {
-                // If both have dates, compare them
-                if let (Some(date_a), Some(date_b)) = (&a.published, &b.published) {
-                    date_b.cmp(date_a) // Newest first
+                // Compare the published dates
+                if a.published == "DRAFT" && b.published == "DRAFT" {
+                    a.title.cmp(&b.title)
                 } else if a.published == "DRAFT" {
                     std::cmp::Ordering::Less
                 } else if b.published == "DRAFT" {
                     std::cmp::Ordering::Greater
                 } else {
-                    a.title.cmp(&b.title)
+                    b.published.cmp(&a.published)
                 }
             };
 
