@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::NaiveDate;
-use common_models::{Frontmatter, TopicConfig, Config};
+use common_models::{Config, Frontmatter, TopicConfig};
 use comrak::{markdown_to_html, ComrakOptions};
 use regex::Regex;
 use std::collections::HashMap;
@@ -49,10 +49,21 @@ pub struct StatsOptions {
 }
 
 /// Type alias for stats generation result
-type StatsResult = (Vec<ContentStats>, HashMap<String, usize>, usize, usize, usize);
+type StatsResult = (
+    Vec<ContentStats>,
+    HashMap<String, usize>,
+    usize,
+    usize,
+    usize,
+);
 
 /// Calculate statistics for a single content file
-pub fn calculate_stats(content: &str, frontmatter: &Frontmatter, topic: &str, slug: &str) -> ContentStats {
+pub fn calculate_stats(
+    content: &str,
+    frontmatter: &Frontmatter,
+    topic: &str,
+    slug: &str,
+) -> ContentStats {
     // Strip HTML tags for accurate word count
     let options = ComrakOptions::default();
     let html = markdown_to_html(content, &options);
@@ -65,7 +76,8 @@ pub fn calculate_stats(content: &str, frontmatter: &Frontmatter, topic: &str, sl
     let character_count = text.chars().count();
 
     // Count paragraphs (non-empty lines)
-    let paragraph_count = content.lines()
+    let paragraph_count = content
+        .lines()
         .filter(|line| !line.trim().is_empty())
         .count();
 
@@ -80,11 +92,17 @@ pub fn calculate_stats(content: &str, frontmatter: &Frontmatter, topic: &str, sl
     let tags = frontmatter.tags.clone().unwrap_or_default();
 
     // Check if draft
-    let is_draft = frontmatter.is_draft.unwrap_or(false) ||
-                  frontmatter.published_at.as_ref().is_some_and(|p| p == "DRAFT");
+    let is_draft = frontmatter.is_draft.unwrap_or(false)
+        || frontmatter
+            .published_at
+            .as_ref()
+            .is_some_and(|p| p == "DRAFT");
 
     // Get published date or default
-    let published = frontmatter.published_at.clone().unwrap_or_else(|| "DRAFT".to_string());
+    let published = frontmatter
+        .published_at
+        .clone()
+        .unwrap_or_else(|| "DRAFT".to_string());
 
     ContentStats {
         title: frontmatter.title.clone(),
@@ -127,7 +145,10 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
     // Validate topic if provided
     if let Some(ref topic) = options.topic {
         if !config.content.topics.contains_key(topic) {
-            let valid_topics: Vec<String> = config.content.topics.keys()
+            let valid_topics: Vec<String> = config
+                .content
+                .topics
+                .keys()
                 .map(|k| k.to_string())
                 .collect();
             return Err(anyhow::anyhow!(
@@ -164,9 +185,17 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
             if article_path.exists() {
                 let index_path = article_path.join("index.mdx");
                 if index_path.exists() {
-                    process_article(&index_path, topic_key, slug, options, &mut all_stats,
-                                   &mut total_words, &mut total_articles, &mut total_drafts,
-                                   &mut tag_counts)?;
+                    process_article(
+                        &index_path,
+                        topic_key,
+                        slug,
+                        options,
+                        &mut all_stats,
+                        &mut total_words,
+                        &mut total_articles,
+                        &mut total_drafts,
+                        &mut tag_counts,
+                    )?;
                     found = true;
                 }
             }
@@ -195,15 +224,24 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
             let dirs = common_fs::find_dirs_with_depth(&topic_dir, 1, 1)?;
 
             for article_dir in dirs {
-                let slug = article_dir.file_name()
+                let slug = article_dir
+                    .file_name()
                     .and_then(|name| name.to_str())
                     .unwrap_or("");
 
                 let index_path = article_dir.join("index.mdx");
                 if index_path.exists() {
-                    process_article(&index_path, topic_key, slug, options, &mut all_stats,
-                                   &mut total_words, &mut total_articles, &mut total_drafts,
-                                   &mut tag_counts)?;
+                    process_article(
+                        &index_path,
+                        topic_key,
+                        slug,
+                        options,
+                        &mut all_stats,
+                        &mut total_words,
+                        &mut total_articles,
+                        &mut total_drafts,
+                        &mut tag_counts,
+                    )?;
                 }
             }
         }
@@ -212,47 +250,66 @@ pub fn generate_stats(options: &StatsOptions) -> Result<StatsResult> {
     // Sort the statistics
     match options.sort_by.as_str() {
         "date" => {
-            all_stats.sort_by(|a, b| {
-                if a.published == "DRAFT" && b.published == "DRAFT" {
-                    a.title.cmp(&b.title)
+            let sort_stats = |a: &ContentStats, b: &ContentStats| {
+                // If both have dates, compare them
+                if let (Some(date_a), Some(date_b)) = (&a.published, &b.published) {
+                    date_b.cmp(date_a) // Newest first
                 } else if a.published == "DRAFT" {
                     std::cmp::Ordering::Less
                 } else if b.published == "DRAFT" {
                     std::cmp::Ordering::Greater
                 } else {
-                    b.published.cmp(&a.published)
+                    a.title.cmp(&b.title)
                 }
-            });
-        },
+            };
+
+            let mut stats_vec = all_stats.iter().cloned().collect::<Vec<_>>();
+            stats_vec.sort_by(sort_stats);
+            return Ok((
+                stats_vec,
+                tag_counts,
+                total_words,
+                total_articles,
+                total_drafts,
+            ));
+        }
         "words" => {
             all_stats.sort_by(|a, b| b.word_count.cmp(&a.word_count));
-        },
+        }
         "reading_time" => {
             all_stats.sort_by(|a, b| b.reading_time.cmp(&a.reading_time));
-        },
+        }
         _ => {
-            // Default to sorting by date
-            all_stats.sort_by(|a, b| {
-                if a.published == "DRAFT" && b.published == "DRAFT" {
-                    a.title.cmp(&b.title)
+            // Default sort by date
+            let sort_stats = |a: &ContentStats, b: &ContentStats| {
+                // If both have dates, compare them
+                if let (Some(date_a), Some(date_b)) = (&a.published, &b.published) {
+                    date_b.cmp(date_a) // Newest first
                 } else if a.published == "DRAFT" {
                     std::cmp::Ordering::Less
                 } else if b.published == "DRAFT" {
                     std::cmp::Ordering::Greater
                 } else {
-                    b.published.cmp(&a.published)
+                    a.title.cmp(&b.title)
                 }
-            });
+            };
+
+            let mut stats_vec = all_stats.iter().cloned().collect::<Vec<_>>();
+            stats_vec.sort_by(sort_stats);
+            return Ok((
+                stats_vec,
+                tag_counts,
+                total_words,
+                total_articles,
+                total_drafts,
+            ));
         }
     }
-
-    Ok((all_stats, tag_counts, total_words, total_articles, total_drafts))
 }
 
 /// Process a single article file and extract statistics
 fn process_article(
-#[allow(clippy::too_many_arguments)]
-    index_path: &Path,
+    #[allow(clippy::too_many_arguments)] index_path: &Path,
     topic_key: &str,
     slug: &str,
     options: &StatsOptions,
@@ -260,7 +317,7 @@ fn process_article(
     total_words: &mut usize,
     total_articles: &mut usize,
     total_drafts: &mut usize,
-    tag_counts: &mut HashMap<String, usize>
+    tag_counts: &mut HashMap<String, usize>,
 ) -> Result<()> {
     // Read the content file
     let content = common_fs::read_file(index_path)?;
@@ -269,8 +326,11 @@ fn process_article(
     let (frontmatter, content_text) = common_markdown::extract_frontmatter_and_content(&content)?;
 
     // Check if draft and skip if not including drafts
-    let is_draft = frontmatter.is_draft.unwrap_or(false) ||
-                  frontmatter.published_at.as_ref().is_some_and(|p| p == "DRAFT");
+    let is_draft = frontmatter.is_draft.unwrap_or(false)
+        || frontmatter
+            .published_at
+            .as_ref()
+            .is_some_and(|p| p == "DRAFT");
 
     if is_draft && !options.include_drafts {
         return Ok(());
@@ -354,7 +414,9 @@ fn get_topic_stats(
             let content = common_fs::read_file(&index_file)?;
 
             // Extract frontmatter
-            if let Ok((frontmatter, content)) = common_markdown::extract_frontmatter_and_content(&content) {
+            if let Ok((frontmatter, content)) =
+                common_markdown::extract_frontmatter_and_content(&content)
+            {
                 // Count words
                 let word_count = content.split_whitespace().count();
 
@@ -460,18 +522,32 @@ pub mod test_utils {
     use super::*;
     use std::cmp::Ordering;
 
-    /// Get the sort_stats function for testing
-    pub fn get_sort_function() -> Option<fn(&ContentStats, &ContentStats, &str) -> Ordering> {
-        Some(sort_stats)
+    /// Get the sort function for testing
+    pub fn get_sort_function() -> Option<fn(&ContentStats, &ContentStats) -> Ordering> {
+        Some(|a, b| {
+            // Sort by published date (newest first)
+            if a.published == "DRAFT" && b.published == "DRAFT" {
+                a.title.cmp(&b.title)
+            } else if a.published == "DRAFT" {
+                Ordering::Less
+            } else if b.published == "DRAFT" {
+                Ordering::Greater
+            } else {
+                b.published.cmp(&a.published)
+            }
+        })
     }
 
     /// Extract metadata and content from markdown for testing
-    pub fn extract_metadata_and_content(content: &str) -> (String, HashMap<String, String>, String) {
+    pub fn extract_metadata_and_content(
+        content: &str,
+    ) -> (String, HashMap<String, String>, String) {
         // Simplified test version of the internal function
         let parts: Vec<&str> = content.split("---").collect();
         if parts.len() >= 3 {
             let frontmatter = parts[1].trim();
-            let frontmatter_yaml = serde_yaml::from_str::<HashMap<String, String>>(frontmatter).unwrap_or_default();
+            let frontmatter_yaml =
+                serde_yaml::from_str::<HashMap<String, String>>(frontmatter).unwrap_or_default();
             let title = frontmatter_yaml.get("title").cloned().unwrap_or_default();
             let content = parts[2..].join("---").trim().to_string();
             (title, frontmatter_yaml, content)

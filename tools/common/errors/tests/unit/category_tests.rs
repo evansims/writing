@@ -2,25 +2,41 @@
 //!
 //! This module contains tests for the error category system.
 
-use common_errors::{WritingError, ErrorCategory, ResultExt};
+use crate::{ErrorCategory, ResultExt, WritingError};
+use std::io;
 
 #[test]
 fn test_error_category_from_error() {
     // Test mapping from error to category
     let config_error = WritingError::config_error("Config error");
-    assert_eq!(ErrorCategory::from(&config_error), ErrorCategory::Configuration);
+    assert_eq!(
+        ErrorCategory::from(&config_error),
+        ErrorCategory::Configuration
+    );
 
     let not_found_error = WritingError::content_not_found("Content not found");
-    assert_eq!(ErrorCategory::from(&not_found_error), ErrorCategory::NotFound);
+    assert_eq!(
+        ErrorCategory::from(&not_found_error),
+        ErrorCategory::NotFound
+    );
 
     let file_not_found = WritingError::file_not_found("test.txt");
-    assert_eq!(ErrorCategory::from(&file_not_found), ErrorCategory::NotFound);
+    assert_eq!(
+        ErrorCategory::from(&file_not_found),
+        ErrorCategory::NotFound
+    );
 
     let validation_error = WritingError::validation_error("Validation error");
-    assert_eq!(ErrorCategory::from(&validation_error), ErrorCategory::Validation);
+    assert_eq!(
+        ErrorCategory::from(&validation_error),
+        ErrorCategory::Validation
+    );
 
     let permission_error = WritingError::permission_denied("private.txt");
-    assert_eq!(ErrorCategory::from(&permission_error), ErrorCategory::Permission);
+    assert_eq!(
+        ErrorCategory::from(&permission_error),
+        ErrorCategory::Permission
+    );
 
     let format_error = WritingError::format_error("Format error");
     assert_eq!(ErrorCategory::from(&format_error), ErrorCategory::Format);
@@ -64,11 +80,17 @@ fn test_all_error_types_mapped_to_categories() {
 
     // Configuration errors
     let config_error = WritingError::config_error("Invalid configuration");
-    assert_eq!(ErrorCategory::from(&config_error), ErrorCategory::Configuration);
+    assert_eq!(
+        ErrorCategory::from(&config_error),
+        ErrorCategory::Configuration
+    );
 
     // Content not found errors
     let content_not_found = WritingError::content_not_found("blog-post");
-    assert_eq!(ErrorCategory::from(&content_not_found), ErrorCategory::NotFound);
+    assert_eq!(
+        ErrorCategory::from(&content_not_found),
+        ErrorCategory::NotFound
+    );
 
     // Topic errors
     let topic_error = WritingError::topic_error("Invalid topic");
@@ -88,7 +110,10 @@ fn test_all_error_types_mapped_to_categories() {
 
     // File not found errors
     let file_not_found = WritingError::file_not_found("config.yaml");
-    assert_eq!(ErrorCategory::from(&file_not_found), ErrorCategory::NotFound);
+    assert_eq!(
+        ErrorCategory::from(&file_not_found),
+        ErrorCategory::NotFound
+    );
 
     // Directory not found errors
     let dir_not_found = WritingError::directory_not_found("content");
@@ -96,15 +121,24 @@ fn test_all_error_types_mapped_to_categories() {
 
     // Validation errors
     let validation_error = WritingError::validation_error("Invalid input");
-    assert_eq!(ErrorCategory::from(&validation_error), ErrorCategory::Validation);
+    assert_eq!(
+        ErrorCategory::from(&validation_error),
+        ErrorCategory::Validation
+    );
 
     // Permission denied errors
     let permission_denied = WritingError::permission_denied("private.txt");
-    assert_eq!(ErrorCategory::from(&permission_denied), ErrorCategory::Permission);
+    assert_eq!(
+        ErrorCategory::from(&permission_denied),
+        ErrorCategory::Permission
+    );
 
     // Content already exists errors
     let content_exists = WritingError::content_already_exists("blog-post");
-    assert_eq!(ErrorCategory::from(&content_exists), ErrorCategory::Validation);
+    assert_eq!(
+        ErrorCategory::from(&content_exists),
+        ErrorCategory::Validation
+    );
 
     // Invalid argument errors
     let invalid_arg = WritingError::invalid_argument("Invalid argument");
@@ -116,7 +150,10 @@ fn test_all_error_types_mapped_to_categories() {
 
     // Template errors
     let template_error = WritingError::template_error("Invalid template");
-    assert_eq!(ErrorCategory::from(&template_error), ErrorCategory::Template);
+    assert_eq!(
+        ErrorCategory::from(&template_error),
+        ErrorCategory::Template
+    );
 
     // Content parsing errors
     let parsing_error = WritingError::content_parsing_error("Parsing failed");
@@ -150,12 +187,23 @@ fn test_error_messages_non_empty() {
     ];
 
     for error in errors {
-        assert!(!error.to_string().is_empty(), "Error message should not be empty");
+        assert!(
+            !error.to_string().is_empty(),
+            "Error message should not be empty"
+        );
         let category = ErrorCategory::from(&error);
 
         // Verify both message and suggestion are non-empty
-        assert!(!category.user_message().is_empty(), "User message for {:?} should not be empty", category);
-        assert!(!category.user_suggestion().is_empty(), "User suggestion for {:?} should not be empty", category);
+        assert!(
+            !category.user_message().is_empty(),
+            "User message for {:?} should not be empty",
+            category
+        );
+        assert!(
+            !category.user_suggestion().is_empty(),
+            "User suggestion for {:?} should not be empty",
+            category
+        );
     }
 }
 
@@ -169,7 +217,10 @@ fn test_error_context() {
     let error = result_with_context.unwrap_err();
     let error_msg = error.to_string();
 
-    assert!(error_msg.contains("config.yaml"), "Error should contain the original message");
+    assert!(
+        error_msg.contains("config.yaml"),
+        "Error should contain the original message"
+    );
     // We won't check for the context message format as it may change
 
     // Check that adding context changes the error category
@@ -189,7 +240,10 @@ fn test_nested_error_context() {
     let error_msg = error.to_string();
 
     // Just check that the original message is preserved
-    assert!(error_msg.contains("Invalid value"), "Error should contain the original message");
+    assert!(
+        error_msg.contains("Invalid value"),
+        "Error should contain the original message"
+    );
     // We won't check for context messages as their exact format may change
 
     // Check that the error category matches the original error type
@@ -204,11 +258,17 @@ fn test_io_error_mapping() {
 
     // NotFound should map to NotFound category
     let not_found_error = WritingError::file_not_found("file.txt");
-    assert_eq!(ErrorCategory::from(&not_found_error), ErrorCategory::NotFound);
+    assert_eq!(
+        ErrorCategory::from(&not_found_error),
+        ErrorCategory::NotFound
+    );
 
     // Permission denied should map to Permission category
     let permission_error = WritingError::permission_denied("private.txt");
-    assert_eq!(ErrorCategory::from(&permission_error), ErrorCategory::Permission);
+    assert_eq!(
+        ErrorCategory::from(&permission_error),
+        ErrorCategory::Permission
+    );
 
     // Other errors should map to their respective categories
     let format_error = WritingError::format_error("Invalid format");
@@ -233,7 +293,10 @@ fn test_error_category_display() {
 
     for category in categories {
         let category_string = format!("{:?}", category);
-        assert!(!category_string.is_empty(), "Category display should not be empty");
+        assert!(
+            !category_string.is_empty(),
+            "Category display should not be empty"
+        );
 
         // Verify the category name is in the string representation
         match category {

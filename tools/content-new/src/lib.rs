@@ -31,15 +31,27 @@ pub struct NewOptions {
 /// Returns an error if the content cannot be created
 pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
     // Validate options
-    let slug = options.slug.as_ref().ok_or_else(|| anyhow::anyhow!("Content slug is required"))?;
-    let topic = options.topic.as_ref().ok_or_else(|| anyhow::anyhow!("Topic is required"))?;
-    let title = options.title.as_ref().ok_or_else(|| anyhow::anyhow!("Title is required"))?;
+    let slug = options
+        .slug
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Content slug is required"))?;
+    let topic = options
+        .topic
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Topic is required"))?;
+    let title = options
+        .title
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Title is required"))?;
 
     // Load config
     let config = load_config()?;
 
     // Check if topic exists
-    let topic_config = config.content.topics.get(topic)
+    let topic_config = config
+        .content
+        .topics
+        .get(topic)
         .ok_or_else(|| anyhow::anyhow!("Topic not found: {}", topic))?;
 
     // Create content directory
@@ -83,7 +95,7 @@ pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
     let content = if is_test {
         // Format in a way that matches the test expectations
         let mut frontmatter_string = format!(
-            "---\ntitle: \"{}\"\description: \"{}\"\n",
+            "---\ntitle: \"{}\"\ndescription: \"{}\"\n",
             title,
             options.description.as_deref().unwrap_or("")
         );
@@ -113,7 +125,10 @@ pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
         let basic_content = format!(
             "# {}\n\n{}",
             title,
-            options.description.as_deref().unwrap_or("Write your content here...")
+            options
+                .description
+                .as_deref()
+                .unwrap_or("Write your content here...")
         );
 
         format!("{}{}", frontmatter_string, basic_content)
@@ -162,7 +177,9 @@ pub fn list_templates() -> Result<Vec<common_templates::Template>> {
 pub fn get_available_topics() -> Result<Vec<(String, TopicConfig)>> {
     let config = load_config()?;
 
-    let topics: Vec<(String, TopicConfig)> = config.content.topics
+    let topics: Vec<(String, TopicConfig)> = config
+        .content
+        .topics
         .iter()
         .map(|(key, config)| (key.clone(), config.clone()))
         .collect();

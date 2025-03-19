@@ -6,7 +6,9 @@ use regex::Regex;
 pub fn validate_content_type(content_type: &str) -> Result<String> {
     // Check if content type is empty
     if content_type.is_empty() {
-        return Err(WritingError::validation_error("Content type cannot be empty"));
+        return Err(WritingError::validation_error(
+            "Content type cannot be empty",
+        ));
     }
 
     // Check if content type is valid
@@ -31,7 +33,9 @@ pub fn validate_content(content: &str) -> Result<()> {
 
     // Check if content has frontmatter
     if !content.starts_with("---") {
-        return Err(WritingError::validation_error("Content must start with frontmatter"));
+        return Err(WritingError::validation_error(
+            "Content must start with frontmatter",
+        ));
     }
 
     // Check if frontmatter is valid
@@ -47,7 +51,9 @@ pub fn validate_content(content: &str) -> Result<()> {
 
     // Validate required fields
     if parsed.title.is_empty() {
-        return Err(WritingError::validation_error("Title is required in frontmatter"));
+        return Err(WritingError::validation_error(
+            "Title is required in frontmatter",
+        ));
     }
 
     Ok(())
@@ -57,7 +63,9 @@ pub fn validate_content(content: &str) -> Result<()> {
 pub fn validate_content_body(body: &str) -> Result<()> {
     // Check if body is empty
     if body.trim().is_empty() {
-        return Err(WritingError::validation_error("Content body cannot be empty"));
+        return Err(WritingError::validation_error(
+            "Content body cannot be empty",
+        ));
     }
 
     Ok(())
@@ -90,7 +98,7 @@ pub fn validate_content_date(date: &str) -> Result<String> {
     let date_regex = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
     if !date_regex.is_match(date.trim()) {
         return Err(WritingError::validation_error(
-            "Date must be in YYYY-MM-DD format"
+            "Date must be in YYYY-MM-DD format",
         ));
     }
 
@@ -98,7 +106,12 @@ pub fn validate_content_date(date: &str) -> Result<String> {
 }
 
 /// Generate a template for a new content
-pub fn generate_content_template(title: &str, description: Option<&str>, content_type: &str, tags: &[String]) -> Result<String> {
+pub fn generate_content_template(
+    title: &str,
+    description: Option<&str>,
+    content_type: &str,
+    tags: &[String],
+) -> Result<String> {
     // Validate content type
     validate_content_type(content_type)?;
 
@@ -130,7 +143,7 @@ pub fn generate_content_template(title: &str, description: Option<&str>, content
 
     // Add description if provided
     let frontmatter = if let Some(description) = description {
-        format!("{}\description: \"{}\"", frontmatter, description)
+        format!("{}\ndescription: \"{}\"", frontmatter, description)
     } else {
         frontmatter
     };
@@ -142,8 +155,7 @@ pub fn generate_content_template(title: &str, description: Option<&str>, content
          ---\n\n\
          # {}\n\n\
          Write your content here...",
-        frontmatter,
-        title
+        frontmatter, title
     );
 
     Ok(template)
@@ -170,14 +182,15 @@ mod tests {
 
     #[test]
     fn test_validate_content_valid() {
-        let content = "---\ntitle: \"Test Post\"\description: \"A test post\"\n---\n\nThis is the body.";
+        let content =
+            "---\ntitle: \"Test Post\"\ndescription: \"A test post\"\n---\n\nThis is the body.";
         let result = validate_content(content);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_content_invalid_frontmatter() {
-        let content = "---\description: \"A test post\"\n---\n\nThis is the body.";
+        let content = "---\ndescription: \"A test post\"\n---\n\nThis is the body.";
         let result = validate_content(content);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();

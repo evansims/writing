@@ -2,7 +2,9 @@
 //!
 //! This file contains tests for option validation extensions.
 
-use common_errors::{WritingError, Result, OptionValidationExt, OptionExt};
+use crate::validation::OptionValidationExt;
+use crate::{OptionExt, Result, WritingError};
+use std::path::Path;
 
 #[test]
 fn test_validate_required_with_some() {
@@ -28,7 +30,7 @@ fn test_validate_required_with_none() {
     match result {
         Err(WritingError::ValidationError(msg)) => {
             assert_eq!(msg, "Value is required");
-        },
+        }
         other => panic!("Expected ValidationError, got {:?}", other),
     }
 }
@@ -57,7 +59,7 @@ fn test_validate_with_custom_error_none() {
     match result {
         Err(WritingError::ContentNotFound(msg)) => {
             assert_eq!(msg, "Content not found");
-        },
+        }
         other => panic!("Expected ContentNotFound, got {:?}", other),
     }
 }
@@ -86,7 +88,7 @@ fn test_content_not_found_extension_none() {
     match result {
         Err(WritingError::ContentNotFound(msg)) => {
             assert_eq!(msg, "Article not found");
-        },
+        }
         other => panic!("Expected ContentNotFound, got {:?}", other),
     }
 }
@@ -115,7 +117,7 @@ fn test_or_validation_error_extension_none() {
     match result {
         Err(WritingError::ValidationError(msg)) => {
             assert_eq!(msg, "Field is required");
-        },
+        }
         other => panic!("Expected ValidationError, got {:?}", other),
     }
 }
@@ -151,5 +153,8 @@ fn test_chained_validation() {
     // Test with invalid age
     let result = process_input(Some("John".to_string()), Some(15));
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("Age must be at least 18"));
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("Age must be at least 18"));
 }

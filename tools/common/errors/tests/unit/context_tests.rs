@@ -2,9 +2,10 @@
 //!
 //! This file contains tests for adding context to errors.
 
+use crate::{ErrorContext, IoResultExt, Result, ResultExt, WritingError};
+use std::fs;
 use std::io;
 use std::path::Path;
-use common_errors::{WritingError, Result, ResultExt, ErrorContext, IoResultExt};
 
 #[test]
 fn test_with_context() {
@@ -52,12 +53,14 @@ fn test_error_context_creation() {
 #[test]
 fn test_error_context_with_file() {
     // Create a new ErrorContext with a file path
-    let context = ErrorContext::new("read_file")
-        .with_file(Path::new("/path/to/file.txt"));
+    let context = ErrorContext::new("read_file").with_file(Path::new("/path/to/file.txt"));
 
     // Check that both operation and file path are set correctly
     assert_eq!(context.operation, "read_file");
-    assert_eq!(context.file_path.as_ref().unwrap().to_str().unwrap(), "/path/to/file.txt");
+    assert_eq!(
+        context.file_path.as_ref().unwrap().to_str().unwrap(),
+        "/path/to/file.txt"
+    );
     assert!(context.details.is_none());
 
     // Test the string formatting of the context
@@ -69,13 +72,16 @@ fn test_error_context_with_file() {
 #[test]
 fn test_error_context_with_details() {
     // Create a new ErrorContext with details
-    let context = ErrorContext::new("validate_input")
-        .with_details("Input validation failed for username");
+    let context =
+        ErrorContext::new("validate_input").with_details("Input validation failed for username");
 
     // Check that both operation and details are set correctly
     assert_eq!(context.operation, "validate_input");
     assert!(context.file_path.is_none());
-    assert_eq!(context.details.as_ref().unwrap(), "Input validation failed for username");
+    assert_eq!(
+        context.details.as_ref().unwrap(),
+        "Input validation failed for username"
+    );
 
     // Test the string formatting of the context
     let context_string = context.format();
@@ -92,8 +98,14 @@ fn test_error_context_complete() {
 
     // Check that all fields are set correctly
     assert_eq!(context.operation, "save_config");
-    assert_eq!(context.file_path.as_ref().unwrap().to_str().unwrap(), "/path/to/config.yaml");
-    assert_eq!(context.details.as_ref().unwrap(), "Could not save configuration due to permission issues");
+    assert_eq!(
+        context.file_path.as_ref().unwrap().to_str().unwrap(),
+        "/path/to/config.yaml"
+    );
+    assert_eq!(
+        context.details.as_ref().unwrap(),
+        "Could not save configuration due to permission issues"
+    );
 
     // Test the string formatting of the context
     let context_string = context.format();
@@ -131,8 +143,7 @@ fn test_with_enhanced_context_ok_result() {
 
     // Add enhanced context (should not affect the Ok value)
     let result = io_result.with_enhanced_context(|| {
-        ErrorContext::new("read_value")
-            .with_details("This context won't be used")
+        ErrorContext::new("read_value").with_details("This context won't be used")
     });
 
     // Check that the result is still Ok with the same value

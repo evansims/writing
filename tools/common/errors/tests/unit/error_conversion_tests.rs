@@ -2,9 +2,9 @@
 //!
 //! This file contains tests for converting between error types.
 
+use crate::{ResultExt, WritingError};
 use std::io;
 use std::path::{Path, PathBuf};
-use common_errors::{WritingError, ResultExt};
 
 #[test]
 fn test_from_io_error() {
@@ -32,7 +32,7 @@ fn test_file_not_found_creation() {
     match err {
         WritingError::FileNotFound(ref p) => {
             assert_eq!(p.to_str().unwrap(), "/path/to/file.txt");
-        },
+        }
         other => panic!("Expected FileNotFound, got {:?}", other),
     }
 
@@ -48,7 +48,7 @@ fn test_directory_not_found_creation() {
     match err {
         WritingError::DirectoryNotFound(ref p) => {
             assert_eq!(p.to_str().unwrap(), "/path/to/directory");
-        },
+        }
         other => panic!("Expected DirectoryNotFound, got {:?}", other),
     }
 
@@ -63,7 +63,7 @@ fn test_config_error_creation() {
     match err {
         WritingError::ConfigError(ref msg) => {
             assert_eq!(msg, "Invalid config");
-        },
+        }
         other => panic!("Expected ConfigError, got {:?}", other),
     }
 
@@ -78,7 +78,7 @@ fn test_content_not_found_creation() {
     match err {
         WritingError::ContentNotFound(ref msg) => {
             assert_eq!(msg, "Article not found");
-        },
+        }
         other => panic!("Expected ContentNotFound, got {:?}", other),
     }
 
@@ -93,7 +93,7 @@ fn test_topic_error_creation() {
     match err {
         WritingError::TopicError(ref msg) => {
             assert_eq!(msg, "Invalid topic");
-        },
+        }
         other => panic!("Expected TopicError, got {:?}", other),
     }
 
@@ -108,7 +108,7 @@ fn test_validation_error_creation() {
     match err {
         WritingError::ValidationError(ref msg) => {
             assert_eq!(msg, "Field cannot be empty");
-        },
+        }
         other => panic!("Expected ValidationError, got {:?}", other),
     }
 
@@ -123,7 +123,7 @@ fn test_format_error_creation() {
     match err {
         WritingError::FormatError(ref msg) => {
             assert_eq!(msg, "Invalid date format");
-        },
+        }
         other => panic!("Expected FormatError, got {:?}", other),
     }
 

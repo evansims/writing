@@ -2,7 +2,8 @@
 //!
 //! This module contains tests for the error reporting system.
 
-use common_errors::{WritingError, ErrorReporter, ErrorDisplayStyle, get_default_reporter};
+use crate::{get_default_reporter, ErrorDisplayStyle, ErrorReporter, WritingError};
+use std::io;
 
 #[test]
 fn test_simple_error_formatting() {

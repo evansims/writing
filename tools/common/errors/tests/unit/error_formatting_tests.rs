@@ -2,10 +2,11 @@
 //!
 //! This file contains tests for the error formatter and related functionality.
 
-use common_errors::{
-    ErrorFormatter, ErrorFormatterExt, Verbosity, WritingError,
-    print_error
+use crate::{
+    print_error, ErrorCategory, ErrorContext, ErrorDisplayStyle, ErrorFormatter, ErrorFormatterExt,
+    Verbosity, WritingError,
 };
+use std::io;
 
 #[test]
 fn test_error_formatter_basic() {

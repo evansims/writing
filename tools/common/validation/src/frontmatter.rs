@@ -6,7 +6,9 @@ use common_models::Frontmatter;
 pub fn validate_frontmatter(frontmatter: &str) -> Result<Frontmatter> {
     // Check if frontmatter is empty
     if frontmatter.trim().is_empty() {
-        return Err(WritingError::validation_error("Frontmatter cannot be empty"));
+        return Err(WritingError::validation_error(
+            "Frontmatter cannot be empty",
+        ));
     }
 
     // Check if frontmatter has valid YAML format
@@ -27,7 +29,9 @@ pub fn validate_frontmatter(frontmatter: &str) -> Result<Frontmatter> {
 
     // Validate required fields
     if parsed.title.is_empty() {
-        return Err(WritingError::validation_error("Title is required in frontmatter"));
+        return Err(WritingError::validation_error(
+            "Title is required in frontmatter",
+        ));
     }
 
     Ok(parsed)
@@ -36,7 +40,9 @@ pub fn validate_frontmatter(frontmatter: &str) -> Result<Frontmatter> {
 /// Extract frontmatter from content
 pub fn extract_frontmatter(content: &str) -> Result<(String, String)> {
     if !content.starts_with("---") {
-        return Err(WritingError::validation_error("Content does not contain frontmatter"));
+        return Err(WritingError::validation_error(
+            "Content does not contain frontmatter",
+        ));
     }
 
     let parts: Vec<&str> = content.splitn(3, "---").collect();
@@ -61,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_validate_frontmatter_valid() {
-        let frontmatter = "---\ntitle: \"Test Post\"\description: \"A test post\"\n---";
+        let frontmatter = "---\ntitle: \"Test Post\"\ndescription: \"A test post\"\n---";
         let result = validate_frontmatter(frontmatter);
         assert!(result.is_ok());
         let parsed = result.unwrap();
@@ -71,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_validate_frontmatter_invalid_format() {
-        let frontmatter = "---\ntitle: \"Test Post\"\description: \"A test post\"";
+        let frontmatter = "---\ntitle: \"Test Post\"\ndescription: \"A test post\"";
         let result = validate_frontmatter(frontmatter);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -80,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_validate_frontmatter_missing_title() {
-        let frontmatter = "---\description: \"A test post\"\n---";
+        let frontmatter = "---\ndescription: \"A test post\"\n---";
         let result = validate_frontmatter(frontmatter);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -89,11 +95,15 @@ mod tests {
 
     #[test]
     fn test_extract_frontmatter() {
-        let content = "---\ntitle: \"Test Post\"\description: \"A test post\"\n---\n\nThis is the body.";
+        let content =
+            "---\ntitle: \"Test Post\"\ndescription: \"A test post\"\n---\n\nThis is the body.";
         let result = extract_frontmatter(content);
         assert!(result.is_ok());
         let (frontmatter, body) = result.unwrap();
-        assert_eq!(frontmatter, "title: \"Test Post\"\description: \"A test post\"");
+        assert_eq!(
+            frontmatter,
+            "title: \"Test Post\"\ndescription: \"A test post\""
+        );
         assert_eq!(body, "This is the body.");
     }
 
@@ -108,9 +118,12 @@ mod tests {
 
     #[test]
     fn test_combine_frontmatter_and_body() {
-        let frontmatter = "title: \"Test Post\"\description: \"A test post\"";
+        let frontmatter = "title: \"Test Post\"\ndescription: \"A test post\"";
         let body = "This is the body.";
         let content = combine_frontmatter_and_body(frontmatter, body);
-        assert_eq!(content, "---\ntitle: \"Test Post\"\description: \"A test post\"\n---\n\nThis is the body.");
+        assert_eq!(
+            content,
+            "---\ntitle: \"Test Post\"\ndescription: \"A test post\"\n---\n\nThis is the body."
+        );
     }
 }
