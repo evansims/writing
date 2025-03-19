@@ -26,27 +26,6 @@ A collection of Rust tools for managing content, images, and building a static s
 - `toc-generate` - Generate table of contents
 - `llms-generate` - Generate training data
 
-## Usage
-
-```bash
-# Content operations
-./write content new
-./write content edit
-./write content build
-
-# Topic operations
-./write topic add
-./write topic edit
-./write topic delete
-
-# Image operations
-./write image optimize
-./write image build
-
-# Build operations
-./write build
-```
-
 ## Directory Structure
 
 ```
@@ -59,11 +38,7 @@ tools/
   write/
   content-build/
   topic-add/
-  ...
 docs/
-  IMAGE-MANAGEMENT.md
-  AVIF-GENERATION.md
-  INCREMENTAL-BUILD.md
 ```
 
 ## Features

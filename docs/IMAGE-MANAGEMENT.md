@@ -1,28 +1,25 @@
 # Image Management
 
-Images are managed using a single high-quality source image per article, which is transformed into optimized formats during build.
+Image management capabilities within the content system.
 
-## Directory Structure
+## Features
 
-```
-content/
-  topic/
-    article-slug/
-      index.jpg       # Source image
-      index.mdx       # Article content
-```
+- Image organization by article/content
+- Responsive image generation
+- Format conversion (JPEG, WebP, AVIF)
+- Optimization for web delivery
+- Metadata handling
 
-## Usage
+## Configuration
 
-```bash
-# Optimize a new image
-./write image-optimize --source path/to/image.jpg --article article-slug
+Image management parameters are defined in config.yaml:
 
-# Build all images
-./write build --site-url "https://example.com"
-```
+- Quality settings for each format
+- Size breakpoints for responsive images
+- Optimization level
+- Metadata preservation options
 
-## Generated Images
+## Generated Formats
 
 The build process generates:
 

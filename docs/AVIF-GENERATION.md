@@ -1,23 +1,21 @@
 # AVIF Generation
 
-AVIF (AV1 Image File Format) is automatically generated for all images during build, providing superior compression and quality.
+AVIF image generation capabilities for responsive images.
 
-## Usage
+## Features
 
-```bash
-# Generate all images (including AVIF)
-./write build --site-url "https://example.com"
-```
+- High-quality AVIF encoding
+- Configurable quality settings
+- Fallback handling for browsers without AVIF support
+- Automatic generation during build process
 
-## HTML Implementation
+## Configuration
 
-```html
-<picture>
-  <source srcset="image.avif" type="image/avif" />
-  <source srcset="image.webp" type="image/webp" />
-  <img src="image.jpg" alt="Description" />
-</picture>
-```
+AVIF configuration parameters in config.yaml:
+
+- Quality levels (default: 70)
+- Encoding speed (default: 4)
+- Subsample level (default: 1)
 
 ## Benefits
 

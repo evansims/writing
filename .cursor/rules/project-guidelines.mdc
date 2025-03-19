@@ -55,3 +55,8 @@ This is the personal website, blog and podcast of Evan Sims (hello@evansims.com)
    - NEVER create demonstration or example code. This is always unnecessary.
    - NEVER craete migration guides or scripts. This is also always unnecessary.
    - Assume a high level of technical expertise from the reader of any documentation.
+
+7. DOCUMENTATION SHOULD FOLLOW ESSENTIALIST PRINCIPLES:
+   - Keep it brief, and emphasize clarity.
+   - If it's not absolutely revelant, get rid of it.
+   - The root README should only include an overview of the project, a quick start, and relevant links to more in-depth project documentation.

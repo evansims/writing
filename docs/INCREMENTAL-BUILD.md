@@ -2,16 +2,6 @@
 
 The build system uses caching to only rebuild content that has changed since the last build.
 
-## Usage
-
-```bash
-# Normal build (uses cache)
-./write build
-
-# Force rebuild all content
-./write build --force
-```
-
 ## How It Works
 
 1. Build cache tracks:
