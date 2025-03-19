@@ -1,90 +1,238 @@
-# Test Organization Standard
+# Test Organization Guide
 
-This document outlines the standard organization for tests in the writing tool codebase.
+This document outlines the standardized approach for organizing tests throughout the Write CLI ecosystem, ensuring consistency and maintainability across all components.
 
-## Directory Structure
+## Core Principles
 
-Each tool should have a consistent test directory structure as follows:
-
-```
-/tools/tool-name/
-  /src/            # Source code
-  /tests/          # Tests
-    mod.rs         # Test module declaration
-    /unit/         # Unit tests
-    /integration/  # Integration tests
-    /property/     # Property-based tests
-```
+1. **Consistent Structure**: All tests follow the same organizational structure
+2. **Clear Categories**: Tests are organized into distinct categories (unit, integration, property-based)
+3. **Discoverable Tests**: Tests are easy to find and run selectively
+4. **Self-Explanatory**: Test file names and module structures clearly indicate what is being tested
+5. **Isolation Aligned**: Test organization supports the tool isolation strategy
 
 ## Test Categories
 
-Tests are organized into three main categories:
+All tests in the Write CLI ecosystem are organized into three main categories:
 
-1. **Unit Tests** - Tests for individual functions and components in isolation
+### 1. Unit Tests
 
-   - Located in `tests/unit/`
-   - Test files should be named `*_tests.rs` (e.g., `validation_tests.rs`)
-   - Should not require external resources or dependencies
+Unit tests focus on testing individual components in isolation:
 
-2. **Integration Tests** - Tests that verify multiple components working together
+- Located in a dedicated `tests/unit` directory
+- Test a single function, method, or struct
+- Use mocks extensively as outlined in the [Mocking Guide](MOCKING_GUIDE.md)
+- Follow a clear Arrange-Act-Assert pattern
+- Should run quickly (< 10ms per test)
 
-   - Located in `tests/integration/`
-   - Test files should be named `*_integration_tests.rs` (e.g., `content_integration_tests.rs`)
-   - May require test fixtures and mocked external dependencies
+### 2. Integration Tests
 
-3. **Property Tests** - Tests that verify properties of functions via randomized inputs
-   - Located in `tests/property/`
-   - Test files should be named `*_property_tests.rs` (e.g., `validation_property_tests.rs`)
-   - Should use the proptest crate for property-based testing
+Integration tests focus on testing how components work together:
 
-## Test Module Structure
+- Located in a dedicated `tests/integration` directory
+- Test interactions between multiple components
+- Minimize mocking where appropriate
+- May use real file systems (in temporary directories)
+- May have longer setup/teardown phases
 
-Each test directory should be declared as a module in `tests/mod.rs`:
+### 3. Property-Based Tests
+
+Property-based tests focus on validating invariants and properties:
+
+- Located in a dedicated `tests/property` directory
+- Test properties or invariants about functions/components
+- Generate random inputs using proptest
+- Use the common test utilities for property testing
+- Focus on edge cases and broad input coverage
+
+## File Structure and Naming
+
+### Unit Tests Inside Source Files
+
+For unit tests inside source files (`#[cfg(test)]` modules):
 
 ```rust
-//! Tests for the tool-name module
-//!
-//! This module contains tests for the tool-name tool.
+// src/some_module.rs
 
-// Unit tests
-pub mod unit;
+// Module code...
 
-// Integration tests
-pub mod integration;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use common_test_utils::mocks::*;
 
-// Property-based tests
-pub mod property;
+    // For simple tests
+    #[test]
+    fn test_function_name_scenario_description() {
+        // Test code
+    }
+
+    // For grouped tests
+    mod function_name_tests {
+        use super::*;
+
+        #[test]
+        fn scenario_1() {
+            // Test code
+        }
+
+        #[test]
+        fn scenario_2() {
+            // Test code
+        }
+    }
+}
 ```
 
-## Standardization Script
+### Dedicated Test Files
 
-A script is provided to help standardize the test structure across all tools:
+For tests in dedicated test directories:
 
-```bash
-./tools/standardize_tests.sh
+```
+tests/
+  ├── unit/
+  │    ├── module_name_tests.rs
+  │    └── another_module_tests.rs
+  ├── integration/
+  │    ├── workflow_tests.rs
+  │    └── cross_tool_tests.rs
+  └── property/
+       ├── module_name_properties.rs
+       └── another_module_properties.rs
 ```
 
-This script will:
+## Test Tagging
 
-1. Create the standard test directory structure for each tool
-2. Move tests from non-standard locations to the standard locations
-3. Create a `mod.rs` file if it doesn't exist
+To facilitate selective test runs, we use test attributes for tagging:
+
+```rust
+// For tests that work with the file system
+#[cfg(test)]
+#[cfg_attr(test, test)]
+#[cfg_attr(feature = "fs_tests", test)]
+fn test_file_operations() {
+    // Test code
+}
+
+// For tests that take longer to run
+#[test]
+#[cfg_attr(feature = "slow_tests", ignore)]
+fn test_expensive_operation() {
+    // Test code
+}
+```
+
+Common tags include:
+
+- `slow_tests`: For tests that take longer to run
+- `fs_tests`: For tests that interact with the file system
+- `network_tests`: For tests that require network access
+- `integration_tests`: For broader integration tests
+
+## Helper Macros
+
+Common test helper macros are provided in the `common_test_utils` crate:
+
+### Fixture Setup
+
+```rust
+use common_test_utils::with_test_fixture;
+
+#[test]
+fn test_with_fixture() {
+    with_test_fixture!(fixture => {
+        // Test code using fixture
+        let content_path = fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
+        assert!(content_path.exists());
+    });
+}
+```
+
+### Mock Setup
+
+```rust
+use common_test_utils::with_mocks;
+
+#[test]
+fn test_with_mocks() {
+    with_mocks!(MockFileSystem, mock_fs => {
+        // Setup expectations
+        mock_fs.expect_file_exists()
+            .returning(|_| Ok(true));
+
+        // Test code using mock_fs
+    });
+}
+```
+
+### Common Assertions
+
+```rust
+use common_test_utils::assert_contains;
+
+#[test]
+fn test_with_common_assertions() {
+    let result = some_function();
+    assert_contains!(result, "expected text");
+}
+```
+
+## Test Naming Conventions
+
+- Unit test methods: `test_<function_name>_<scenario_description>`
+- Integration test methods: `test_<workflow/feature>_<scenario_description>`
+- Property test methods: `prop_<function/feature>_<property_description>`
+- Test files: `<module_name>_tests.rs` or `<feature_name>_tests.rs`
 
 ## Best Practices
 
-1. **Keep Tests Separate** - Tests should not be included in the source code files
-2. **Test Naming** - Use descriptive names for test functions: `test_<function_name>_<scenario>`
-3. **Test Organization** - Group related tests in the same file
-4. **Fixture Usage** - Use the `common_test_utils` module for test fixtures and helpers
-5. **Test Coverage** - Aim for high test coverage, especially for critical functionality
-6. **Documentation** - Include doc comments explaining the purpose of test modules and complex tests
+1. **Arrange-Act-Assert**: Structure tests with a clear separation between setup, action, and verification
+2. **Single Assertion Focus**: Each test should focus on verifying one specific behavior
+3. **Descriptive Names**: Use descriptive test names that explain what is being tested
+4. **Minimal Setup**: Keep test setup as minimal as possible while still being clear
+5. **Independent Tests**: Tests should be independent and not rely on the state from other tests
+6. **Test Data**: Use test fixtures and factories for consistent test data
+7. **Test Coverage**: Aim for comprehensive coverage of code paths and edge cases
+8. **Test Readability**: Prioritize test readability over minimal code duplication
 
-## Migration Notes
+## Integration with Cargo Nextest
 
-If you encounter tests in non-standard locations:
+For running specific categories of tests with Cargo Nextest:
 
-1. **In-Source Tests** - Move tests from `#[cfg(test)]` modules in source files to `tests/unit/`
-2. **Src/Tests Directory** - Move tests from `src/tests/` to `tests/unit/`
-3. **Root Test Files** - Move tests from `tests/*.rs` to the appropriate category directory
+```bash
+# Run all unit tests
+cargo nextest run --no-default-features
 
-Run the standardization script to handle this automatically.
+# Run integration tests
+cargo nextest run --test '*' --workspace
+
+# Run property tests
+cargo nextest run --test '*_properties'
+
+# Run tests with specific tags
+cargo nextest run --features fs_tests
+```
+
+## Example Test Structure
+
+For a typical component, the test structure might look like:
+
+```
+component-name/
+  ├── src/
+  │    ├── lib.rs
+  │    ├── module1.rs
+  │    └── module2.rs
+  └── tests/
+       ├── unit/
+       │    ├── module1_tests.rs
+       │    └── module2_tests.rs
+       ├── integration/
+       │    └── workflow_tests.rs
+       └── property/
+            └── module1_properties.rs
+```
+
+## References
+
+- [TOOL_ISOLATION.md](TOOL_ISOLATION.md) - Guide for tool isolation strategy
+- [MOCKING_GUIDE.md](MOCKING_GUIDE.md) - Guide for mocking approach

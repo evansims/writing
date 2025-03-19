@@ -1,0 +1,66 @@
+# EditorConfig helps maintain consistent coding styles across various editors and IDEs
+# https://editorconfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Rust specific settings
+[*.rs]
+indent_size = 4
+
+# Python specific settings
+[*.py]
+indent_size = 4
+
+# TypeScript/JavaScript specific settings
+[*.{ts,tsx,js,jsx,json}]
+indent_size = 2
+
+# YAML specific settings
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown specific settings
+[*.{md,mdx}]
+trim_trailing_whitespace = false
+
+# Shell script specific settings
+[*.sh]
+indent_size = 2
+
+# TOML specific settings
+[*.toml]
+indent_size = 2
+
+# HTML/CSS/SCSS specific settings
+[*.{html,css,scss}]
+indent_size = 2
+
+# XML specific settings
+[*.xml]
+indent_size = 2
+
+# Config files
+[{package.json,.travis.yml}]
+indent_size = 2
+
+# Makefiles require tabs
+[Makefile]
+indent_style = tab
+
+# Cargo.toml
+[Cargo.toml]
+indent_size = 4
+
+# Bat files
+[*.bat]
+end_of_line = crlf
