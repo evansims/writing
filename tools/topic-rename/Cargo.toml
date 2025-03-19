@@ -27,6 +27,8 @@ common-fs = { path = "../common/fs" }
 common-errors = { path = "../common/errors" }
 
 [dev-dependencies]
-tempfile.workspace = true
-serial_test = "2.0.0"
+anyhow = "1.0"
 common-test-utils = { path = "../common/test_utils" }
+proptest = "1.0.0"
+serial_test = "2.0.0"
+temp-env = "0.3.1"

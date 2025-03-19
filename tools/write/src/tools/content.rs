@@ -54,7 +54,7 @@ impl ContentTools {
         &self,
         title: Option<String>,
         topic: Option<String>,
-        tagline: Option<String>,
+        description: Option<String>,
         tags: Option<String>,
         _content_type: Option<String>,
         draft: bool,
@@ -73,7 +73,7 @@ impl ContentTools {
             slug: None,  // Will be generated from title
             title,
             topic,
-            description: tagline,
+            description: description,
             template,
             tags,
             draft: Some(draft),
@@ -445,7 +445,7 @@ fn get_content_tools() -> Result<std::sync::MutexGuard<'static, Option<ContentTo
 pub fn create_content(
     title: Option<String>,
     topic: Option<String>,
-    tagline: Option<String>,
+    description: Option<String>,
     tags: Option<String>,
     content_type: Option<String>,
     draft: bool,
@@ -453,7 +453,7 @@ pub fn create_content(
     introduction: Option<String>,
 ) -> Result<()> {
     let tools = get_content_tools()?;
-    tools.as_ref().unwrap().create_content(title, topic, tagline, tags, content_type, draft, template, introduction)
+    tools.as_ref().unwrap().create_content(title, topic, description, tags, content_type, draft, template, introduction)
 }
 
 /// Edit content

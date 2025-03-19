@@ -7,7 +7,7 @@ pub struct ContentArgs {
     /// Slug of the content
     #[arg(short, long)]
     pub slug: Option<String>,
-    
+
     /// Topic of the content
     #[arg(short, long)]
     pub topic: Option<String>,
@@ -43,7 +43,7 @@ pub struct EditArgs {
     /// Edit only the frontmatter
     #[arg(long)]
     pub frontmatter_only: bool,
-    
+
     /// Edit only the content
     #[arg(long)]
     pub content_only: bool,
@@ -55,15 +55,15 @@ pub struct CreateArgs {
     /// Title of the content
     #[arg(short, long)]
     pub title: String,
-    
-    /// Tagline or description
+
+    /// Description
     #[arg(short, long)]
-    pub tagline: String,
-    
+    pub description: String,
+
     /// Content type (article, note, etc.)
     #[arg(short, long)]
     pub content_type: String,
-    
+
     /// Introduction text
     #[arg(short, long)]
     pub introduction: Option<String>,
@@ -139,7 +139,7 @@ pub struct SortArgs {
     /// Sort field
     #[arg(short, long, default_value = "title")]
     pub sort: String,
-    
+
     /// Sort direction (asc, desc)
     #[arg(long, default_value = "asc")]
     pub direction: String,
@@ -151,8 +151,8 @@ pub struct PaginationArgs {
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: usize,
-    
+
     /// Page size
     #[arg(long, default_value = "10")]
     pub page_size: usize,
-} 
+}

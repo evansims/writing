@@ -150,7 +150,7 @@ You can run the CLI directly from the repository root without installing it:
 ./write interactive
 
 # Create new content
-./write new --title "My Article" --topic "mindset" --tagline "My tagline" --tags "tag1,tag2" --content-type "article"
+./write new --title "My Article" --topic "mindset" --description "My description" --tags "tag1,tag2" --content-type "article"
 ```
 
 The `./write` script is a wrapper that automatically builds the CLI if needed and executes it directly from its build location.

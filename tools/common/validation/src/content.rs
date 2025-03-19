@@ -73,10 +73,10 @@ pub fn validate_content_title(title: &str) -> Result<String> {
     Ok(title.trim().to_string())
 }
 
-/// Validate content tagline
-pub fn validate_content_tagline(tagline: &str) -> Result<String> {
-    // Tagline is optional, so empty is fine
-    Ok(tagline.trim().to_string())
+/// Validate content description
+pub fn validate_content_description(description: &str) -> Result<String> {
+    // description is optional, so empty is fine
+    Ok(description.trim().to_string())
 }
 
 /// Validate content date
@@ -98,7 +98,7 @@ pub fn validate_content_date(date: &str) -> Result<String> {
 }
 
 /// Generate a template for a new content
-pub fn generate_content_template(title: &str, tagline: Option<&str>, content_type: &str, tags: &[String]) -> Result<String> {
+pub fn generate_content_template(title: &str, description: Option<&str>, content_type: &str, tags: &[String]) -> Result<String> {
     // Validate content type
     validate_content_type(content_type)?;
 
@@ -128,9 +128,9 @@ pub fn generate_content_template(title: &str, tagline: Option<&str>, content_typ
         tags_yaml
     );
 
-    // Add tagline if provided
-    let frontmatter = if let Some(tagline) = tagline {
-        format!("{}\ntagline: \"{}\"", frontmatter, tagline)
+    // Add description if provided
+    let frontmatter = if let Some(description) = description {
+        format!("{}\description: \"{}\"", frontmatter, description)
     } else {
         frontmatter
     };
@@ -170,14 +170,14 @@ mod tests {
 
     #[test]
     fn test_validate_content_valid() {
-        let content = "---\ntitle: \"Test Post\"\ntagline: \"A test post\"\n---\n\nThis is the body.";
+        let content = "---\ntitle: \"Test Post\"\description: \"A test post\"\n---\n\nThis is the body.";
         let result = validate_content(content);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_content_invalid_frontmatter() {
-        let content = "---\ntagline: \"A test post\"\n---\n\nThis is the body.";
+        let content = "---\description: \"A test post\"\n---\n\nThis is the body.";
         let result = validate_content(content);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -237,16 +237,16 @@ mod tests {
     #[test]
     fn test_generate_content_template() {
         let title = "Test Title";
-        let tagline = Some("A test post");
+        let description = Some("A test post");
         let content_type = "article";
         let tags = vec!["tag1".to_string(), "tag2".to_string()];
 
-        let result = generate_content_template(title, tagline, content_type, &tags);
+        let result = generate_content_template(title, description, content_type, &tags);
         assert!(result.is_ok());
 
         let template = result.unwrap();
         assert!(template.contains("title: \"Test Title\""));
-        assert!(template.contains("tagline: \"A test post\""));
+        assert!(template.contains("description: \"A test post\""));
         assert!(template.contains("type: \"article\""));
         assert!(template.contains("  - \"tag1\""));
         assert!(template.contains("  - \"tag2\""));

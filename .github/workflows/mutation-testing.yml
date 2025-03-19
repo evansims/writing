@@ -1,0 +1,117 @@
+name: Mutation Testing
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Run weekly on Monday
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      rust-toolchain: stable
+      components: llvm-tools-preview
+
+  mutation:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-mutants
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick nasm
+
+      - name: Run mutation tests on critical components
+        working-directory: tools
+        run: |
+          # Run mutation tests on critical components
+          ./mutation.sh common/fs
+          ./mutation.sh common/markdown
+          ./mutation.sh content-new
+          ./mutation.sh content-edit
+          ./mutation.sh content-delete
+
+      - name: Create summary report
+        working-directory: tools
+        run: |
+          mkdir -p target/mutation
+          echo "# Mutation Testing Report" > target/mutation/report.md
+          echo "" >> target/mutation/report.md
+          echo "Date: $(date)" >> target/mutation/report.md
+          echo "" >> target/mutation/report.md
+
+          for crate in common/fs common/markdown content-new content-edit content-delete; do
+            echo "## $crate" >> target/mutation/report.md
+            echo "" >> target/mutation/report.md
+
+            if [ -f "$crate/target/mutants/output.txt" ]; then
+              echo '```' >> target/mutation/report.md
+              cat "$crate/target/mutants/output.txt" >> target/mutation/report.md
+              echo '```' >> target/mutation/report.md
+            else
+              echo "No mutation results found" >> target/mutation/report.md
+            fi
+
+            echo "" >> target/mutation/report.md
+          done
+
+      - name: Upload mutation report
+        uses: actions/upload-artifact@v3
+        with:
+          name: mutation-report
+          path: tools/target/mutation/report.md
+          retention-days: 7
+
+      - name: Check mutation scores
+        working-directory: tools
+        run: |
+          # Check if any critical components have low mutation scores
+          FAILURE=0
+
+          for crate in common/fs common/markdown content-new content-edit content-delete; do
+            if [ -f "$crate/target/mutants/output.txt" ]; then
+              SCORE=$(grep "Score:" "$crate/target/mutants/output.txt" | grep -o "[0-9.]*%" | tr -d '%')
+              if (( $(echo "$SCORE < 60" | bc -l) )); then
+                echo "⚠️ Mutation score for $crate is below 60%: $SCORE%"
+                FAILURE=1
+              fi
+            fi
+          done
+
+          if [ "$FAILURE" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Create issue if mutation score is too low
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ Mutation Score Too Low',
+              body: 'The mutation score for some critical components is below 60%. This suggests that the tests might not be effective at catching bugs. Please review the test suite and improve test quality.',
+              labels: ['test-quality', 'needs-attention']
+            });

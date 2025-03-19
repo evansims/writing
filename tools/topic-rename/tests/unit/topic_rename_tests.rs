@@ -1,10 +1,30 @@
 use anyhow::Result;
 use common_test_utils::TestFixture;
-use common_models::{Config, TopicConfig};
+use common_models::{Config, TopicConfig, ContentConfig};
 use std::collections::HashMap;
 use std::path::Path;
 use topic_rename::{rename_topic, TopicRenameOptions};
 use serial_test::serial;
+use temp_env;
+
+// Define a RenameOptions struct for our tests
+struct RenameOptions {
+    old_key: String,
+    new_key: String,
+    update_references: bool,
+}
+
+impl From<&RenameOptions> for TopicRenameOptions {
+    fn from(options: &RenameOptions) -> Self {
+        TopicRenameOptions {
+            key: Some(options.old_key.clone()),
+            new_key: Some(options.new_key.clone()),
+            new_name: None,
+            new_description: None,
+            new_path: None,
+        }
+    }
+}
 
 #[test]
 #[serial]
@@ -335,6 +355,336 @@ fn test_rename_topic_updates_only_provided_fields() -> Result<()> {
     assert_eq!(updated_topic.name, "Updated Name"); // Should be updated
     assert_eq!(updated_topic.description, "Original description"); // Should remain unchanged
     assert_eq!(updated_topic.directory, "test-topic"); // Should remain unchanged
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_changes_key_correctly() -> Result<()> {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || -> Result<()> {
+        // Create a config with existing topic
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+        topics.insert(
+            "old-key".to_string(),
+            TopicConfig {
+                name: "Old Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "old-topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write("temp_config.yaml", config_content)?;
+
+        // Create options for renaming
+        let options = RenameOptions {
+            old_key: "old-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: false, // Don't update references for this test
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Verify the config was updated correctly
+        let updated_config = common_config::load_config()?;
+
+        // Old key should be gone
+        assert!(!updated_config.content.topics.contains_key("old-key"));
+
+        // New key should exist
+        assert!(updated_config.content.topics.contains_key("new-key"));
+
+        // Topic details should be preserved
+        let topic = &updated_config.content.topics["new-key"];
+        assert_eq!(topic.name, "Old Topic");
+        assert_eq!(topic.description, "An existing topic");
+        assert_eq!(topic.directory, "old-topic");
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml")?;
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_fails_if_old_key_does_not_exist() -> Result<()> {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || -> Result<()> {
+        // Create a config with no matching topic
+        let config = Config::default();
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write("temp_config.yaml", config_content)?;
+
+        // Create options for renaming
+        let options = RenameOptions {
+            old_key: "nonexistent-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: false,
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("does not exist"));
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml")?;
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_fails_if_new_key_already_exists() -> Result<()> {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || -> Result<()> {
+        // Create a config with both old and new keys
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+
+        // Add old topic
+        topics.insert(
+            "old-key".to_string(),
+            TopicConfig {
+                name: "Old Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "old-topic".to_string(),
+            },
+        );
+
+        // Add new topic (already exists)
+        topics.insert(
+            "new-key".to_string(),
+            TopicConfig {
+                name: "New Topic".to_string(),
+                description: "Another existing topic".to_string(),
+                directory: "new-topic".to_string(),
+            },
+        );
+
+        config.content.topics = topics;
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write("temp_config.yaml", config_content)?;
+
+        // Create options for renaming
+        let options = RenameOptions {
+            old_key: "old-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: false,
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("already exists"));
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml")?;
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_updates_tags_references() -> Result<()> {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || -> Result<()> {
+        // Create a config with existing topic and tags
+        let mut config = Config::default();
+
+        // Add topic
+        let mut topics = HashMap::new();
+        topics.insert(
+            "old-key".to_string(),
+            TopicConfig {
+                name: "Old Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "old-topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Add tags for the topic
+        let mut tags = HashMap::new();
+        tags.insert(
+            "old-key".to_string(),
+            vec!["tag1".to_string(), "tag2".to_string()],
+        );
+        config.content.tags = Some(tags);
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write("temp_config.yaml", config_content)?;
+
+        // Create options for renaming with reference updates
+        let options = RenameOptions {
+            old_key: "old-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: true,
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Verify the tags references were updated
+        let updated_config = common_config::load_config()?;
+
+        // Tags should be moved to new key
+        let tags_map = updated_config.content.tags.unwrap();
+        assert!(!tags_map.contains_key("old-key"));
+        assert!(tags_map.contains_key("new-key"));
+
+        // Tags content should be preserved
+        let tags = &tags_map["new-key"];
+        assert_eq!(tags.len(), 2);
+        assert!(tags.contains(&"tag1".to_string()));
+        assert!(tags.contains(&"tag2".to_string()));
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml")?;
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_with_content_references() -> Result<()> {
+    // Arrange
+    let fixture = TestFixture::new()?;
+    let base_path = fixture.path();
+    let content_dir = base_path.join("content");
+    std::fs::create_dir_all(&content_dir)?;
+
+    // Create a test content file with topic reference
+    let test_content = r#"---
+title: Test Article
+topic: old-key
+date: 2023-01-01
+---
+This is test content referencing the old-key topic.
+"#;
+
+    let content_file = content_dir.join("test-article.md");
+    std::fs::write(&content_file, test_content)?;
+
+    // Set up config with the topic
+    temp_env::with_var("CONFIG_PATH", Some(base_path.join("config.yaml").to_string_lossy().to_string()), || -> Result<()> {
+        // Create a config with existing topic
+        let mut config = Config::default();
+        config.content.base_dir = content_dir.to_string_lossy().to_string();
+
+        // Add topic
+        let mut topics = HashMap::new();
+        topics.insert(
+            "old-key".to_string(),
+            TopicConfig {
+                name: "Old Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "old-key".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Write config
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write(base_path.join("config.yaml"), config_content)?;
+
+        // Create options for renaming with reference updates
+        let options = RenameOptions {
+            old_key: "old-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: true,
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Verify content file was updated with new topic reference
+        let updated_content = std::fs::read_to_string(&content_file)?;
+        assert!(updated_content.contains("topic: new-key"));
+        assert!(!updated_content.contains("topic: old-key"));
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn test_rename_topic_preserves_directory_path() -> Result<()> {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || -> Result<()> {
+        // Create a config with existing topic
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+        topics.insert(
+            "old-key".to_string(),
+            TopicConfig {
+                name: "Old Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "custom/path/to/topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config)?;
+        std::fs::write("temp_config.yaml", config_content)?;
+
+        // Create options for renaming
+        let options = RenameOptions {
+            old_key: "old-key".to_string(),
+            new_key: "new-key".to_string(),
+            update_references: false,
+        };
+
+        // Act
+        let result = rename_topic(&(&options).into());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Verify directory path was preserved
+        let updated_config = common_config::load_config()?;
+        let topic = &updated_config.content.topics["new-key"];
+        assert_eq!(topic.directory, "custom/path/to/topic");
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml")?;
+
+        Ok(())
+    })?;
 
     Ok(())
 }

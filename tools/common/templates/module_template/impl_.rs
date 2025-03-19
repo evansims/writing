@@ -28,7 +28,7 @@ pub fn create_template(name: &str, config: TemplateConfig) -> Result<TemplateMod
     if name.is_empty() {
         return Err(TemplateError::InvalidName("Name cannot be empty".to_string()));
     }
-    
+
     // Example implementation
     Ok(TemplateModel {
         name: name.to_string(),
@@ -56,7 +56,7 @@ pub fn update_template(name: &str, config: TemplateConfig) -> Result<TemplateMod
     if !template_exists(name) {
         return Err(TemplateError::NotFound(name.to_string()));
     }
-    
+
     // Example implementation
     Ok(TemplateModel {
         name: name.to_string(),
@@ -83,7 +83,7 @@ pub fn delete_template(name: &str) -> Result<(), TemplateError> {
     if !template_exists(name) {
         return Err(TemplateError::NotFound(name.to_string()));
     }
-    
+
     // Example implementation
     Ok(())
 }
@@ -106,7 +106,7 @@ pub fn get_template(name: &str) -> Result<TemplateModel, TemplateError> {
     if !template_exists(name) {
         return Err(TemplateError::NotFound(name.to_string()));
     }
-    
+
     // Example implementation
     Ok(TemplateModel {
         name: name.to_string(),
@@ -128,7 +128,7 @@ pub fn get_template(name: &str) -> Result<TemplateModel, TemplateError> {
 /// Returns a `TemplateError` if listing fails
 pub fn list_templates() -> Result<Vec<TemplateModel>, TemplateError> {
     // Implementation details go here
-    
+
     // Example implementation
     Ok(vec![
         TemplateModel {
@@ -162,4 +162,4 @@ pub fn list_templates() -> Result<Vec<TemplateModel>, TemplateError> {
 fn template_exists(name: &str) -> bool {
     // Example implementation - in a real module, this would check the file system
     !name.is_empty() && name != "non-existent-template"
-} 
+}

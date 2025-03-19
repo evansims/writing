@@ -8,7 +8,7 @@ use common_models::{ContentConfig, TopicConfig};
 #[test]
 fn test_process_content_with_directory_path() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -17,22 +17,22 @@ fn test_process_content_with_directory_path() {
     let article_file = article_dir.join("index.mdx");
 
     // Mock directory existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file))
         .returning(|_| Ok(r#"---
 title: "Test Article"
@@ -43,7 +43,7 @@ published_at: "2023-01-01"
 
 This is the content of the test article."#.to_string()));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -53,14 +53,9 @@ This is the content of the test article."#.to_string()));
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/test-article"), false);
+    let result = process_content(Path::new("blog/test-article"), false);
 
     // Assert
     assert!(result.is_ok());
@@ -70,14 +65,14 @@ This is the content of the test article."#.to_string()));
     assert_eq!(article.frontmatter.title, "Test Article");
     assert_eq!(article.frontmatter.description.unwrap(), "This is a test article");
     assert_eq!(article.frontmatter.published_at.unwrap(), "2023-01-01");
-    assert_eq!(article.frontmatter.draft, None);
+    assert_eq!(article.frontmatter.is_draft, None);
     assert!(article.content.contains("# Test Article"));
 }
 
 #[test]
 fn test_process_content_with_file_path() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -85,17 +80,17 @@ fn test_process_content_with_file_path() {
     let article_file = blog_dir.join("test-article.mdx");
 
     // Mock file existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file))
         .returning(|_| Ok(r#"---
 title: "Test Article"
@@ -106,7 +101,7 @@ published_at: "2023-01-01"
 
 This is the content of the test article."#.to_string()));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -116,14 +111,9 @@ This is the content of the test article."#.to_string()));
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/test-article.mdx"), false);
+    let result = process_content(Path::new("blog/test-article.mdx"), false);
 
     // Assert
     assert!(result.is_ok());
@@ -133,14 +123,14 @@ This is the content of the test article."#.to_string()));
     assert_eq!(article.frontmatter.title, "Test Article");
     assert_eq!(article.frontmatter.description.unwrap(), "This is a test article");
     assert_eq!(article.frontmatter.published_at.unwrap(), "2023-01-01");
-    assert_eq!(article.frontmatter.draft, None);
+    assert_eq!(article.frontmatter.is_draft, None);
     assert!(article.content.contains("# Test Article"));
 }
 
 #[test]
 fn test_process_content_with_draft_include_drafts_true() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -149,22 +139,22 @@ fn test_process_content_with_draft_include_drafts_true() {
     let article_file = article_dir.join("index.mdx");
 
     // Mock directory existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file))
         .returning(|_| Ok(r#"---
 title: "Draft Article"
@@ -176,7 +166,7 @@ draft: true
 
 This is the content of a draft article."#.to_string()));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -186,14 +176,9 @@ This is the content of a draft article."#.to_string()));
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/draft-article"), true);
+    let result = process_content(Path::new("blog/draft-article"), true);
 
     // Assert
     assert!(result.is_ok());
@@ -203,14 +188,14 @@ This is the content of a draft article."#.to_string()));
     assert_eq!(article.frontmatter.title, "Draft Article");
     assert_eq!(article.frontmatter.description.unwrap(), "This is a draft article");
     assert_eq!(article.frontmatter.published_at.unwrap(), "2023-01-01");
-    assert_eq!(article.frontmatter.draft, Some(true));
+    assert_eq!(article.frontmatter.is_draft, Some(true));
     assert!(article.content.contains("# Draft Article"));
 }
 
 #[test]
 fn test_process_content_with_draft_include_drafts_false() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -219,22 +204,22 @@ fn test_process_content_with_draft_include_drafts_false() {
     let article_file = article_dir.join("index.mdx");
 
     // Mock directory existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file))
         .returning(|_| Ok(r#"---
 title: "Draft Article"
@@ -246,7 +231,7 @@ draft: true
 
 This is the content of a draft article."#.to_string()));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -256,14 +241,9 @@ This is the content of a draft article."#.to_string()));
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/draft-article"), false);
+    let result = process_content(Path::new("blog/draft-article"), false);
 
     // Assert
     assert!(result.is_err());
@@ -274,7 +254,7 @@ This is the content of a draft article."#.to_string()));
 #[test]
 fn test_process_content_file_not_found() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -283,21 +263,21 @@ fn test_process_content_file_not_found() {
     let article_file = article_dir.join("index.mdx");
 
     // Mock directory existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence check - file doesn't exist
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -307,14 +287,9 @@ fn test_process_content_file_not_found() {
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/missing-article"), false);
+    let result = process_content(Path::new("blog/missing-article"), false);
 
     // Assert
     assert!(result.is_err());
@@ -325,7 +300,7 @@ fn test_process_content_file_not_found() {
 #[test]
 fn test_process_content_invalid_frontmatter() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     let base_dir = fixture.path().join("content");
@@ -334,22 +309,22 @@ fn test_process_content_invalid_frontmatter() {
     let article_file = article_dir.join("index.mdx");
 
     // Mock directory existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory check (is_dir)
-    mock_fs.expect_is_dir()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence check
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file content with invalid frontmatter
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file))
         .returning(|_| Ok(r#"---
 invalid frontmatter
@@ -358,7 +333,7 @@ invalid frontmatter
 
 This article has invalid frontmatter."#.to_string()));
 
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create content config for the test
     let mut topics = std::collections::HashMap::new();
@@ -368,14 +343,9 @@ This article has invalid frontmatter."#.to_string()));
         directory: "blog".to_string(),
     });
 
-    let content_config = ContentConfig {
-        base_dir: base_dir.to_string_lossy().to_string(),
-        topics,
-        tags: None,
-    };
 
     // Act
-    let result = process_content(&content_config, Path::new("blog/invalid-article"), false);
+    let result = process_content(Path::new("blog/invalid-article"), false);
 
     // Assert
     assert!(result.is_err());

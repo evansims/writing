@@ -74,7 +74,9 @@ topics:
                    "Output doesn't contain the search term: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -94,7 +96,9 @@ topics:
                    "Output doesn't contain the search term: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -114,7 +118,9 @@ topics:
                    "Output doesn't contain the search term: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -129,15 +135,14 @@ topics:
             // Test search with no results
             let output = command.run_with_args(&["--query", "nonexistent"])?;
 
-            // The command should still succeed even with no results
             assert!(output.status.success(), "Command failed: {}", output.stderr);
-
-            // Output should indicate no results
             assert!(output.stdout.contains("No results") || output.stdout.contains("0 results"),
                    "Output doesn't indicate no results: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -152,14 +157,13 @@ topics:
             // Test search with empty query
             let output = command.run_with_args(&["--query", ""])?;
 
-            // The command should fail with an invalid query
             assert!(!output.status.success(), "Command should have failed with empty query");
-
-            // Error should indicate invalid query
             assert!(output.stderr.contains("Invalid") || output.stderr.contains("invalid"),
                    "Error doesn't indicate invalid query: {}", output.stderr);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 }

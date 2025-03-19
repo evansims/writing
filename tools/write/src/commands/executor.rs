@@ -35,7 +35,7 @@ pub fn execute_content_command(command: ContentCommands) -> Result<()> {
     crate::tools::content::lazy_content_tools()?;
 
     match command {
-        ContentCommands::New { title, topic, tagline, tags, draft, template, edit } => {
+        ContentCommands::New { title, topic, description, tags, draft, template, edit } => {
             let content = title.clone();
             let topic_clone = topic.clone();
 
@@ -43,7 +43,7 @@ pub fn execute_content_command(command: ContentCommands) -> Result<()> {
             content::create_content(
                 Some(title),
                 Some(topic),
-                tagline,
+                description,
                 tags,
                 None,
                 draft,

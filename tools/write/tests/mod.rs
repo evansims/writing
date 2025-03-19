@@ -1,12 +1,8 @@
-//! Tests for the write module
+//! Tests for the Write CLI
 //!
 //! This module contains tests for the write tool.
 
-// Unit tests
-pub mod unit;
-
-// Integration tests
+// Include test categories
 pub mod integration;
-
-// Property-based tests
+pub mod unit;
 pub mod property;

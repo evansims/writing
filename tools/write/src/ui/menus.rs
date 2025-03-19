@@ -148,12 +148,12 @@ pub fn show_content_menu() -> Result<Option<ContentCommands>> {
 
             let topic = if topic_input.is_empty() { None } else { Some(topic_input) };
 
-            let tagline_input = Input::<String>::with_theme(&ColorfulTheme::default())
-                .with_prompt("Tagline (optional)")
+            let description_input = Input::<String>::with_theme(&ColorfulTheme::default())
+                .with_prompt("Description (optional)")
                 .allow_empty(true)
                 .interact()?;
 
-            let tagline = if tagline_input.is_empty() { None } else { Some(tagline_input) };
+            let description = if description_input.is_empty() { None } else { Some(description_input) };
 
             let tags_input = Input::<String>::with_theme(&ColorfulTheme::default())
                 .with_prompt("Tags (comma-separated, optional)")
@@ -182,7 +182,7 @@ pub fn show_content_menu() -> Result<Option<ContentCommands>> {
             Ok(Some(ContentCommands::New {
                 title: title.unwrap_or_default(),
                 topic: topic.unwrap_or_default(),
-                tagline,
+                description,
                 tags,
                 draft,
                 template,

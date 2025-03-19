@@ -1,0 +1,109 @@
+name: Test Optimization
+
+on:
+  schedule:
+    - cron: "0 0 * * 2" # Run weekly on Tuesday
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  setup:
+    uses: ./.github/workflows/rust-setup.yml
+    with:
+      rust-toolchain: stable
+      components: llvm-tools-preview
+
+  optimize:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-nextest and jq
+        run: |
+          cargo install cargo-nextest
+          sudo apt-get update
+          sudo apt-get install -y jq imagemagick nasm
+
+      - name: Analyze test execution time
+        working-directory: tools
+        run: |
+          mkdir -p .config/nextest
+          ./optimize-tests.sh analyze
+
+      - name: Upload test analysis report
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-analysis
+          path: tools/target/test-optimization/analysis.md
+          retention-days: 7
+
+      - name: Check test performance
+        working-directory: tools
+        run: |
+          # Get the slowest test time
+          SLOWEST_TEST_TIME=$(tail -n 1 target/test-optimization/test-times.txt | awk '{print $1}')
+          echo "Slowest test execution time: $SLOWEST_TEST_TIME ms"
+
+          # Check if any test is taking too long (> 5 seconds)
+          if (( $(echo "$SLOWEST_TEST_TIME > 5000" | bc -l) )); then
+            echo "⚠️ Some tests are taking too long to execute (>5s)"
+            echo "Consider optimizing or refactoring these tests"
+            tail -n 5 target/test-optimization/test-times.txt
+          fi
+
+          # Get total execution time
+          TOTAL_TIME=$(awk '{sum += $1} END {print sum/1000}' target/test-optimization/test-times.txt)
+          echo "Total test suite execution time: $TOTAL_TIME seconds"
+
+          # Check if the full test suite is taking too long
+          if (( $(echo "$TOTAL_TIME > 120" | bc -l) )); then
+            echo "⚠️ Full test suite execution time is over 2 minutes: $TOTAL_TIME seconds"
+            echo "Consider optimizing tests or improving parallelization"
+          else
+            echo "✅ Test suite execution time is within acceptable limits: $TOTAL_TIME seconds"
+          fi
+
+      - name: Optimize test execution for CI
+        working-directory: tools
+        run: |
+          # Create optimized CI test profile
+          mkdir -p .config/nextest
+
+          echo "# CI Optimized Test Configuration" > .config/nextest/ci-optimized.toml
+          echo "[profile.ci-optimized]" >> .config/nextest/ci-optimized.toml
+          echo "status-level = \"pass\"" >> .config/nextest/ci-optimized.toml
+          echo "final-status-level = \"fail\"" >> .config/nextest/ci-optimized.toml
+          echo "failure-output = \"immediate-final\"" >> .config/nextest/ci-optimized.toml
+          echo "success-output = \"never\"" >> .config/nextest/ci-optimized.toml
+          echo "fail-fast = true" >> .config/nextest/ci-optimized.toml
+          echo "retries = 1" >> .config/nextest/ci-optimized.toml
+
+          # Create a PR with the optimized configuration
+          if [[ $(git status --porcelain .config/nextest) ]]; then
+            git config --local user.name "GitHub Actions"
+            git config --local user.email "actions@github.com"
+            git add .config/nextest
+            git commit -m "chore: optimize test configuration"
+            git push origin HEAD:test-optimization
+
+            # Create PR via GitHub API
+            PR_BODY="This PR updates the test configuration to optimize execution time based on the latest analysis.\n\nTest Analysis Report: [View Report](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+
+            gh pr create --title "chore: optimize test configuration" --body "$PR_BODY" --base main --head test-optimization --label "test-optimization" || true
+          else
+            echo "No changes to test configuration needed"
+          fi

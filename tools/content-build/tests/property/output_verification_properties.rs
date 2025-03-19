@@ -16,7 +16,7 @@ fn article_data_strategy() -> impl Strategy<Value = (String, String, String, Str
         r"[a-z0-9][a-z0-9\-]{3,20}".prop_map(String::from),
         // Title
         r#"[A-Za-z0-9\s\.\,\-\:\;]{5,50}"#.prop_map(String::from),
-        // Tagline (using instead of description based on current Frontmatter structure)
+        // Description (using instead of description based on current Frontmatter structure)
         r#"[A-Za-z0-9\s\.\,\-\:\;]{10,100}"#.prop_map(String::from),
         // Date (YYYY-MM-DD)
         r"\d{4}\-\d{2}\-\d{2}".prop_map(String::from),
@@ -36,7 +36,7 @@ fn create_test_article(
     slug: &str,
     topic: &str,
     title: &str,
-    tagline: &str,
+    description: &str,
     published_at: &str,
     content: &str,
     is_draft: bool,
@@ -47,8 +47,8 @@ fn create_test_article(
     Article {
         frontmatter: Frontmatter {
             title: title.to_string(),
-            // Using tagline instead of description based on current Frontmatter structure
-            tagline: Some(tagline.to_string()),
+            // Using description instead of description based on current Frontmatter structure
+            description: Some(description.to_string()),
             published_at: Some(published_at.to_string()),
             updated_at: None,
             is_draft: Some(is_draft),
@@ -68,18 +68,18 @@ fn verify_json_contents(json_content: &str, article: &Article) -> Result<(), Tes
     let json: Value = serde_json::from_str(json_content).expect("JSON should be valid");
 
     // Check basic properties
-    prop_assert_eq!(json["title"].as_str().unwrap(), article.frontmatter.title, "Title should match");
+    prop_assert_eq!(json["title"].as_str().unwrap(), article.frontmatter.title.as_str(), "Title should match");
 
-    if let Some(tagline) = &article.frontmatter.tagline {
-        prop_assert_eq!(json["tagline"].as_str().unwrap(), tagline, "Tagline should match");
+    if let Some(description) = &article.frontmatter.description {
+        prop_assert_eq!(json["description"].as_str().unwrap(), description, "Description should match");
     }
 
     if let Some(date) = &article.frontmatter.published_at {
         prop_assert_eq!(json["published_at"].as_str().unwrap(), date, "Published date should match");
     }
 
-    prop_assert_eq!(json["slug"].as_str().unwrap(), article.slug, "Slug should match");
-    prop_assert_eq!(json["topic"].as_str().unwrap(), article.topic, "Topic should match");
+    prop_assert_eq!(json["slug"].as_str().unwrap(), article.slug.as_str(), "Slug should match");
+    prop_assert_eq!(json["topic"].as_str().unwrap(), article.topic.as_str(), "Topic should match");
 
     // Word count and reading time
     if let Some(count) = article.word_count {
@@ -134,8 +134,8 @@ fn verify_sitemap_contents(sitemap_content: &str, articles: &[Article], site_url
             continue;
         }
 
-        let expected_url = format!("{}/{}/{}", site_url, article.topic, article.slug);
-        prop_assert!(sitemap_content.contains(&expected_url), "Sitemap should contain URL for article: {}", article.slug);
+        let expected_url = format!("{}/{}/{}", site_url, &&article.topic, &&article.slug);
+        prop_assert!(sitemap_content.contains(&expected_url), "Sitemap should contain URL for article: {}", &&article.slug);
     }
 
     Ok(())
@@ -153,14 +153,14 @@ fn verify_rss_contents(rss_content: &str, articles: &[Article], site_url: &str) 
             continue;
         }
 
-        prop_assert!(rss_content.contains(&article.frontmatter.title), "RSS feed should contain article title: {}", article.frontmatter.title);
+        prop_assert!(rss_content.contains(article.frontmatter.title.as_str()), "RSS feed should contain article title: {}", &&article.frontmatter.title);
 
-        if let Some(tagline) = &article.frontmatter.tagline {
-            prop_assert!(rss_content.contains(tagline), "RSS feed should contain article tagline");
+        if let Some(description) = &article.frontmatter.description {
+            prop_assert!(rss_content.contains(description), "RSS feed should contain article description");
         }
 
-        let expected_url = format!("{}/{}/{}", site_url, article.topic, article.slug);
-        prop_assert!(rss_content.contains(&expected_url), "RSS feed should contain URL for article: {}", article.slug);
+        let expected_url = format!("{}/{}/{}", site_url, &&article.topic, &&article.slug);
+        prop_assert!(rss_content.contains(&expected_url), "RSS feed should contain URL for article: {}", &&article.slug);
     }
 
     Ok(())
@@ -170,7 +170,7 @@ proptest! {
     #[test]
     fn test_build_json_output_verification(articles in multiple_articles_strategy(2, 5)) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test paths
@@ -199,8 +199,8 @@ proptest! {
             .returning(|_| Ok(()));
 
         // Create test articles and setup mocks
-        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, tagline, date, content))| {
-            create_test_article(slug, "blog", title, tagline, date, content, i % 3 == 0) // Every 3rd article is a draft
+        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, description, date, content))| {
+            create_test_article(slug, "blog", title, description, date, content, i % 3 == 0) // Every 3rd article is a draft
         }).collect();
 
         // Capture JSON written to files for verification
@@ -209,7 +209,7 @@ proptest! {
 
         // Expect JSON file writes and capture content
         for article in &test_articles {
-            let json_path = data_dir.join(format!("{}.json", article.slug));
+            let json_path = data_dir.join(format!("{}.json", &&article.slug));
             let captured = captured_json.clone();
 
             mock_fs.expect_write_file()
@@ -227,7 +227,7 @@ proptest! {
             .with(predicate::eq(all_json_path.clone()), predicate::always())
             .returning(move |_, content| {
                 let mut map = captured_json.lock().unwrap();
-                map.insert(all_json_path.to_string_lossy().to_string(), content.to_owned());
+                map.insert("data/all.json".to_string(), content.to_owned());
                 Ok(())
             });
 
@@ -249,13 +249,13 @@ proptest! {
         // Setup mock config loader
         let mut mock_config = MockConfigLoader::new();
         mock_config.expect_load_config()
-            .returning(move || Ok(config.clone()));
+            .returning(move || Ok(Config { default_topic: "blog".to_string(), email: "user@example.com".to_string(), image: Default::default(), site_name: "Test Site".to_string(), site_description: "A test site".to_string(), site_url: "https://example.com".to_string(), topics: Default::default(), publication: Default::default() }));
 
         // Mock template checks
         let templates_dir = PathBuf::from("templates");
         mock_fs.expect_dir_exists()
             .with(predicate::eq(templates_dir.clone()))
-            .returning(|_| false);
+            .returning(|_| Ok(false));
 
         // Skip sitemap and RSS for this test (tested separately)
         mock_fs.expect_write_file()
@@ -267,8 +267,8 @@ proptest! {
             .returning(|_, _| Ok(()));
 
         // Set the mock filesystem on the fixture (manually since TestFixture may not have register methods)
-        fixture.set_fs(mock_fs);
-        fixture.set_config_loader(mock_config);
+        fixture.fs = mock_fs;
+        fixture.config = mock_config;
 
         // Create build options focused on JSON output
         let options = BuildOptions {
@@ -292,7 +292,7 @@ proptest! {
 
         // Verify individual article JSON files
         for article in &test_articles {
-            let json_path = data_dir.join(format!("{}.json", article.slug)).to_string_lossy().to_string();
+            let json_path = data_dir.join(format!("{}.json", &&article.slug)).to_string_lossy().to_string();
 
             if let Some(json_content) = captured_files.get(&json_path) {
                 // Verify this JSON file's content
@@ -301,7 +301,7 @@ proptest! {
         }
 
         // Verify all.json contains all articles
-        if let Some(all_json_content) = captured_files.get(&all_json_path.to_string_lossy().to_string()) {
+        if let Some(all_json_content) = captured_files.get(&"data/all.json".to_string()) {
             let all_json: Value = serde_json::from_str(all_json_content).expect("all.json should be valid JSON");
             prop_assert!(all_json.is_array(), "all.json should contain an array");
 
@@ -318,7 +318,7 @@ proptest! {
     #[test]
     fn test_sitemap_generation_verification(articles in multiple_articles_strategy(2, 5)) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test paths
@@ -329,8 +329,8 @@ proptest! {
         let site_url = "https://example.com";
 
         // Create test articles
-        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, tagline, date, content))| {
-            create_test_article(slug, "blog", title, tagline, date, content, i % 3 == 0) // Every 3rd article is a draft
+        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, description, date, content))| {
+            create_test_article(slug, "blog", title, description, date, content, i % 3 == 0) // Every 3rd article is a draft
         }).collect();
 
         // Capture sitemap XML for verification
@@ -347,7 +347,7 @@ proptest! {
             });
 
         // Set the mock filesystem on the fixture
-        fixture.set_fs(mock_fs);
+        fixture.fs = mock_fs;
 
         // Create config for testing
         let mut topics = HashMap::new();
@@ -388,7 +388,7 @@ proptest! {
     #[test]
     fn test_rss_feed_generation_verification(articles in multiple_articles_strategy(2, 5)) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test paths
@@ -399,8 +399,8 @@ proptest! {
         let site_url = "https://example.com";
 
         // Create test articles
-        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, tagline, date, content))| {
-            create_test_article(slug, "blog", title, tagline, date, content, i % 3 == 0) // Every 3rd article is a draft
+        let test_articles: Vec<Article> = articles.iter().enumerate().map(|(i, (slug, title, description, date, content))| {
+            create_test_article(slug, "blog", title, description, date, content, i % 3 == 0) // Every 3rd article is a draft
         }).collect();
 
         // Capture RSS XML for verification
@@ -417,7 +417,7 @@ proptest! {
             });
 
         // Set the mock filesystem on the fixture
-        fixture.set_fs(mock_fs);
+        fixture.fs = mock_fs;
 
         // Create config for testing
         let mut topics = HashMap::new();

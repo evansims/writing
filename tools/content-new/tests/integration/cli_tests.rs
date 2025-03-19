@@ -53,7 +53,7 @@ fn test_cli_create_content_with_args() -> Result<()> {
     // Verify content
     let content = std::fs::read_to_string(&expected_path)?;
     assert!(content.contains("title: \"Test Title\""));
-    assert!(content.contains("tagline: \"Test Description\""));
+    assert!(content.contains("description: \"Test Description\""));
     assert!(content.contains("# Test Title"));
     assert!(content.contains("date: DRAFT") || content.contains("draft: true"));
     assert!(content.contains("\"test\"") && content.contains("\"example\""));

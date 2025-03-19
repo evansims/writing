@@ -173,7 +173,7 @@ pub fn markdown_to_html(content: &str) -> String {
 pub fn generate_frontmatter(
     title: &str,
     published: Option<&str>,
-    tagline: Option<&str>,
+    description: Option<&str>,
     tags: Option<Vec<&str>>,
     draft: bool,
 ) -> String {
@@ -185,8 +185,8 @@ pub fn generate_frontmatter(
         frontmatter.push_str(&format!("published: {}\n", published_date));
     }
 
-    if let Some(tagline_text) = tagline {
-        frontmatter.push_str(&format!("tagline: \"{}\"\n", tagline_text));
+    if let Some(description_text) = description {
+        frontmatter.push_str(&format!("description: \"{}\"\n", description_text));
     }
 
     if let Some(tag_list) = tags {
@@ -230,7 +230,7 @@ mod tests {
         let content = r#"---
 title: "Test Title"
 published: 2023-01-01
-tagline: "Test Tagline"
+description: "Test description"
 tags:
   - test
   - markdown
@@ -247,7 +247,7 @@ This is a test paragraph."#;
         let (frontmatter, markdown) = result.unwrap();
         assert_eq!(frontmatter.title, "Test Title");
         assert_eq!(frontmatter.published_at, Some("2023-01-01".to_string()));
-        assert_eq!(frontmatter.tagline, Some("Test Tagline".to_string()));
+        assert_eq!(frontmatter.description, Some("Test Description".to_string()));
         assert_eq!(frontmatter.tags, Some(vec!["test".to_string(), "markdown".to_string()]));
         assert_eq!(frontmatter.is_draft, Some(true));
 

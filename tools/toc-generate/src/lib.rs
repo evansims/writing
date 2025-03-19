@@ -32,8 +32,8 @@ impl Default for TocOptions {
 pub struct ArticleInfo {
     /// Article title
     pub title: String,
-    /// Article tagline/description
-    pub tagline: String,
+    /// Article description
+    pub description: String,
     /// Path to the article
     pub path: PathBuf,
 }
@@ -58,7 +58,7 @@ pub fn collect_articles(config: &Config) -> Result<HashMap<String, Vec<ArticleIn
     let mut articles: HashMap<String, Vec<ArticleInfo>> = config.content.topics.keys()
         .map(|topic_key| (topic_key.clone(), Vec::new()))
         .collect();
-    
+
     // Process content directory and collect articles
     let walkdir_iter = WalkDir::new(&config.content.base_dir)
         .min_depth(3)
@@ -66,10 +66,10 @@ pub fn collect_articles(config: &Config) -> Result<HashMap<String, Vec<ArticleIn
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_name() == "index.mdx");
-    
+
     for entry in walkdir_iter {
         let path = entry.path();
-        
+
         // Use functional error handling with and_then
         if let Err(e) = fs::read_to_string(path)
             .context(format!("Failed to read file: {:?}", path))
@@ -82,20 +82,20 @@ pub fn collect_articles(config: &Config) -> Result<HashMap<String, Vec<ArticleIn
                     .and_then(|(frontmatter, _)| {
                         let article_path = path.parent().unwrap();
                         let relative_path = article_path.strip_prefix(Path::new("."))?;
-                        
+
                         // Process topic references if present
                         if let Some(topics) = &frontmatter.topics {
                             for topic_key in topics {
                                 if let Some(articles_for_topic) = articles.get_mut(topic_key) {
                                     articles_for_topic.push(ArticleInfo {
                                         title: frontmatter.title.clone(),
-                                        tagline: frontmatter.tagline.clone().unwrap_or_default(),
+                                        description: frontmatter.description.clone().unwrap_or_default(),
                                         path: relative_path.to_path_buf(),
                                     });
                                 }
                             }
                         }
-                        
+
                         Ok(())
                     })
             })
@@ -103,7 +103,7 @@ pub fn collect_articles(config: &Config) -> Result<HashMap<String, Vec<ArticleIn
             eprintln!("Warning: {}", e);
         }
     }
-    
+
     Ok(articles)
 }
 
@@ -114,42 +114,42 @@ pub fn generate_toc_content(
     options: &TocOptions,
 ) -> String {
     let mut toc = String::new();
-    
+
     // Add title
     let title = options.title.as_deref().unwrap_or("Writing Collection");
     toc.push_str(&format!("# {}\n\n", title));
-    
+
     // Add description
     let description = options.description.as_deref().unwrap_or(
         "A curated collection of personal writings exploring creativity, engineering, focus, mindset, strategy, and tools."
     );
     toc.push_str(&format!("{}\n\n", description));
-    
+
     // Add table of contents with topic descriptions
     for (topic_key, topic_config) in &config.content.topics {
         toc.push_str(&format!("## {}\n\n", topic_config.name));
         toc.push_str(&format!("{}\n\n", topic_config.description));
-        
+
         if let Some(articles_for_topic) = articles.get(topic_key) {
             if articles_for_topic.is_empty() {
                 toc.push_str("*No articles yet*\n\n");
             } else {
                 for article in articles_for_topic {
-                    toc.push_str(&format!("- [{}]({}) - {}\n", 
-                        article.title, 
-                        article.path.display(), 
-                        article.tagline
+                    toc.push_str(&format!("- [{}]({}) - {}\n",
+                        article.title,
+                        article.path.display(),
+                        article.description
                     ));
                 }
                 toc.push_str("\n");
             }
         }
     }
-    
+
     // Add footer
     toc.push_str("---\n\n");
     toc.push_str("This collection is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).\n");
-    
+
     toc
 }
 
@@ -157,16 +157,16 @@ pub fn generate_toc_content(
 pub fn generate_toc(options: &TocOptions) -> Result<PathBuf> {
     // Load configuration
     let config = load_config()?;
-    
+
     // Collect articles by topic
     let articles = collect_articles(&config)?;
-    
+
     // Generate table of contents content
     let toc_content = generate_toc_content(&config, &articles, options);
-    
+
     // Write to output file
     fs::write(&options.output, toc_content)
         .context(format!("Failed to write to file: {:?}", options.output))?;
-    
+
     Ok(options.output.clone())
-} 
+}

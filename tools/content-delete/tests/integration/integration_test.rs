@@ -16,9 +16,9 @@ fn test_delete_content() {
     let index_file = content_dir.join("index.mdx");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     mock_fs.expect_read_file()
         .with(predicate::eq(index_file.clone()))
@@ -57,8 +57,8 @@ Test content
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create a ContentDeleterImpl instance
     let deleter = ContentDeleterImpl::new();
@@ -80,9 +80,9 @@ fn test_delete_nonexistent_content() {
     let content_dir = fixture.path().join("content/blog/nonexistent-post");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -107,8 +107,8 @@ fn test_delete_nonexistent_content() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create a ContentDeleterImpl instance
     let deleter = ContentDeleterImpl::new();
@@ -132,9 +132,9 @@ fn test_can_delete_check() {
     let content_dir = fixture.path().join("content/blog/test-post");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -159,8 +159,8 @@ fn test_can_delete_check() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create a ContentDeleterImpl instance
     let deleter = ContentDeleterImpl::new();
@@ -183,9 +183,9 @@ fn test_can_delete_nonexistent() {
     let content_dir = fixture.path().join("content/blog/nonexistent-post");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -210,8 +210,8 @@ fn test_can_delete_nonexistent() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create a ContentDeleterImpl instance
     let deleter = ContentDeleterImpl::new();

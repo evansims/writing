@@ -57,9 +57,9 @@ fn test_delete_command_success() {
     let index_file = content_dir.join("index.mdx");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     mock_fs.expect_read_file()
         .with(predicate::eq(index_file.clone()))
@@ -98,8 +98,8 @@ Test content
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create command with valid args and force flag
     let args = DeleteArgs {
@@ -133,9 +133,9 @@ fn test_delete_command_nonexistent_content() {
     let content_dir = fixture.path().join("content/blog/nonexistent-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -160,8 +160,8 @@ fn test_delete_command_nonexistent_content() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create command for content that doesn't exist
     let args = DeleteArgs {
@@ -204,9 +204,9 @@ fn test_content_deleter_impl() {
     let content_dir = fixture.path().join("content/blog/test-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     mock_fs.expect_remove_dir_all()
         .with(predicate::eq(content_dir.clone()))
@@ -236,8 +236,8 @@ fn test_content_deleter_impl() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create the ContentDeleterImpl
     let deleter = ContentDeleterImpl::new();

@@ -70,9 +70,9 @@ pub enum ContentCommands {
         #[arg(short, long)]
         topic: String,
 
-        /// Tagline or subtitle for the content
+        /// Description for the content
         #[arg(short = 'g', long)]
-        tagline: Option<String>,
+        description: Option<String>,
 
         /// Tags for the content (comma-separated)
         #[arg(short = 'a', long)]

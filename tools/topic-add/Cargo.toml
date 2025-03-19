@@ -28,9 +28,8 @@ serde_yaml = "0.9"
 slug = "0.1"
 
 [dev-dependencies]
+anyhow = "1.0"
 common-test-utils = { path = "../common/test_utils" }
-mockall = "0.12.1"
-proptest = "1.4.0"
-ctor = "0.2.6"
-tempfile = "3.4"
-serial_test = "3.2.0"
+proptest = "1.0.0"
+serial_test = "2.0.0"
+temp-env = "0.3.1"

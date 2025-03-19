@@ -11,7 +11,7 @@ fn test_create_new_content() {
     let output = command.assert_success(&[
         "--title", "Test Article",
         "--topic", "blog",
-        "--tagline", "A test article",
+        "--description", "A test article",
         "--content-type", "article"
     ]);
 
@@ -26,7 +26,7 @@ fn test_create_new_content() {
     // Verify content has expected structure
     let content = fs::read_to_string(content_path).unwrap();
     assert!(content.contains("title: \"Test Article\""));
-    assert!(content.contains("tagline: \"A test article\""));
+    assert!(content.contains("description: \"A test article\""));
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn test_create_new_content_with_tags() {
     let output = command.assert_success(&[
         "--title", "Tagged Article",
         "--topic", "blog",
-        "--tagline", "An article with tags",
+        "--description", "An article with tags",
         "--content-type", "article",
         "--tags", "tag1,tag2,tag3"
     ]);
@@ -54,7 +54,7 @@ fn test_create_new_content_with_tags() {
     // Verify content has expected structure
     let content = fs::read_to_string(content_path).unwrap();
     assert!(content.contains("title: \"Tagged Article\""));
-    assert!(content.contains("tagline: \"An article with tags\""));
+    assert!(content.contains("description: \"An article with tags\""));
     assert!(content.contains("\"tag1\","));
     assert!(content.contains("\"tag2\","));
     assert!(content.contains("\"tag3\","));
@@ -69,7 +69,7 @@ fn test_create_new_content_as_draft() {
     let output = command.assert_success(&[
         "--title", "Draft Article",
         "--topic", "blog",
-        "--tagline", "A draft article",
+        "--description", "A draft article",
         "--content-type", "article",
         "--draft"
     ]);
@@ -85,7 +85,7 @@ fn test_create_new_content_as_draft() {
     // Verify content has expected structure
     let content = fs::read_to_string(content_path).unwrap();
     assert!(content.contains("title: \"Draft Article\""));
-    assert!(content.contains("tagline: \"A draft article\""));
+    assert!(content.contains("description: \"A draft article\""));
     assert!(content.contains("draft: true"));
     assert!(content.contains("date: DRAFT"));
 }
@@ -99,7 +99,7 @@ fn test_create_new_content_with_custom_template() {
     let template_dir = command.fixture.temp_dir.path().join("templates");
     fs::create_dir_all(&template_dir).unwrap();
     let template_path = template_dir.join("custom-template.hbs");
-    fs::write(template_path, "---\ntitle: \"{{title}}\"\ntagline: \"{{tagline}}\"\n---\n\n# {{title}}\n\n{{introduction}}").unwrap();
+    fs::write(template_path, "---\ntitle: \"{{title}}\"\description: \"{{description}}\"\n---\n\n# {{title}}\n\n{{introduction}}").unwrap();
 
     // Set template directory in config
     let config_path = command.fixture.path().join("config.yaml");
@@ -111,7 +111,7 @@ fn test_create_new_content_with_custom_template() {
     let output = command.assert_success(&[
         "--title", "Custom Template Article",
         "--topic", "blog",
-        "--tagline", "Using a custom template",
+        "--description", "Using a custom template",
         "--content-type", "article",
         "--template", "custom-template"
     ]);
@@ -127,7 +127,7 @@ fn test_create_new_content_with_custom_template() {
     // Verify content has expected structure
     let content = fs::read_to_string(content_path).unwrap();
     assert!(content.contains("title: \"Custom Template Article\""));
-    assert!(content.contains("tagline: \"Using a custom template\""));
+    assert!(content.contains("description: \"Using a custom template\""));
     assert!(content.contains("# Custom Template Article"));
 }
 
@@ -140,7 +140,7 @@ fn test_create_new_content_with_invalid_topic() {
     let output = command.assert_failure(&[
         "--title", "Invalid Topic Article",
         "--topic", "invalid-topic",
-        "--tagline", "An article with invalid topic",
+        "--description", "An article with invalid topic",
         "--content-type", "article"
     ]);
 
@@ -170,8 +170,8 @@ fn test_interactive_content_creation() {
     interactive.expect("Select topic").unwrap();
     interactive.send("1").unwrap(); // Assuming the first item is "blog"
 
-    // Enter tagline
-    interactive.expect("Enter tagline").unwrap();
+    // Enter description
+    interactive.expect("Enter description").unwrap();
     interactive.send("An interactive article").unwrap();
 
     // Enter content type
@@ -197,7 +197,7 @@ fn test_interactive_content_creation() {
     // Verify content has expected structure
     let content = fs::read_to_string(content_path).unwrap();
     assert!(content.contains("title: \"Interactive Article\""));
-    assert!(content.contains("tagline: \"An interactive article\""));
+    assert!(content.contains("description: \"An interactive article\""));
     assert!(content.contains("\"interactive\","));
     assert!(content.contains("\"test\","));
 }

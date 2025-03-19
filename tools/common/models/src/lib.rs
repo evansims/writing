@@ -368,7 +368,7 @@ impl Default for PublicationConfig {
 ///     published_at: Some("2023-01-01".to_string()),
 ///     updated_at: None,
 ///     slug: Some("article-slug".to_string()),
-///     tagline: Some("Article tagline".to_string()),
+///     description: Some("Article description".to_string()),
 ///     tags: Some(vec!["tag1".to_string(), "tag2".to_string()]),
 ///     topics: Some(vec!["topic1".to_string()]),
 ///     is_draft: Some(false),
@@ -387,8 +387,8 @@ pub struct Frontmatter {
     pub updated_at: Option<String>,
     /// Optional slug for the article
     pub slug: Option<String>,
-    /// Optional tagline or subtitle
-    pub tagline: Option<String>,
+    /// Optional description
+    pub description: Option<String>,
     /// Optional list of tags
     pub tags: Option<Vec<String>>,
     /// Optional list of topics
@@ -408,7 +408,7 @@ impl Default for Frontmatter {
             published_at: None,
             updated_at: None,
             slug: None,
-            tagline: None,
+            description: None,
             tags: None,
             topics: None,
             is_draft: Some(true),
@@ -433,7 +433,7 @@ impl Default for Frontmatter {
 ///         published_at: Some("2023-01-01".to_string()),
 ///         updated_at: None,
 ///         slug: Some("my-first-post".to_string()),
-///         tagline: None,
+///         description: None,
 ///         tags: Some(vec!["intro".to_string()]),
 ///         topics: Some(vec!["blog".to_string()]),
 ///         is_draft: Some(false),

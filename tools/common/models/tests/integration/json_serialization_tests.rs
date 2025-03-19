@@ -129,7 +129,7 @@ fn test_frontmatter_yaml_compatibility() {
         published_at: Some("2023-01-01".to_string()),
         updated_at: Some("2023-01-15".to_string()),
         slug: Some("test-article".to_string()),
-        tagline: Some("This is a test article".to_string()),
+        description: Some("This is a test article".to_string()),
         tags: Some(vec!["test".to_string(), "article".to_string()]),
         topics: Some(vec!["blog".to_string()]),
         is_draft: Some(false),
@@ -147,7 +147,7 @@ fn test_frontmatter_yaml_compatibility() {
     assert_eq!(deserialized.published_at, frontmatter.published_at);
     assert_eq!(deserialized.updated_at, frontmatter.updated_at);
     assert_eq!(deserialized.slug, frontmatter.slug);
-    assert_eq!(deserialized.tagline, frontmatter.tagline);
+    assert_eq!(deserialized.description, frontmatter.description);
     assert_eq!(deserialized.tags, frontmatter.tags);
     assert_eq!(deserialized.topics, frontmatter.topics);
     assert_eq!(deserialized.is_draft, frontmatter.is_draft);
@@ -163,7 +163,7 @@ fn test_article_serialization() {
             published_at: Some("2023-01-01".to_string()),
             updated_at: None,
             slug: Some("test-article".to_string()),
-            tagline: None,
+            description: None,
             tags: Some(vec!["test".to_string()]),
             topics: Some(vec!["blog".to_string()]),
             is_draft: Some(false),
@@ -201,7 +201,7 @@ fn test_serialize_article_to_json() {
             published_at: Some("2023-01-01".to_string()),
             updated_at: None,
             slug: Some("test-article".to_string()),
-            tagline: Some("A test article".to_string()),
+            description: Some("A test article".to_string()),
             tags: Some(vec!["test".to_string(), "sample".to_string()]),
             topics: Some(vec!["blog".to_string()]),
             is_draft: Some(false),
@@ -233,7 +233,7 @@ fn test_deserialize_json_to_article() {
             "title": "Test Article",
             "published": "2023-01-01",
             "slug": "test-article",
-            "tagline": "A test article",
+            "description": "A test article",
             "tags": ["test", "sample"],
             "topics": ["blog"],
             "draft": false

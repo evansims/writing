@@ -87,7 +87,7 @@ fn test_mock_content_operations() {
             published_at: Some("2023-01-01".to_string()),
             updated_at: None,
             slug: Some("test-article".to_string()),
-            tagline: None,
+            description: None,
             tags: Some(vec!["test".to_string()]),
             topics: Some(vec!["blog".to_string()]),
             is_draft: Some(false),

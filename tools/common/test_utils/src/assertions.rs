@@ -98,7 +98,7 @@ pub fn assert_frontmatter(frontmatter: &Frontmatter, expected: &[(&str, &str)]) 
     for (key, value) in expected {
         match *key {
             "title" => assert_eq!(frontmatter.title, *value, "Frontmatter title did not match"),
-            "tagline" => assert_eq!(frontmatter.tagline.as_deref().unwrap_or(""), *value, "Frontmatter tagline did not match"),
+            "description" => assert_eq!(frontmatter.description.as_deref().unwrap_or(""), *value, "Frontmatter description did not match"),
             "published_at" => assert_eq!(frontmatter.published_at.as_deref().unwrap_or(""), *value, "Frontmatter published_at did not match"),
             "updated_at" => assert_eq!(frontmatter.updated_at.as_deref().unwrap_or(""), *value, "Frontmatter updated_at did not match"),
             "slug" => assert_eq!(frontmatter.slug.as_deref().unwrap_or(""), *value, "Frontmatter slug did not match"),

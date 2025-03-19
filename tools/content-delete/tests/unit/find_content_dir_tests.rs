@@ -15,9 +15,9 @@ fn test_find_content_dir_with_topic() {
     let content_dir = fixture.path().join("content/blog/test-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -47,8 +47,8 @@ fn test_find_content_dir_with_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act - Call function with topic specified
     let result = find_content_dir("test-article", Some("blog"));
@@ -80,13 +80,13 @@ fn test_find_content_dir_without_topic() {
     let podcast_content_dir = fixture.path().join("content/podcast/some-article");
 
     // Mock file existence checks - first check for blog fails, second for podcast succeeds
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast_content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -116,8 +116,8 @@ fn test_find_content_dir_without_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act - Call function without topic specified (should search all topics)
     let result = find_content_dir("test-article", None);
@@ -148,9 +148,9 @@ fn test_find_content_dir_nonexistent_content() {
     let content_dir = fixture.path().join("content/blog/nonexistent-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -180,8 +180,8 @@ fn test_find_content_dir_nonexistent_content() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act - Call function with nonexistent content
     let result = find_content_dir("nonexistent-article", Some("blog"));
@@ -225,7 +225,7 @@ fn test_find_content_dir_invalid_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.config = mock_config;
 
     // Act - Call function with invalid topic
     let result = find_content_dir("test-article", Some("nonexistent-topic"));
@@ -247,13 +247,13 @@ fn test_find_content_dir_same_slug_different_topics() {
     let podcast_content_dir = fixture.path().join("content/podcast/test-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast_content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -284,8 +284,8 @@ fn test_find_content_dir_same_slug_different_topics() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act & Assert - Find with blog topic
     let blog_result = find_content_dir("test-article", Some("blog"));

@@ -2,59 +2,40 @@
 
 use anyhow::Result;
 use common_test_utils::fixtures::TestFixture;
-use common_test_utils::proptest::strategies::*;
 use content_stats::{StatsOptions, ContentStats, calculate_stats};
 use common_models::Frontmatter;
 use proptest::prelude::*;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 // Strategies for generating test data
 fn frontmatter_strategy() -> impl Strategy<Value = Frontmatter> {
-    (
-        prop::string::string_regex("[A-Za-z0-9 ]{3,30}").unwrap(),
-        prop::option::of(prop::string::string_regex("[A-Za-z0-9 ]{10,50}").unwrap()),
-        prop::option::of(prop::string::string_regex("[0-9]{4}-[0-9]{2}-[0-9]{2}").unwrap()),
-        prop::option::of(prop::bool::ANY),
-        prop::option::of(prop::collection::vec(
-            prop::string::string_regex("[a-z-]{3,10}").unwrap(),
-            0..5
-        ))
-    ).prop_map(|(title, description, date, is_draft, tags)| {
-        Frontmatter {
-            title,
-            description,
-            published_at: date,
-            is_draft,
-            tags,
-            content_type: Some("article".to_string()),
-            image: None,
-            canonical_url: None,
-            custom_excerpt: None,
-            url: None,
-            slug: None,
-            meta_title: None,
-            meta_description: None,
-            feature_image: None,
-            template: None,
-            excerpt: None,
-            primary_author: None,
-            created_at: None,
-            updated_at: None,
-            twitter_card: None,
-            twitter_title: None,
-            twitter_description: None,
-            twitter_image: None,
-            og_title: None,
-            og_description: None,
-            og_image: None,
-            og_type: None,
-            visibility: None,
-            custom_template: None,
-            frontmatter_type: None,
-            status: None,
-            locale: None,
-        }
-    })
+    // Generate optional strings for the frontmatter fields
+    let title = any::<String>().prop_filter("Title should not be empty", |s| !s.is_empty());
+    let published_at = any::<Option<String>>();
+    let updated_at = any::<Option<String>>();
+    let slug = any::<Option<String>>();
+    let tagline = any::<Option<String>>();
+    let tags = any::<Option<Vec<String>>>();
+    let topics = any::<Option<Vec<String>>>();
+    let is_draft = any::<Option<bool>>();
+    let featured_image_path = any::<Option<String>>();
+
+    // Build the frontmatter struct
+    (title, published_at, updated_at, slug, tagline, tags, topics, is_draft, featured_image_path)
+        .prop_map(|(title, published_at, updated_at, slug, tagline, tags, topics, is_draft, featured_image_path)| {
+            Frontmatter {
+                title,
+                published_at,
+                updated_at,
+                slug,
+                tagline,
+                tags,
+                topics,
+                is_draft,
+                featured_image_path,
+            }
+        })
 }
 
 fn content_strategy() -> impl Strategy<Value = String> {
@@ -94,7 +75,7 @@ proptest! {
 
         // For publish date, it should match the frontmatter or be "DRAFT"
         if let Some(ref date) = frontmatter.published_at {
-            prop_assert_eq!(stats.published, date);
+            prop_assert_eq!(&stats.published, date);
         } else {
             prop_assert_eq!(stats.published, "DRAFT");
         }
@@ -124,7 +105,7 @@ proptest! {
 
         // Tags should match or be empty
         if let Some(ref tags) = frontmatter.tags {
-            prop_assert_eq!(stats.tags, tags);
+            prop_assert_eq!(&stats.tags, tags);
         } else {
             prop_assert!(stats.tags.is_empty(), "Tags should be empty for null frontmatter tags");
         }

@@ -112,7 +112,7 @@ proptest! {
         let content_path = PathBuf::from(format!("content/{}/{}/index.mdx", topic, slug));
 
         // Set up mock expectations
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .returning(|_| Ok(true));
 
         mock_fs.expect_read_file()
@@ -189,7 +189,7 @@ proptest! {
         let mut mock_config = MockConfigLoader::new();
 
         // Set up mock expectations - file system returns false for exists
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .returning(|_| Ok(false));
 
         let config = common_models::Config {
@@ -269,7 +269,7 @@ draft: {}
 "#, title, description, is_draft);
 
         // Set up mock expectations
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .returning(|_| Ok(true));
 
         mock_fs.expect_read_file()

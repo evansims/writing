@@ -1,14 +1,11 @@
 ---
 title: "{{ title }}"
-tagline: "{{ tagline }}"
+description: "{{ description }}"
 slug: "{{ slug }}"
 topics: ["{{ topic }}"]
-tags:
-  [
-    {{ tags }}
-  ]
+tags: [{ { tags } }]
 published: "{{ date }}"
-draft: {{ draft }}
+draft: { { draft } }
 references:
   - title: "Reference Title"
     author: Author Name

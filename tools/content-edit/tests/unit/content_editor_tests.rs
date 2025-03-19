@@ -24,7 +24,7 @@ fn test_edit_content_with_valid_options() {
     let content_path = PathBuf::from("content/blog/test-post/index.mdx");
     let content_dir = content_path.parent().unwrap().to_path_buf();
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_path.clone()))
         .returning(|_| Ok(true));
 
@@ -105,7 +105,7 @@ fn test_update_frontmatter_field() {
     let content_path = PathBuf::from("content/blog/test-post/index.mdx");
     let content_dir = content_path.parent().unwrap().to_path_buf();
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_path.clone()))
         .returning(|_| Ok(true));
 
@@ -184,7 +184,7 @@ fn test_get_frontmatter_fields() {
     let content_path = PathBuf::from("content/blog/test-post/index.mdx");
     let content_dir = content_path.parent().unwrap().to_path_buf();
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_path.clone()))
         .returning(|_| Ok(true));
 
@@ -264,7 +264,7 @@ fn test_edit_content_with_nonexistent_content() {
     let mut mock_fs = MockFileSystem::new();
 
     // Set expectations for finding content path - this will fail
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .returning(|_| Ok(false));
 
     // Create mock ConfigLoader

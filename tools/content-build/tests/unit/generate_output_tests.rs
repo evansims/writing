@@ -9,7 +9,7 @@ use common_models::{Article, Frontmatter, Config, ContentConfig, TopicConfig, Pu
 #[test]
 fn test_generate_sitemap() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -22,7 +22,7 @@ fn test_generate_sitemap() {
         .returning(|_, _| Ok(()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create test articles
     let articles = vec![
@@ -108,7 +108,7 @@ fn test_generate_sitemap() {
 #[test]
 fn test_generate_sitemap_without_site_url() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -121,7 +121,7 @@ fn test_generate_sitemap_without_site_url() {
         .returning(|_, _| Ok(()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create test articles
     let articles = vec![
@@ -175,7 +175,7 @@ fn test_generate_sitemap_without_site_url() {
 #[test]
 fn test_generate_rss_feed() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -188,7 +188,7 @@ fn test_generate_rss_feed() {
         .returning(|_, _| Ok(()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create test articles
     let articles = vec![
@@ -274,7 +274,7 @@ fn test_generate_rss_feed() {
 #[test]
 fn test_generate_rss_feed_with_many_articles() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -287,7 +287,7 @@ fn test_generate_rss_feed_with_many_articles() {
         .returning(|_, _| Ok(()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create many test articles (more than the limit of 20)
     let mut articles = Vec::new();
@@ -342,7 +342,7 @@ fn test_generate_rss_feed_with_many_articles() {
 #[test]
 fn test_generate_sitemap_file_error() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -352,10 +352,10 @@ fn test_generate_sitemap_file_error() {
     // Mock file system operations to fail
     mock_fs.expect_write_file()
         .with(predicate::eq(sitemap_path.clone()), predicate::always())
-        .returning(|_, _| Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Permission denied")));
+        .returning(|_, _| Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Permission denied").into()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create test articles
     let articles = vec![
@@ -391,7 +391,7 @@ fn test_generate_sitemap_file_error() {
 #[test]
 fn test_generate_rss_feed_file_error() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -401,10 +401,10 @@ fn test_generate_rss_feed_file_error() {
     // Mock file system operations to fail
     mock_fs.expect_write_file()
         .with(predicate::eq(rss_path.clone()), predicate::always())
-        .returning(|_, _| Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Permission denied")));
+        .returning(|_, _| Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Permission denied").into()));
 
     // Register mock file system
-    fixture.register_fs(Box::new(mock_fs));
+    fixture.fs = mock_fs;
 
     // Create test articles
     let articles = vec![

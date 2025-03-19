@@ -92,7 +92,9 @@ topics:
                    "Output should contain word count information: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -114,7 +116,9 @@ topics:
                    "Output should not contain other article title: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -134,11 +138,13 @@ topics:
                    "Output should mention the topic: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
-    fn test_stats_cli_including_drafts() -> Result<()> {
+    fn test_stats_cli_include_drafts() -> Result<()> {
         with_test_fixture!(fixture => {
             // Set up test environment
             setup_test_articles(&fixture)?;
@@ -156,11 +162,13 @@ topics:
                    "Output should indicate draft status: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
-    fn test_stats_cli_sort_by_word_count() -> Result<()> {
+    fn test_stats_cli_sort_options() -> Result<()> {
         with_test_fixture!(fixture => {
             // Set up test environment
             setup_test_articles(&fixture)?;
@@ -168,13 +176,15 @@ topics:
             // Create a test command
             let command = TestCommand::cargo_binary("content-stats")?;
 
-            // Test stats sorted by word count
+            // Test sorting options
             let output = command.run_with_args(&["--sort-by", "word_count"])?;
 
             assert!(output.status.success(), "Command failed: {}", output.stderr);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -186,7 +196,7 @@ topics:
             // Create a test command
             let command = TestCommand::cargo_binary("content-stats")?;
 
-            // Test detailed stats output
+            // Test detailed output
             let output = command.run_with_args(&["--detailed"])?;
 
             assert!(output.status.success(), "Command failed: {}", output.stderr);
@@ -196,7 +206,9 @@ topics:
                    "Output should include paragraph count: {}", output.stdout);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 
     #[test]
@@ -208,7 +220,7 @@ topics:
             // Create a test command
             let command = TestCommand::cargo_binary("content-stats")?;
 
-            // Test stats for a nonexistent slug
+            // Test with nonexistent slug
             let output = command.run_with_args(&["--slug", "nonexistent-article"])?;
 
             assert!(!output.status.success(), "Command should fail with nonexistent slug");
@@ -216,6 +228,8 @@ topics:
                    "Error should mention the nonexistent slug: {}", output.stderr);
 
             Ok(())
-        })
+        });
+
+        Ok(())
     }
 }

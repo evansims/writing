@@ -1,14 +1,11 @@
 ---
 title: "{{ title }}"
-tagline: "{{ tagline }}"
+description: "{{ description }}"
 slug: "{{ slug }}"
 topics: ["{{ topic }}"]
-tags:
-  [
-    {{ tags }}
-  ]
+tags: [{ { tags } }]
 published: "{{ date }}"
-draft: {{ draft }}
+draft: { { draft } }
 type: "tutorial"
 difficulty: "{{ difficulty }}"
 ---
@@ -41,4 +38,4 @@ difficulty: "{{ difficulty }}"
 ## Next Steps
 
 - Suggestion 1
-- Suggestion 2 
+- Suggestion 2

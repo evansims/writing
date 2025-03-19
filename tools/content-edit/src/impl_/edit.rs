@@ -352,10 +352,10 @@ pub fn update_frontmatter_field(slug: &str, topic: Option<&str>, field: &str, va
         );
     }
 
-    if let Some(tagline) = &frontmatter.tagline {
+    if let Some(description) = &frontmatter.description {
         fm_mapping.insert(
-            serde_yaml::Value::String("tagline".to_string()),
-            serde_yaml::Value::String(tagline.clone())
+            serde_yaml::Value::String("description".to_string()),
+            serde_yaml::Value::String(description.clone())
         );
     }
 

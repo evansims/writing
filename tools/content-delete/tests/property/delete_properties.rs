@@ -48,9 +48,9 @@ proptest! {
         let content_dir = fixture.path().join(format!("content/{}/{}", topic, slug));
 
         // Mock file existence checks
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .with(predicate::eq(content_dir.clone()))
-            .returning(|_| true);
+            .returning(|_| Ok(true));
 
         mock_fs.expect_remove_dir_all()
             .with(predicate::eq(content_dir.clone()))
@@ -79,8 +79,8 @@ proptest! {
             .returning(move || Ok(config.clone()));
 
         // Register mocks with the fixture
-        fixture.register_fs(Box::new(mock_fs));
-        fixture.register_config_loader(Box::new(mock_config));
+        fixture.fs = mock_fs;
+        fixture.config = mock_config;
 
         // Create delete options with force flag to ensure deletion happens
         let options = DeleteOptions {
@@ -109,9 +109,9 @@ proptest! {
         let content_dir = fixture.path().join(format!("content/{}/{}", topic, slug));
 
         // Mock file existence checks - content should not exist
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .with(predicate::eq(content_dir.clone()))
-            .returning(|_| false);
+            .returning(|_| Ok(false));
 
         // Create a mock config for topics
         let mut topics = HashMap::new();
@@ -136,8 +136,8 @@ proptest! {
             .returning(move || Ok(config.clone()));
 
         // Register mocks with the fixture
-        fixture.register_fs(Box::new(mock_fs));
-        fixture.register_config_loader(Box::new(mock_config));
+        fixture.fs = mock_fs;
+        fixture.config = mock_config;
 
         // Create delete options with invalid slug
         let options = DeleteOptions {
@@ -191,7 +191,7 @@ proptest! {
             .returning(move || Ok(config.clone()));
 
         // Register mocks with the fixture
-        fixture.register_config_loader(Box::new(mock_config));
+        fixture.config = mock_config;
 
         // Create delete options with invalid topic
         let options = DeleteOptions {

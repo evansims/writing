@@ -8,7 +8,7 @@ use common_models::{Config, ContentConfig, TopicConfig};
 #[test]
 fn test_find_content_files_all_topics() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -21,31 +21,31 @@ fn test_find_content_files_all_topics() {
     let podcast1_dir = podcast_dir.join("episode1");
 
     // Mock file system directory listing
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article1_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article2_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast1_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article1_dir.clone(), article2_dir.clone()]));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(podcast_dir.clone()))
         .returning(move |_| Ok(vec![podcast1_dir.clone()]));
 
@@ -77,8 +77,8 @@ fn test_find_content_files_all_topics() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_files(&base_dir, None);
@@ -102,7 +102,7 @@ fn test_find_content_files_all_topics() {
 #[test]
 fn test_find_content_files_specific_topic() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -113,19 +113,19 @@ fn test_find_content_files_specific_topic() {
     let article2_dir = blog_dir.join("article2");
 
     // Mock file system directory listing
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article1_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article2_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article1_dir.clone(), article2_dir.clone()]));
 
@@ -157,8 +157,8 @@ fn test_find_content_files_specific_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_files(&base_dir, Some("blog"));
@@ -181,7 +181,7 @@ fn test_find_content_files_specific_topic() {
 #[test]
 fn test_find_content_files_invalid_topic() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
 
     // Define test paths
     let base_dir = fixture.path().join("content");
@@ -209,7 +209,7 @@ fn test_find_content_files_invalid_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_files(&base_dir, Some("nonexistent-topic"));
@@ -222,7 +222,7 @@ fn test_find_content_files_invalid_topic() {
 #[test]
 fn test_find_content_by_slug_found() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -233,19 +233,19 @@ fn test_find_content_by_slug_found() {
     let article2_dir = blog_dir.join("another-article");
 
     // Mock file system directory listing
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article1_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article2_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article1_dir.clone(), article2_dir.clone()]));
 
@@ -272,8 +272,8 @@ fn test_find_content_by_slug_found() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_by_slug(&base_dir, "test-article", None);
@@ -288,7 +288,7 @@ fn test_find_content_by_slug_found() {
 #[test]
 fn test_find_content_by_slug_not_found() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -298,15 +298,15 @@ fn test_find_content_by_slug_not_found() {
     let article_dir = blog_dir.join("test-article");
 
     // Mock file system directory listing
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article_dir.clone()]));
 
@@ -333,8 +333,8 @@ fn test_find_content_by_slug_not_found() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_by_slug(&base_dir, "nonexistent-article", None);
@@ -347,7 +347,7 @@ fn test_find_content_by_slug_not_found() {
 #[test]
 fn test_find_content_by_slug_with_topic() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -359,15 +359,15 @@ fn test_find_content_by_slug_with_topic() {
     let podcast_dir_same_slug = podcast_dir.join("test-article");
 
     // Mock file system directory listing
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_dir.join("index.mdx")))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article_dir.clone()]));
 
@@ -399,8 +399,8 @@ fn test_find_content_by_slug_with_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Act
     let result = find_content_by_slug(&base_dir, "test-article", Some("blog"));

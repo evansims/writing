@@ -9,7 +9,7 @@ use common_models::{Config, ContentConfig, TopicConfig, PublicationConfig};
 #[test]
 fn test_build_content_integration() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths and directory structure
@@ -32,38 +32,38 @@ fn test_build_content_integration() {
     let data_dir = output_dir.join("data");
 
     // Mock directory checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article1_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article2_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(episode1_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory listing
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article1_dir.clone(), article2_dir.clone()]));
 
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(podcast_dir.clone()))
         .returning(move |_| Ok(vec![episode1_dir.clone()]));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article1_file.clone()))
         .returning(|_| Ok(r#"---
 title: "Article 1"
@@ -74,7 +74,7 @@ published_at: "2023-01-01"
 
 This is the content of article 1."#.to_string()));
 
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article2_file.clone()))
         .returning(|_| Ok(r#"---
 title: "Article 2"
@@ -85,7 +85,7 @@ published_at: "2023-01-02"
 
 This is the content of article 2."#.to_string()));
 
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(episode1_file.clone()))
         .returning(|_| Ok(r#"---
 title: "Episode 1"
@@ -137,9 +137,9 @@ This is the content of episode 1."#.to_string()));
     // Check for templates directory (doesn't exist)
     let templates_dir = PathBuf::from("templates");
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(templates_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config
     let mut topics = HashMap::new();
@@ -174,8 +174,8 @@ This is the content of episode 1."#.to_string()));
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create build options for integrated test
     let options = BuildOptions {
@@ -200,7 +200,7 @@ This is the content of episode 1."#.to_string()));
 #[test]
 fn test_build_specific_content_integration() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -212,22 +212,22 @@ fn test_build_specific_content_integration() {
     let data_dir = output_dir.join("data");
 
     // Mock directory checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory listing
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article_dir.clone()]));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file.clone()))
         .returning(|_| Ok(r#"---
 title: "Test Article"
@@ -269,9 +269,9 @@ This is a test article with some content."#.to_string()));
     // Check for templates directory (doesn't exist)
     let templates_dir = PathBuf::from("templates");
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(templates_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config
     let mut topics = HashMap::new();
@@ -301,8 +301,8 @@ This is a test article with some content."#.to_string()));
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create build options for specific slug
     let options = BuildOptions {
@@ -327,7 +327,7 @@ This is a test article with some content."#.to_string()));
 #[test]
 fn test_build_content_with_optional_features() {
     // Arrange
-    let fixture = TestFixture::new().unwrap();
+    let mut fixture = TestFixture::new().unwrap();
     let mut mock_fs = MockFileSystem::new();
 
     // Define test paths
@@ -340,22 +340,22 @@ fn test_build_content_with_optional_features() {
     let html_dir = output_dir.join("html");
 
     // Mock directory checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(article_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // Mock directory listing
-    mock_fs.expect_read_dir()
+    mock_fs.expect_list_dirs()
         .with(predicate::eq(blog_dir.clone()))
         .returning(move |_| Ok(vec![article_dir.clone()]));
 
     // Mock file content
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(article_file.clone()))
         .returning(|_| Ok(r#"---
 title: "Test Article"
@@ -392,15 +392,15 @@ This is a test article with some content."#.to_string()));
     let templates_dir = PathBuf::from("templates");
     let template_file = templates_dir.join("article.hbs");
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(templates_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(template_file.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_read_to_string()
+    mock_fs.expect_read_file()
         .with(predicate::eq(template_file.clone()))
         .returning(|_| Ok("{{title}} - {{{content}}}".to_string()));
 
@@ -446,8 +446,8 @@ This is a test article with some content."#.to_string()));
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Create build options with all features enabled
     let options = BuildOptions {

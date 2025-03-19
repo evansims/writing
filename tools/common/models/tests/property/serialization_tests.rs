@@ -84,7 +84,7 @@ mod strategies {
             published_at,
             updated_at,
             slug,
-            tagline,
+            description,
             tags,
             topics,
             is_draft,
@@ -95,7 +95,7 @@ mod strategies {
                 published_at,
                 updated_at,
                 slug,
-                tagline,
+                description,
                 tags,
                 topics,
                 is_draft,
@@ -153,7 +153,7 @@ proptest! {
         prop_assert_eq!(frontmatter.published_at, roundtrip.published_at);
         prop_assert_eq!(frontmatter.updated_at, roundtrip.updated_at);
         prop_assert_eq!(frontmatter.slug, roundtrip.slug);
-        prop_assert_eq!(frontmatter.tagline, roundtrip.tagline);
+        prop_assert_eq!(frontmatter.description, roundtrip.description);
         prop_assert_eq!(frontmatter.tags, roundtrip.tags);
         prop_assert_eq!(frontmatter.topics, roundtrip.topics);
         prop_assert_eq!(frontmatter.is_draft, roundtrip.is_draft);

@@ -95,13 +95,13 @@ proptest! {
         let published_at = frontmatter.published_at.clone();
         let tags_vec = frontmatter.tags.clone().unwrap_or_default();
         let tags = tags_vec.iter().map(|s| s.as_str()).collect();
-        let tagline = frontmatter.tagline.clone();
+        let description = frontmatter.description.clone();
         let is_draft = match frontmatter.is_draft {
             Some(value) => value,
             None => true, // Default to true if None
         };
 
-        let new_frontmatter = generate_frontmatter(&title, published_at.as_deref(), tagline.as_deref(), Some(tags), is_draft);
+        let new_frontmatter = generate_frontmatter(&title, published_at.as_deref(), description.as_deref(), Some(tags), is_draft);
         let new_doc = format!("{}{}", new_frontmatter, content);
 
         // Extract frontmatter from the new document

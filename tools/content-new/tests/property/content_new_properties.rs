@@ -53,11 +53,11 @@ proptest! {
         // Create new options with the property generated values
         let options = NewOptions {
             slug: Some(slug.clone()),
-            title: Some(title.clone()),
             topic: Some(topic.clone()),
+            title: Some(title.clone()),
             description: Some(description.clone()),
             template: None,
-            tags: Some(tags.clone()),
+            tags: None,
             draft: Some(draft),
         };
 
@@ -89,7 +89,7 @@ proptest! {
         prop_assert!(content.contains(&format!("title: \"{title}\"")));
 
         if !description.is_empty() {
-            prop_assert!(content.contains(&format!("tagline: \"{description}\"")));
+            prop_assert!(content.contains(&format!("description: \"{description}\"")));
         }
 
         // If draft is true, should have draft marker

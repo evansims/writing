@@ -4,14 +4,18 @@ use common_models::{Config, TopicConfig};
 use std::collections::HashMap;
 use topic_add::{add_topic, AddOptions};
 use serial_test::serial;
+use common_config::ConfigLoader;
+use common_test_utils::mocks::{MockConfigLoader, MockFileSystem};
+use mockall::{predicate, Sequence};
+use topic_add::{add_tags_to_topic};
 
 #[test]
-fn test_add_topic_validates_empty_key() {
+fn test_add_topic_rejects_empty_key() {
     // Arrange
     let options = AddOptions {
-        key: String::new(),
+        key: "".to_string(),
         name: "Test Topic".to_string(),
-        description: "Test description".to_string(),
+        description: "A test topic".to_string(),
         directory: "test-topic".to_string(),
     };
 
@@ -20,17 +24,19 @@ fn test_add_topic_validates_empty_key() {
 
     // Assert
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Topic key is required"));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Topic key is required"
+    );
 }
 
 #[test]
-fn test_add_topic_validates_empty_name() {
+fn test_add_topic_rejects_empty_name() {
     // Arrange
     let options = AddOptions {
         key: "test-topic".to_string(),
-        name: String::new(),
-        description: "Test description".to_string(),
+        name: "".to_string(),
+        description: "A test topic".to_string(),
         directory: "test-topic".to_string(),
     };
 
@@ -39,17 +45,19 @@ fn test_add_topic_validates_empty_name() {
 
     // Assert
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Topic name is required"));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Topic name is required"
+    );
 }
 
 #[test]
-fn test_add_topic_validates_empty_description() {
+fn test_add_topic_rejects_empty_description() {
     // Arrange
     let options = AddOptions {
         key: "test-topic".to_string(),
         name: "Test Topic".to_string(),
-        description: String::new(),
+        description: "".to_string(),
         directory: "test-topic".to_string(),
     };
 
@@ -58,18 +66,20 @@ fn test_add_topic_validates_empty_description() {
 
     // Assert
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Topic description is required"));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Topic description is required"
+    );
 }
 
 #[test]
-fn test_add_topic_validates_empty_directory() {
+fn test_add_topic_rejects_empty_directory() {
     // Arrange
     let options = AddOptions {
         key: "test-topic".to_string(),
         name: "Test Topic".to_string(),
-        description: "Test description".to_string(),
-        directory: String::new(),
+        description: "A test topic".to_string(),
+        directory: "".to_string(),
     };
 
     // Act
@@ -77,8 +87,156 @@ fn test_add_topic_validates_empty_directory() {
 
     // Assert
     assert!(result.is_err());
-    let error = result.unwrap_err().to_string();
-    assert!(error.contains("Topic directory is required"));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "Topic directory is required"
+    );
+}
+
+#[test]
+fn test_add_topic_rejects_duplicate_key() {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || {
+        // Create a config with existing topic
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+        topics.insert(
+            "existing-topic".to_string(),
+            TopicConfig {
+                name: "Existing Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "existing-topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config).unwrap();
+        std::fs::write("temp_config.yaml", config_content).unwrap();
+
+        // Create options with duplicate key
+        let options = AddOptions {
+            key: "existing-topic".to_string(),
+            name: "New Topic".to_string(),
+            description: "A new topic".to_string(),
+            directory: "new-topic".to_string(),
+        };
+
+        // Act
+        let result = add_topic(&options);
+
+        // Assert
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Topic with key 'existing-topic' already exists"
+        );
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml").unwrap_or(());
+    });
+}
+
+#[test]
+fn test_add_tags_to_topic_rejects_nonexistent_topic() {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || {
+        // Create a config with no topics
+        let config = Config::default();
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config).unwrap();
+        std::fs::write("temp_config.yaml", config_content).unwrap();
+
+        // Act
+        let result = add_tags_to_topic("nonexistent-topic", vec!["tag1".to_string(), "tag2".to_string()]);
+
+        // Assert
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Topic with key 'nonexistent-topic' does not exist"
+        );
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml").unwrap_or(());
+    });
+}
+
+#[test]
+fn test_add_tags_to_topic_handles_empty_tags() {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || {
+        // Create a config with existing topic
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+        topics.insert(
+            "existing-topic".to_string(),
+            TopicConfig {
+                name: "Existing Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "existing-topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config).unwrap();
+        std::fs::write("temp_config.yaml", config_content).unwrap();
+
+        // Act - Add empty tags
+        let result = add_tags_to_topic("existing-topic", vec![]);
+
+        // Assert - Should not error but return false (no tags added)
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), false);
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml").unwrap_or(());
+    });
+}
+
+#[test]
+fn test_add_tags_creates_tags_map_if_none_exists() {
+    // Arrange - Set up environment variable to avoid touching real config file
+    temp_env::with_var("CONFIG_PATH", Some("temp_config.yaml"), || {
+        // Create a config with existing topic but no tags map
+        let mut config = Config::default();
+        let mut topics = HashMap::new();
+        topics.insert(
+            "existing-topic".to_string(),
+            TopicConfig {
+                name: "Existing Topic".to_string(),
+                description: "An existing topic".to_string(),
+                directory: "existing-topic".to_string(),
+            },
+        );
+        config.content.topics = topics;
+        config.content.tags = None; // Ensure no tags map exists
+
+        // Write config to temporary file
+        let config_content = serde_yaml::to_string(&config).unwrap();
+        std::fs::write("temp_config.yaml", config_content).unwrap();
+
+        // Act - Add tags
+        let result = add_tags_to_topic("existing-topic", vec!["tag1".to_string(), "tag2".to_string()]);
+
+        // Assert - Should succeed
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), true);
+
+        // Verify tags were added correctly
+        let updated_config = common_config::load_config().unwrap();
+        assert!(updated_config.content.tags.is_some());
+        let tags = updated_config.content.tags.unwrap();
+        assert!(tags.contains_key("existing-topic"));
+        assert_eq!(tags.get("existing-topic").unwrap().len(), 2);
+        assert!(tags.get("existing-topic").unwrap().contains(&"tag1".to_string()));
+        assert!(tags.get("existing-topic").unwrap().contains(&"tag2".to_string()));
+
+        // Clean up
+        std::fs::remove_file("temp_config.yaml").unwrap_or(());
+    });
 }
 
 #[test]

@@ -1,11 +1,3 @@
-use content_build::{build_content, BuildOptions};
-use common_test_utils::fixtures::TestFixture;
-use common_test_utils::mocks::{MockFileSystem, MockConfigLoader};
-use mockall::predicate;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use common_models::{Config, ContentConfig, TopicConfig, PublicationConfig};
-
 #[test]
 fn test_build_content_with_single_slug() {
     // Arrange
@@ -120,7 +112,6 @@ This is the content of the test article."#.to_string()));
     // Assert
     assert!(result.is_ok(), "Building content should succeed: {:?}", result);
 }
-
 #[test]
 fn test_build_content_with_topic() {
     // Arrange
@@ -224,15 +215,15 @@ This is the content of article 2."#.to_string()));
 
     // Create a mock config
     let mut topics = HashMap::new();
-    topics.insert("blog".to_string(), TopicConfig { name: "Blog".to_string(), description: "Blog posts".to_string(), directory: "blog".to_string() }
+    topics.insert("blog".to_string(), TopicConfig { name: "Podcast".to_string(), description: "Podcast episodes".to_string(), directory: "podcast".to_string()
         name: "Blog".to_string(),
         description: "Blog posts".to_string(),
         directory: "blog".to_string(),
     });
-    topics.insert("podcast".to_string(), TopicConfig {
+    topics.insert("podcast".to_string(), TopicConfig { name: "Podcast".to_string(), description: "Podcast episodes".to_string(), directory: "podcast".to_string()
         name: "Podcast".to_string(),
-        description: "Podcast episodes".to_string(),
         directory: "podcast".to_string(),
+
     });
 
     let config = Config::default()
@@ -277,7 +268,6 @@ This is the content of article 2."#.to_string()));
     // Assert
     assert!(result.is_ok(), "Building content for topic should succeed: {:?}", result);
 }
-
 #[test]
 fn test_build_content_with_no_content_found() {
     // Arrange
@@ -299,7 +289,7 @@ fn test_build_content_with_no_content_found() {
 
     // Create a mock config
     let mut topics = HashMap::new();
-    topics.insert("blog".to_string(), TopicConfig { name: "Blog".to_string(), description: "Blog posts".to_string(), directory: "blog".to_string() }
+    topics.insert("blog".to_string(), TopicConfig { name: "Podcast".to_string(), description: "Podcast episodes".to_string(), directory: "podcast".to_string()
         name: "Blog".to_string(),
         description: "Blog posts".to_string(),
         directory: "blog".to_string(),
@@ -343,7 +333,6 @@ fn test_build_content_with_no_content_found() {
     assert!(result.is_err(), "Building content with no content found should fail");
     assert!(result.unwrap_err().to_string().contains("No content found"));
 }
-
 #[test]
 fn test_build_content_with_skip_options() {
     // Arrange
@@ -388,7 +377,7 @@ This is the content of the test article."#.to_string()));
 
     // Create a mock config
     let mut topics = HashMap::new();
-    topics.insert("blog".to_string(), TopicConfig { name: "Blog".to_string(), description: "Blog posts".to_string(), directory: "blog".to_string() }
+    topics.insert("blog".to_string(), TopicConfig { name: "Podcast".to_string(), description: "Podcast episodes".to_string(), directory: "podcast".to_string()
         name: "Blog".to_string(),
         description: "Blog posts".to_string(),
         directory: "blog".to_string(),
@@ -436,7 +425,6 @@ This is the content of the test article."#.to_string()));
     // Assert
     assert!(result.is_ok(), "Building content with skip options should succeed: {:?}", result);
 }
-
 #[test]
 fn test_build_content_with_include_drafts() {
     // Arrange
@@ -540,7 +528,7 @@ This is the content of the draft article."#.to_string()));
 
     // Create a mock config
     let mut topics = HashMap::new();
-    topics.insert("blog".to_string(), TopicConfig { name: "Blog".to_string(), description: "Blog posts".to_string(), directory: "blog".to_string() }
+    topics.insert("blog".to_string(), TopicConfig { name: "Podcast".to_string(), description: "Podcast episodes".to_string(), directory: "podcast".to_string()
         name: "Blog".to_string(),
         description: "Blog posts".to_string(),
         directory: "blog".to_string(),

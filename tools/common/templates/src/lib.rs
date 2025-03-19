@@ -293,7 +293,7 @@ mod tests {
 
         let content = r#"---
 title: "{{ title }}"
-tagline: "{{ tagline }}"
+description: "{{ description }}"
 slug: "{{ slug }}"
 topics: ["{{ topic }}"]
 tags:
@@ -337,7 +337,7 @@ This is the main content.
         // Test content retrieval
         let content = template.get_content().unwrap();
         assert!(content.contains("{{ title }}"));
-        assert!(content.contains("{{ tagline }}"));
+        assert!(content.contains("{{ description }}"));
     }
 
     #[test]
@@ -350,7 +350,7 @@ This is the main content.
         // Define variables
         let variables = [
             ("title", "Test Article"),
-            ("tagline", "This is a test article"),
+            ("description", "This is a test article"),
             ("slug", "test-article"),
             ("topic", "test"),
             ("tags", "\"test\", \"article\""),
@@ -363,7 +363,7 @@ This is the main content.
 
         // Check variable substitutions
         assert!(rendered.contains("title: \"Test Article\""));
-        assert!(rendered.contains("tagline: \"This is a test article\""));
+        assert!(rendered.contains("description: \"This is a test article\""));
         assert!(rendered.contains("slug: \"test-article\""));
         assert!(rendered.contains("topics: [\"test\"]"));
         assert!(rendered.contains("\"test\", \"article\""));
@@ -392,7 +392,7 @@ This is the main content.
         assert!(rendered.contains("slug: \"test-article\""));
 
         // Check variable substitutions (not replaced ones)
-        assert!(rendered.contains("tagline: \"{{ tagline }}\""));
+        assert!(rendered.contains("description: \"{{ description }}\""));
         assert!(rendered.contains("topics: [\"{{ topic }}\"]"));
     }
 }

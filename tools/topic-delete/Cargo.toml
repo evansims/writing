@@ -28,3 +28,6 @@ common-fs = { path = "../common/fs" }
 tempfile.workspace = true
 serial_test = "2.0.0"
 common-test-utils = { path = "../common/test_utils" }
+anyhow = "1.0"
+proptest = "1.0.0"
+temp-env = "0.3.1"

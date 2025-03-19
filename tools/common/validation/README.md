@@ -20,13 +20,13 @@ use common_errors::Result;
 fn validate_content(slug: &str, topic: Option<&str>) -> Result<()> {
     // Validate slug
     validate_slug(slug)?;
-    
+
     // Validate topic
     let topic = validate_topic(topic)?;
-    
+
     // Validate content path
     let content_path = validate_content_path(slug, topic.as_deref())?;
-    
+
     Ok(())
 }
 ```
@@ -54,7 +54,7 @@ fn validate_content(slug: &str, topic: Option<&str>) -> Result<()> {
 - `validate_content(content: &str) -> Result<Frontmatter>`: Validates that content is properly formatted
 - `validate_content_body(body: &str) -> Result<()>`: Validates that content body is properly formatted
 - `validate_content_title(title: &str) -> Result<()>`: Validates that content title is properly formatted
-- `validate_content_tagline(tagline: &str) -> Result<()>`: Validates that content tagline is properly formatted
+- `validate_content_description(description: &str) -> Result<()>`: Validates that content description is properly formatted
 - `validate_content_date(date: &str) -> Result<()>`: Validates that content date is properly formatted
 - `validate_content_type(content_type: &str) -> Result<String>`: Validates that content type is supported
 
@@ -67,4 +67,4 @@ fn validate_content(slug: &str, topic: Option<&str>) -> Result<()> {
 ### Tag Validation
 
 - `validate_tags(tags: &str) -> Result<Vec<String>>`: Validates that tags are properly formatted
-- `format_tags(tags: &str) -> String`: Formats tags for frontmatter 
+- `format_tags(tags: &str) -> String`: Formats tags for frontmatter

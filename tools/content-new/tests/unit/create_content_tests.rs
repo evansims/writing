@@ -42,7 +42,7 @@ fn test_create_content_with_valid_options() -> Result<()> {
     // Verify the file exists and has the expected content
     let content = std::fs::read_to_string(&content_path)?;
     assert!(content.contains("title: \"Test Title\""));
-    assert!(content.contains("tagline: \"Test description\""));
+    assert!(content.contains("description: \"Test description\""));
     assert!(content.contains("# Test Title"));
     assert!(content.contains("\"test\""));
     assert!(content.contains("\"example\""));
@@ -205,7 +205,7 @@ fn test_create_content_with_template() -> Result<()> {
         description: Some("This post uses a template".to_string()),
         template: Some("article".to_string()),
         tags: None,
-        draft: None,
+        draft: Some(false),
     };
 
     // Act

@@ -142,16 +142,16 @@ pub fn valid_path_strategy() -> impl Strategy<Value = PathBuf> {
 pub fn valid_frontmatter_strategy() -> impl Strategy<Value = Frontmatter> {
     (
         valid_title_strategy(),
-        valid_title_strategy().prop_map(Some), // tagline is optional
+        valid_title_strategy().prop_map(Some), // description is optional
         valid_date_strategy(),
         valid_slug_strategy(),
         valid_tags_strategy().prop_map(|t| Some(vec![t])), // tags are optional
         valid_topic_key_strategy().prop_map(|t| Some(vec![t])), // topic is optional
         prop::bool::ANY,
-    ).prop_map(|(title, tagline, published, slug, tags, topics, draft)| {
+    ).prop_map(|(title, description, published, slug, tags, topics, draft)| {
         Frontmatter {
             title,
-            tagline,
+            description,
             published_at: Some(published.clone()),
             updated_at: Some(published),
             slug: Some(slug),

@@ -48,7 +48,7 @@ fn test_delete_content_nonexistent_topic() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.config = mock_config;
 
     // Topic must exist
     let options = DeleteOptions {
@@ -73,9 +73,9 @@ fn test_delete_content_topic_not_found() {
     let content_dir = fixture.path().join("content/blog/nonexistent-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     // Create a mock config for topics
     let mut topics = HashMap::new();
@@ -100,8 +100,8 @@ fn test_delete_content_topic_not_found() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Content must exist in the specified topic
     let options = DeleteOptions {
@@ -126,9 +126,9 @@ fn test_delete_content_success() {
     let content_dir = fixture.path().join("content/blog/test-article");
 
     // Mock file existence checks and operations
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     mock_fs.expect_remove_dir_all()
         .with(predicate::eq(content_dir.clone()))
@@ -157,8 +157,8 @@ fn test_delete_content_success() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Successfully delete content
     let options = DeleteOptions {
@@ -182,13 +182,13 @@ fn test_delete_content_search_in_all_topics() {
     let podcast_content_dir = fixture.path().join("content/podcast/test-article");
 
     // Mock file existence checks - test that it finds content in blog topic
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(blog_content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(podcast_content_dir.clone()))
-        .returning(|_| false);
+        .returning(|_| Ok(false));
 
     mock_fs.expect_remove_dir_all()
         .with(predicate::eq(blog_content_dir.clone()))
@@ -222,8 +222,8 @@ fn test_delete_content_search_in_all_topics() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // When topic is not specified, search in all topics
     let options = DeleteOptions {
@@ -246,9 +246,9 @@ fn test_delete_content_non_force_safety() {
     let content_dir = fixture.path().join("content/blog/test-article");
 
     // Mock file existence checks
-    mock_fs.expect_exists()
+    mock_fs.expect_dir_exists()
         .with(predicate::eq(content_dir.clone()))
-        .returning(|_| true);
+        .returning(|_| Ok(true));
 
     // This may or may not be called depending on implementation
     mock_fs.expect_remove_dir_all()
@@ -278,8 +278,8 @@ fn test_delete_content_non_force_safety() {
         .returning(move || Ok(config.clone()));
 
     // Register mocks with the fixture
-    fixture.register_fs(Box::new(mock_fs));
-    fixture.register_config_loader(Box::new(mock_config));
+    fixture.fs = mock_fs;
+    fixture.config = mock_config;
 
     // Without force flag, deletion should require confirmation
     let options = DeleteOptions {

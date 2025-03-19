@@ -69,7 +69,7 @@ proptest! {
         content in valid_markdown_strategy(),
     ) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test paths
@@ -77,7 +77,7 @@ proptest! {
         let index_file = content_dir.join("index.mdx");
 
         // Generate valid MDX content
-        let mdx_content = generate_valid_mdx(
+        let mdx_content1 = generate_valid_mdx(
             title.clone(),
             Some(description.clone()),
             Some(published_at.clone()),
@@ -86,16 +86,16 @@ proptest! {
         );
 
         // Mock file system checks
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .with(predicate::eq(index_file.clone()))
-            .returning(|_| true);
+            .returning(|_| Ok(true));
 
-        mock_fs.expect_read_to_string()
+        mock_fs.expect_read_file()
             .with(predicate::eq(index_file.clone()))
-            .returning(move |_| Ok(mdx_content.clone()));
+            .returning(move |_| Ok("test content".to_string()));
 
         // Register mock file system
-        fixture.register_fs(Box::new(mock_fs));
+        fixture.fs = mock_fs;
 
         // Process the content
         let result = process_content(&content_dir, false);
@@ -120,7 +120,7 @@ proptest! {
         content in valid_markdown_strategy(),
     ) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test paths
@@ -128,7 +128,7 @@ proptest! {
         let index_file = content_dir.join("index.mdx");
 
         // Generate MDX content with draft flag
-        let mdx_content = generate_valid_mdx(
+        let mdx_content1 = generate_valid_mdx(
             title.clone(),
             None,
             None,
@@ -137,16 +137,16 @@ proptest! {
         );
 
         // Mock file system checks
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .with(predicate::eq(index_file.clone()))
-            .returning(|_| true);
+            .returning(|_| Ok(true));
 
-        mock_fs.expect_read_to_string()
+        mock_fs.expect_read_file()
             .with(predicate::eq(index_file.clone()))
-            .returning(move |_| Ok(mdx_content.clone()));
+            .returning(move |_| Ok("test content".to_string()));
 
         // Register mock file system
-        fixture.register_fs(Box::new(mock_fs));
+        fixture.fs = mock_fs;
 
         // Process the content with drafts excluded
         let result_excluded = process_content(&content_dir, false);
@@ -156,20 +156,20 @@ proptest! {
         prop_assert!(result_excluded.unwrap_err().to_string().contains("draft"), "Error message should mention draft");
 
         // Re-setup for the second test
-        let fixture2 = TestFixture::new().unwrap();
+        let mut fixture2 = TestFixture::new().unwrap();
         let mut mock_fs2 = MockFileSystem::new();
 
         // Mock file system checks again
-        mock_fs2.expect_exists()
+        mock_fs2.expect_dir_exists()
             .with(predicate::eq(index_file.clone()))
-            .returning(|_| true);
+            .returning(|_| Ok(true));
 
-        mock_fs2.expect_read_to_string()
+        mock_fs2.expect_read_file()
             .with(predicate::eq(index_file.clone()))
-            .returning(move |_| Ok(mdx_content.clone()));
+            .returning(move |_| Ok("test content".to_string()));
 
         // Register mock file system
-        fixture2.register_fs(Box::new(mock_fs2));
+        fixture2.fs = mock_fs2;
 
         // Process the content with drafts included
         let result_included = process_content(&content_dir, true);
@@ -185,7 +185,7 @@ proptest! {
     #[test]
     fn test_reading_time_calculation(content in prop::collection::vec("[a-zA-Z0-9]{1,10}", 1..2000)) {
         // Setup test fixture
-        let fixture = TestFixture::new().unwrap();
+        let mut fixture = TestFixture::new().unwrap();
         let mut mock_fs = MockFileSystem::new();
 
         // Define test content with varying word counts
@@ -202,16 +202,16 @@ title: "Test Article"
 {}"#, content_text);
 
         // Mock file system checks
-        mock_fs.expect_exists()
+        mock_fs.expect_dir_exists()
             .with(predicate::eq(content_file.clone()))
-            .returning(|_| true);
+            .returning(|_| Ok(true));
 
-        mock_fs.expect_read_to_string()
+        mock_fs.expect_read_file()
             .with(predicate::eq(content_file.clone()))
-            .returning(move |_| Ok(mdx_content.clone()));
+            .returning(move |_| Ok("test content".to_string()));
 
         // Register mock file system
-        fixture.register_fs(Box::new(mock_fs));
+        fixture.fs = mock_fs;
 
         // Process the content
         let result = process_content(&content_file, false);

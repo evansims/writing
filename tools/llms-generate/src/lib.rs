@@ -36,8 +36,8 @@ impl Default for LlmsOptions {
 pub struct Article {
     /// Article title
     pub title: String,
-    /// Article tagline/description
-    pub tagline: String,
+    /// Article description
+    pub description: String,
     /// Article slug
     pub slug: String,
     /// Topics the article belongs to
@@ -97,7 +97,7 @@ pub fn collect_articles(config: &Config, include_drafts: bool) -> Result<Vec<Art
 
             articles.push(Article {
                 title: frontmatter.title.clone(),
-                tagline: frontmatter.tagline.clone().unwrap_or_default(),
+                description: frontmatter.description.clone().unwrap_or_default(),
                 slug: frontmatter.slug.clone().unwrap_or_default(),
                 topics: frontmatter.topics.clone().unwrap_or_default(),
                 tags: frontmatter.tags.clone().unwrap_or_default(),
@@ -134,7 +134,7 @@ pub fn generate_llms_txt(articles: &[Article], site_url: &str) -> String {
 
         content.push_str(&format!("# {}\n", article.title));
         content.push_str(&format!("{}\n", url));
-        content.push_str(&format!("{}\n\n", article.tagline));
+        content.push_str(&format!("{}\n\n", article.description));
     }
 
     content
@@ -176,7 +176,7 @@ pub fn generate_llms_full_txt(articles: &[Article], site_url: &str, include_draf
         content.push_str(&format!("Published: {}\n", article.published));
         content.push_str(&format!("Tags: {}\n", article.tags.join(", ")));
         content.push_str(&format!("Topics: {}\n", article.topics.join(", ")));
-        content.push_str(&format!("Description: {}\n\n", article.tagline));
+        content.push_str(&format!("Description: {}\n\n", article.description));
 
         // Add content with 80 character wrapping
         let mut current_line = String::new();

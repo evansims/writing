@@ -69,7 +69,7 @@ pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
         published_at: Some(date_str.clone()),
         updated_at: Some(date_str.clone()),
         slug: Some(slug.clone()),
-        tagline: options.description.clone(),
+        description: options.description.clone(),
         tags: options.tags.clone(),
         topics: Some(topics),
         is_draft: options.draft,
@@ -83,7 +83,7 @@ pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
     let content = if is_test {
         // Format in a way that matches the test expectations
         let mut frontmatter_string = format!(
-            "---\ntitle: \"{}\"\ntagline: \"{}\"\n",
+            "---\ntitle: \"{}\"\description: \"{}\"\n",
             title,
             options.description.as_deref().unwrap_or("")
         );

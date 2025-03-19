@@ -11,8 +11,6 @@ use common_traits::tools::{
 use common_models::Config;
 use common_errors::Result;
 use std::path::PathBuf;
-use walkdir::WalkDir;
-use regex::Regex;
 
 /// A concrete implementation of ToolFactory for the Write CLI
 pub struct WriteToolFactory {
@@ -325,7 +323,7 @@ impl ContentSearcher for PlaceholderContentSearcher {
                     if !options.include_drafts {
                         if let Ok(content) = fs::read_to_string(path) {
                             // Simple frontmatter parsing to check draft status
-                            if let Some(draft_line) = Regex::new(r"draft:\s*true").ok()
+                            if let Some(_draft_line) = Regex::new(r"draft:\s*true").ok()
                                 .and_then(|re| re.find(&content)) {
                                 // Skip draft content
                                 continue;

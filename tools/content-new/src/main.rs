@@ -20,9 +20,9 @@ pub struct CreateArgs {
     #[arg(short = 'T', long, default_value = "")]
     pub title: String,
 
-    /// Tagline or description
+    /// Description
     #[arg(short = 'g', long, default_value = "")]
-    pub tagline: String,
+    pub description: String,
 
     /// Content type (article, note, etc.)
     #[arg(short, long, default_value = "")]
@@ -123,14 +123,14 @@ fn main() -> Result<()> {
         }
     };
 
-    // Get tagline if not provided
-    let tagline = if !args.create.tagline.is_empty() {
-        args.create.tagline.clone()
+    // Get description if not provided
+    let description = if !args.create.description.is_empty() {
+        args.create.description.clone()
     } else if is_test {
-        "Test Tagline".to_string()
+        "Test Description".to_string()
     } else {
         let input = Input::new()
-            .with_prompt("Enter content tagline")
+            .with_prompt("Enter content description")
             .interact_text()
             .map_err(|e| WritingError::validation_error(format!("Dialog error: {}", e)))?;
         input
@@ -246,7 +246,7 @@ fn main() -> Result<()> {
         slug: Some(slug),
         topic: Some(topic),
         title: Some(title),
-        description: Some(tagline),
+        description: Some(description),
         template,
         tags: if !tags.is_empty() {
             Some(tags.split(',').map(|s| s.trim().to_string()).collect())

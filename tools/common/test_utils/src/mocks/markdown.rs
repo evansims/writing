@@ -49,7 +49,7 @@ impl MockMarkdown {
                 published_at: Some("2023-01-01".to_string()),
                 updated_at: Some("2023-01-01".to_string()),
                 slug: Some("mock-title".to_string()),
-                tagline: None,
+                description: None,
                 tags: None,
                 topics: None,
                 featured_image_path: None,

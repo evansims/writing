@@ -201,8 +201,8 @@ impl FileSystemFixture {
             full_content
         };
 
-        let full_content = if let Some(tagline) = &frontmatter.tagline {
-            format!("{}tagline: {}\n", full_content, tagline)
+        let full_content = if let Some(description) = &frontmatter.description {
+            format!("{}description: {}\n", full_content, description)
         } else {
             full_content
         };

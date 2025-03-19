@@ -379,7 +379,7 @@ mod tests {
     fn test_validate_frontmatter_valid() {
         let frontmatter = Frontmatter {
             title: "Test Post".to_string(),
-            tagline: Some("A test post".to_string()),
+            description: Some("A test post".to_string()),
             ..Frontmatter::default()
         };
         let result = validate_frontmatter(&frontmatter);
@@ -390,7 +390,7 @@ mod tests {
     fn test_validate_frontmatter_missing_title() {
         let frontmatter = Frontmatter {
             title: "".to_string(),
-            tagline: Some("A test post".to_string()),
+            description: Some("A test post".to_string()),
             ..Frontmatter::default()
         };
         let result = validate_frontmatter(&frontmatter);
