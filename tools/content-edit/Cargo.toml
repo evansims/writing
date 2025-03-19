@@ -42,3 +42,5 @@ serde_json = { workspace = true }
 common-test-utils = { path = "../common/test_utils" }
 tempfile = "3.10.1"
 copy_dir = "0.1.3"
+proptest = { workspace = true }
+mockall = { workspace = true }

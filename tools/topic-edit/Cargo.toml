@@ -24,4 +24,6 @@ common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile.workspace = true
+serial_test = "2.0.0"
+common-test-utils = { path = "../common/test_utils" }

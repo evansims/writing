@@ -1,9 +1,4 @@
-//! Unit tests for topic-edit
+// Unit tests for topic-edit
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert!(true);
-    }
-}
+mod topic_edit_tests;
+mod topic_edit_validation_tests;

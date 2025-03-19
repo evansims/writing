@@ -1,9 +1,5 @@
-//! Unit tests for content-move
+// Unit tests for content-move
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert!(true);
-    }
-}
+mod move_content_tests;
+mod find_content_tests;
+mod move_options_tests;

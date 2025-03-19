@@ -25,4 +25,10 @@ chrono.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
-common-markdown = { path = "../common/markdown" } 
+common-markdown = { path = "../common/markdown" }
+
+[dev-dependencies]
+tempfile.workspace = true
+mockall.workspace = true
+proptest.workspace = true
+common-test-utils = { path = "../common/test_utils" }

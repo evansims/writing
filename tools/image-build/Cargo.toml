@@ -38,6 +38,8 @@ tempfile = "3.8"
 criterion = "0.5"
 rand = "0.8"
 chrono = "0.4"
+serial_test = "2.0.0"
+common-test-utils = { path = "../common/test_utils" }
 
 [[bench]]
 name = "build_processing"

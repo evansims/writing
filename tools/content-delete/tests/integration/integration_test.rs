@@ -1,148 +1,225 @@
-use common_test_utils::integration::TestCommand;
+use common_test_utils::fixtures::TestFixture;
+use common_test_utils::mocks::{MockFileSystem, MockConfigLoader};
+use common_traits::tools::ContentDeleter;
+use content_delete::ContentDeleterImpl;
+use std::collections::HashMap;
+use mockall::predicate;
 
 #[test]
 fn test_delete_content() {
-    // Create a new test command for content-delete
-    let command = TestCommand::new("content-delete").unwrap();
+    // Arrange - Create a fixture and mocks
+    let fixture = TestFixture::new().unwrap();
+    let mut mock_fs = MockFileSystem::new();
 
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    assert!(content_file.exists());
+    // Define test paths
+    let content_dir = fixture.path().join("content/blog/test-post");
+    let index_file = content_dir.join("index.mdx");
 
-    // Test deleting content with force flag
-    let output = command.run(&["-s", "test-post", "-t", "blog", "-f"]).expect("Failed to run command");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Mock file existence checks
+    mock_fs.expect_exists()
+        .with(predicate::eq(content_dir.clone()))
+        .returning(|_| true);
 
-    println!("Stdout: {}", stdout);
-    println!("Stderr: {}", stderr);
+    mock_fs.expect_read_file()
+        .with(predicate::eq(index_file.clone()))
+        .returning(move |_| {
+            Ok(r#"---
+title: "Test Post"
+---
+Test content
+"#.into())
+        });
 
-    // For the test to pass, we just need to ensure the file was deleted
-    if !content_file.exists() {
-        // Test passes if file is deleted, regardless of the exact command output
-        assert!(!content_file.exists());
-    } else {
-        // If file still exists, fail with detailed error message
-        panic!("File was not deleted. Stdout: {}, Stderr: {}", stdout, stderr);
-    }
+    mock_fs.expect_remove_dir_all()
+        .with(predicate::eq(content_dir.clone()))
+        .returning(|_| Ok(()));
+
+    // Create a mock config for topics
+    let mut topics = HashMap::new();
+    topics.insert("blog".to_string(), common_config::TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        ..Default::default()
+    });
+
+    let config = common_config::Config {
+        content: common_config::ContentConfig {
+            base_dir: "content".to_string(),
+            topics,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    // Setup mock config loader
+    let mut mock_config = MockConfigLoader::new();
+    mock_config.expect_load_config()
+        .returning(move || Ok(config.clone()));
+
+    // Register mocks with the fixture
+    fixture.register_fs(Box::new(mock_fs));
+    fixture.register_config_loader(Box::new(mock_config));
+
+    // Create a ContentDeleterImpl instance
+    let deleter = ContentDeleterImpl::new();
+
+    // Act - Delete content with force flag
+    let result = deleter.delete_content("test-post", Some("blog"), true);
+
+    // Assert - Check the result
+    assert!(result.is_ok(), "Failed to delete content: {:?}", result.err());
 }
 
 #[test]
 fn test_delete_nonexistent_content() {
-    // Create a new test command for content-delete
-    let command = TestCommand::new("content-delete").unwrap();
+    // Arrange - Create a fixture and mocks
+    let fixture = TestFixture::new().unwrap();
+    let mut mock_fs = MockFileSystem::new();
 
-    // Test deleting nonexistent content
-    let output = command.run(&["-s", "nonexistent-post", "-t", "blog", "-f"]).expect("Failed to run command");
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Define test paths
+    let content_dir = fixture.path().join("content/blog/nonexistent-post");
 
-    // The command should fail with an error message mentioning the content wasn't found
-    assert!(stderr.contains("not found") || stderr.contains("Content not found") || !output.status.success());
+    // Mock file existence checks
+    mock_fs.expect_exists()
+        .with(predicate::eq(content_dir.clone()))
+        .returning(|_| false);
+
+    // Create a mock config for topics
+    let mut topics = HashMap::new();
+    topics.insert("blog".to_string(), common_config::TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        ..Default::default()
+    });
+
+    let config = common_config::Config {
+        content: common_config::ContentConfig {
+            base_dir: "content".to_string(),
+            topics,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    // Setup mock config loader
+    let mut mock_config = MockConfigLoader::new();
+    mock_config.expect_load_config()
+        .returning(move || Ok(config.clone()));
+
+    // Register mocks with the fixture
+    fixture.register_fs(Box::new(mock_fs));
+    fixture.register_config_loader(Box::new(mock_config));
+
+    // Create a ContentDeleterImpl instance
+    let deleter = ContentDeleterImpl::new();
+
+    // Act - Try to delete nonexistent content
+    let result = deleter.delete_content("nonexistent-post", Some("blog"), true);
+
+    // Assert - Check the result
+    assert!(result.is_err(), "Should have failed to delete nonexistent content");
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("not found") || err.contains("Content not found"));
 }
 
 #[test]
-fn test_interactive_delete() {
-    // Create a new test command for content-delete
-    let command = TestCommand::new("content-delete").unwrap();
+fn test_can_delete_check() {
+    // Arrange - Create a fixture and mocks
+    let fixture = TestFixture::new().unwrap();
+    let mut mock_fs = MockFileSystem::new();
 
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    assert!(content_file.exists());
+    // Define test paths
+    let content_dir = fixture.path().join("content/blog/test-post");
 
-    // Test interactive deletion with confirmation
-    let output = command.run_with_input(&["-s", "test-post", "-t", "blog"], "y\n").expect("Failed to run command");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Mock file existence checks
+    mock_fs.expect_exists()
+        .with(predicate::eq(content_dir.clone()))
+        .returning(|_| true);
 
-    println!("Stdout: {}", stdout);
-    println!("Stderr: {}", stderr);
+    // Create a mock config for topics
+    let mut topics = HashMap::new();
+    topics.insert("blog".to_string(), common_config::TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        ..Default::default()
+    });
 
-    // If we get a "not a terminal" error, this is expected in CI environments
-    if stderr.contains("not a terminal") {
-        println!("Got 'not a terminal' error - this is expected in non-interactive environments");
-        // Skip the rest of the test
-        return;
-    }
+    let config = common_config::Config {
+        content: common_config::ContentConfig {
+            base_dir: "content".to_string(),
+            topics,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
 
-    // For the test to pass, we just need to ensure the file was deleted
-    if !content_file.exists() {
-        // Test passes if file is deleted, regardless of the exact command output
-        assert!(!content_file.exists());
-    } else {
-        // Try deleting with force flag as a fallback
-        println!("Falling back to force delete");
-        let force_output = command.run(&["-s", "test-post", "-t", "blog", "-f"]).expect("Failed to run force command");
-        println!("Force delete stdout: {}", String::from_utf8_lossy(&force_output.stdout));
+    // Setup mock config loader
+    let mut mock_config = MockConfigLoader::new();
+    mock_config.expect_load_config()
+        .returning(move || Ok(config.clone()));
 
-        // Now check if the file is deleted
-        assert!(!content_file.exists(), "File still exists after force delete attempt");
-    }
+    // Register mocks with the fixture
+    fixture.register_fs(Box::new(mock_fs));
+    fixture.register_config_loader(Box::new(mock_config));
+
+    // Create a ContentDeleterImpl instance
+    let deleter = ContentDeleterImpl::new();
+
+    // Act - Check if content can be deleted
+    let result = deleter.can_delete("test-post", Some("blog"));
+
+    // Assert - Check the result
+    assert!(result.is_ok(), "Failed to check deletion possibility: {:?}", result.err());
+    assert!(result.unwrap(), "Should be able to delete existing content");
 }
 
 #[test]
-fn test_interactive_delete_cancel() {
-    // Create a new test command for content-delete
-    let command = TestCommand::new("content-delete").unwrap();
+fn test_can_delete_nonexistent() {
+    // Arrange - Create a fixture and mocks
+    let fixture = TestFixture::new().unwrap();
+    let mut mock_fs = MockFileSystem::new();
 
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    assert!(content_file.exists());
+    // Define test paths
+    let content_dir = fixture.path().join("content/blog/nonexistent-post");
 
-    // Test interactive deletion with cancellation
-    let output = command.run_with_input(&["-s", "test-post", "-t", "blog"], "n\n").expect("Failed to run command");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Mock file existence checks
+    mock_fs.expect_exists()
+        .with(predicate::eq(content_dir.clone()))
+        .returning(|_| false);
 
-    println!("Stdout: {}", stdout);
-    println!("Stderr: {}", stderr);
+    // Create a mock config for topics
+    let mut topics = HashMap::new();
+    topics.insert("blog".to_string(), common_config::TopicConfig {
+        name: "Blog".to_string(),
+        directory: "blog".to_string(),
+        ..Default::default()
+    });
 
-    // If we get a "not a terminal" error, this is expected in CI environments
-    if stderr.contains("not a terminal") {
-        println!("Got 'not a terminal' error - this is expected in non-interactive environments");
-        // Skip the rest of the test, but ensure the file still exists (wasn't deleted)
-        assert!(content_file.exists(), "File should not have been deleted");
-        return;
-    }
+    let config = common_config::Config {
+        content: common_config::ContentConfig {
+            base_dir: "content".to_string(),
+            topics,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
 
-    // Confirm the file still exists
-    assert!(content_file.exists());
+    // Setup mock config loader
+    let mut mock_config = MockConfigLoader::new();
+    mock_config.expect_load_config()
+        .returning(move || Ok(config.clone()));
 
-    // Check for cancellation message (but don't fail the test if it's not there)
-    if !stdout.contains("cancelled") && !stdout.contains("Cancelled") {
-        println!("Warning: Expected cancellation message but didn't find it. Stdout: {}", stdout);
-    }
-}
+    // Register mocks with the fixture
+    fixture.register_fs(Box::new(mock_fs));
+    fixture.register_config_loader(Box::new(mock_config));
 
-#[test]
-fn test_fully_interactive_delete() {
-    // Skip test in CI environment
-    if std::env::var("CI").is_ok() {
-        println!("Skipping interactive test in CI environment");
-        return;
-    }
+    // Create a ContentDeleterImpl instance
+    let deleter = ContentDeleterImpl::new();
 
-    // Create a new test command for content-delete
-    let command = TestCommand::new("content-delete").unwrap();
+    // Act - Check if nonexistent content can be deleted
+    let result = deleter.can_delete("nonexistent-post", Some("blog"));
 
-    // Create test content
-    let content_file = command.fixture.create_content("blog", "test-post", "Test Post", false).unwrap();
-    assert!(content_file.exists());
-
-    // This test is hard to get working reliably in automated environments
-    // So we'll use a simple approach to test for file deletion
-
-    println!("Note: Running simpler version of fully interactive test");
-    let output = command.run_with_input(&["-s", "test-post", "-t", "blog"], "y\n").expect("Failed to run command");
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("Command output: {}", stdout);
-
-    // For the test to pass, we just need to ensure the file was deleted
-    if !content_file.exists() {
-        // Test passes if file is deleted
-        assert!(!content_file.exists());
-    } else {
-        // For this test only, we'll consider it a pass even if the file wasn't deleted
-        // This is because the fully interactive test is hard to get working reliably
-        println!("Warning: File wasn't deleted, but we'll consider this test passed for CI environments");
-    }
+    // Assert - Check the result
+    assert!(result.is_ok(), "Failed to check deletion possibility: {:?}", result.err());
+    assert!(!result.unwrap(), "Should not be able to delete nonexistent content");
 }

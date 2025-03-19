@@ -1,9 +1,2 @@
-//! Unit tests for image-optimize
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert!(true);
-    }
-}
+// Unit tests for image-optimize
+mod image_optimize_tests;

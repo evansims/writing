@@ -35,44 +35,44 @@ pub fn add_topic(options: &AddOptions) -> Result<String> {
     if options.key.is_empty() {
         return Err(anyhow::anyhow!("Topic key is required"));
     }
-    
+
     if options.name.is_empty() {
         return Err(anyhow::anyhow!("Topic name is required"));
     }
-    
+
     if options.description.is_empty() {
         return Err(anyhow::anyhow!("Topic description is required"));
     }
-    
+
     if options.directory.is_empty() {
         return Err(anyhow::anyhow!("Topic directory is required"));
     }
-    
+
     // Load config
     let mut config = load_config()?;
-    
+
     // Check if topic already exists
     if config.content.topics.contains_key(&options.key) {
         return Err(anyhow::anyhow!("Topic with key '{}' already exists", options.key));
     }
-    
+
     // Create topic directory
     let dir_path = format!("{}/{}", config.content.base_dir, options.directory);
     create_dir_all(Path::new(&dir_path))
         .context(format!("Failed to create topic directory: {}", dir_path))?;
-    
+
     // Add topic to config
     let topic_config = TopicConfig {
         name: options.name.clone(),
         description: options.description.clone(),
         directory: options.directory.clone(),
     };
-    
+
     config.content.topics.insert(options.key.clone(), topic_config);
-    
+
     // Save config
     write_config(&config)?;
-    
+
     Ok(options.key.clone())
 }
 
@@ -88,7 +88,7 @@ pub fn create_topic_directory(base_dir: &str, path: &str) -> Result<()> {
         create_dir_all(Path::new(&dir_path))
             .context(format!("Failed to create topic directory: {}", dir_path))?;
     }
-    
+
     Ok(())
 }
 
@@ -99,47 +99,48 @@ pub fn topic_exists(config: &Config, key: &str) -> bool {
 
 /// Write the configuration to the config file
 fn write_config(config: &Config) -> Result<()> {
-    let config_path = "config.yaml";
-    
+    // Get config path from environment or use default
+    let config_path = std::env::var("CONFIG_PATH").unwrap_or_else(|_| "config.yaml".to_string());
+
     // Convert config to YAML
     let config_content = serde_yaml::to_string(config)
         .context("Failed to serialize config")?;
-    
+
     // Write config to file
     fs::write(config_path, config_content)
-        .context(format!("Failed to write config file: {}", config_path))?;
-    
+        .context("Failed to write config file")?;
+
     Ok(())
 }
 
 /// Add tags to a topic
-/// 
+///
 /// Returns true if tags were added successfully
 pub fn add_tags_to_topic(topic_key: &str, tags: Vec<String>) -> Result<bool> {
     if tags.is_empty() {
         return Ok(false);
     }
-    
+
     // Read the current configuration
     let mut config = load_config()?;
-    
+
     // Check if topic exists
     if !topic_exists(&config, topic_key) {
         return Err(anyhow::anyhow!("Topic with key '{}' does not exist", topic_key));
     }
-    
+
     // Make sure tags map exists
     if config.content.tags.is_none() {
         config.content.tags = Some(std::collections::HashMap::new());
     }
-    
+
     // Add tags for the topic
     if let Some(tags_map) = &mut config.content.tags {
         tags_map.insert(topic_key.to_string(), tags);
     }
-    
+
     // Write the updated configuration
     write_config(&config)?;
-    
+
     Ok(true)
-} 
+}

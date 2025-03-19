@@ -8,6 +8,7 @@ members = [
     "common/markdown",
     "common/models",
     "common/test_utils",
+    "common/traits",
     "common/validation",
     "content-edit",
     "content-new",

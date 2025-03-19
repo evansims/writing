@@ -7,6 +7,8 @@ use tempfile::NamedTempFile;
 use tempfile::TempDir;
 use std::fs::{self, create_dir_all};
 use content_edit::find_content_path;
+use anyhow::Result;
+use std::path::PathBuf;
 
 /// Test that we can split frontmatter and body correctly
 #[test]

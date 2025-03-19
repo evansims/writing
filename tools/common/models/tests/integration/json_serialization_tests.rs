@@ -54,6 +54,11 @@ fn test_full_config_json_roundtrip() {
     );
 
     let original_config = Config {
+        title: "Test Site".to_string(),
+        email: "test@example.com".to_string(),
+        url: "https://test-site.com".to_string(),
+        image: "https://test-site.com/image.jpg".to_string(),
+        default_topic: Some("blog".to_string()),
         content: ContentConfig {
             base_dir: "/content".to_string(),
             topics,
@@ -95,10 +100,16 @@ fn test_full_config_json_roundtrip() {
     let deserialized_config: Config = serde_json::from_str(&json).expect("Failed to deserialize from JSON");
 
     // Verify structure is preserved
+    assert_eq!(deserialized_config.title, original_config.title);
+    assert_eq!(deserialized_config.email, original_config.email);
+    assert_eq!(deserialized_config.url, original_config.url);
+    assert_eq!(deserialized_config.image, original_config.image);
+    assert_eq!(deserialized_config.default_topic, original_config.default_topic);
     assert_eq!(deserialized_config.content.base_dir, original_config.content.base_dir);
     assert_eq!(deserialized_config.content.topics.len(), original_config.content.topics.len());
     assert_eq!(deserialized_config.images.formats, original_config.images.formats);
     assert_eq!(deserialized_config.publication.author, original_config.publication.author);
+    assert_eq!(deserialized_config.publication.copyright, original_config.publication.copyright);
     assert_eq!(deserialized_config.publication.site_url, original_config.publication.site_url);
 
     // Check specific nested elements
@@ -251,8 +262,8 @@ fn test_serialize_and_deserialize_config() {
     let original_config = Config {
         title: "Test Site".to_string(),
         email: "test@example.com".to_string(),
-        url: "https://test.example.com".to_string(),
-        image: "https://test.example.com/image.jpg".to_string(),
+        url: "https://test-site.com".to_string(),
+        image: "https://test-site.com/image.jpg".to_string(),
         default_topic: Some("blog".to_string()),
         content: ContentConfig {
             base_dir: "/content".to_string(),

@@ -44,3 +44,6 @@ common-errors = { path = "../common/errors" }
 [dev-dependencies]
 tempfile.workspace = true
 similar = "2.2"
+mockall.workspace = true
+proptest.workspace = true
+common-test-utils = { path = "../common/test_utils" }

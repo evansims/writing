@@ -1,6 +1,6 @@
 //! Unit tests extracted from lib.rs
 
-use content-delete::*;
+use content_delete::*;
 mod tests {
     use super::*;
     use std::io::Write;
@@ -20,11 +20,11 @@ tags:
 # Test Content
 
 This is a test article."#;
-        
+
         file.write_all(content.as_bytes()).unwrap();
-        
+
         // Test extracting the title
         let title = extract_title_from_content(file.path()).unwrap();
         assert_eq!(title, "Test Article");
     }
-} 
+}

@@ -2,7 +2,7 @@
 name = "topic-delete"
 version = "0.1.0"
 edition = "2021"
-description = "Delete a topic and migrate its content in the writing collection"
+description = "Delete a topic from the writing collection"
 
 [lib]
 name = "topic_delete"
@@ -18,11 +18,13 @@ anyhow.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 colored.workspace = true
-walkdir.workspace = true
 dialoguer.workspace = true
+slug.workspace = true
 common-models = { path = "../common/models" }
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
 
 [dev-dependencies]
-tempfile.workspace = true 
+tempfile.workspace = true
+serial_test = "2.0.0"
+common-test-utils = { path = "../common/test_utils" }

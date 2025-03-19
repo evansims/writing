@@ -1,0 +1,42 @@
+title: My Writing Site
+email: user@example.com
+url: https://example.com
+image: https://example.com/image.jpg
+default_topic: blog
+content:
+  base_dir: content
+  topics:
+    existing-topic:
+      name: Existing Topic
+      description: An existing topic
+      directory: existing-topic
+    new-topic:
+      name: New Topic
+      description: A new topic
+      directory: new-topic
+  tags: null
+images:
+  formats:
+  - jpg
+  - png
+  - webp
+  format_descriptions: null
+  sizes:
+    small:
+      width: 400
+      height: 300
+      description: Small size
+    large:
+      width: 1200
+      height: 800
+      description: Large size
+    medium:
+      width: 800
+      height: 600
+      description: Medium size
+  naming: null
+  quality: null
+publication:
+  author: Author Name
+  copyright: © 2023, All rights reserved
+  site: https://example.com

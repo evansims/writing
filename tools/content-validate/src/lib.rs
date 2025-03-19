@@ -499,3 +499,19 @@ fn validate_frontmatter_fields(
     Ok(())
 }
 
+#[cfg(test)]
+pub mod test_utils {
+    use super::*;
+
+    /// Returns the extract_links function for testing
+    pub use super::extract_links;
+
+    /// Returns the LocalLinkKind for testing
+    pub use super::LocalLinkKind;
+
+    /// Returns the ValidationOptions for testing
+    pub use super::ValidationOptions;
+
+    /// Returns the ValidationType for testing
+    pub use super::ValidationType;
+}

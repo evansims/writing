@@ -37,6 +37,8 @@ thiserror.workspace = true
 tempfile = "3.8"
 criterion = "0.5"
 rand = "0.8"
+serial_test = "2.0.0"
+common-test-utils = { path = "../common/test_utils" }
 
 [[bench]]
 name = "image_processing"
@@ -44,4 +46,4 @@ harness = false
 
 [[bench]]
 name = "advanced_scenarios"
-harness = false 
+harness = false

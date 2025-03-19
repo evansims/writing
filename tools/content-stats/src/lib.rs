@@ -453,3 +453,58 @@ pub fn get_content_stats(options: &StatsOptions) -> Result<ContentStats> {
 //         Ok(())
 //     }
 // }
+
+// Test utility functions for exposing internal functionality in tests
+#[cfg(test)]
+pub mod test_utils {
+    use super::*;
+    use std::cmp::Ordering;
+
+    /// Get the sort_stats function for testing
+    pub fn get_sort_function() -> Option<fn(&ContentStats, &ContentStats, &str) -> Ordering> {
+        Some(sort_stats)
+    }
+
+    /// Extract metadata and content from markdown for testing
+    pub fn extract_metadata_and_content(content: &str) -> (String, HashMap<String, String>, String) {
+        // Simplified test version of the internal function
+        let parts: Vec<&str> = content.split("---").collect();
+        if parts.len() >= 3 {
+            let frontmatter = parts[1].trim();
+            let frontmatter_yaml = serde_yaml::from_str::<HashMap<String, String>>(frontmatter).unwrap_or_default();
+            let title = frontmatter_yaml.get("title").cloned().unwrap_or_default();
+            let content = parts[2..].join("---").trim().to_string();
+            (title, frontmatter_yaml, content)
+        } else {
+            ("".to_string(), HashMap::new(), content.to_string())
+        }
+    }
+
+    /// Create excerpt for testing
+    pub fn create_excerpt(text: &str, query: &str, max_length: usize) -> String {
+        // Simplified test version of the internal function
+        let position = text.to_lowercase().find(&query.to_lowercase());
+        if let Some(pos) = position {
+            let start = if pos > max_length / 2 {
+                pos - max_length / 2
+            } else {
+                0
+            };
+            let end = std::cmp::min(start + max_length, text.len());
+            let mut excerpt = text[start..end].to_string();
+            if start > 0 {
+                excerpt = format!("...{}", excerpt);
+            }
+            if end < text.len() {
+                excerpt = format!("{}...", excerpt);
+            }
+            excerpt
+        } else {
+            if text.len() <= max_length {
+                text.to_string()
+            } else {
+                format!("{}...", &text[0..max_length])
+            }
+        }
+    }
+}

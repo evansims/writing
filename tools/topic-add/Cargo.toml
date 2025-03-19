@@ -13,16 +13,24 @@ name = "topic-add"
 path = "src/main.rs"
 
 [dependencies]
-clap.workspace = true
-anyhow.workspace = true
-serde.workspace = true
-serde_yaml.workspace = true
-colored.workspace = true
-slug.workspace = true
-dialoguer.workspace = true
-common-models = { path = "../common/models" }
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+dialoguer = "0.11"
 common-config = { path = "../common/config" }
 common-fs = { path = "../common/fs" }
+common-models = { path = "../common/models" }
+common-errors = { path = "../common/errors" }
+common-validation = { path = "../common/validation" }
+common_traits = { path = "../common/traits" }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+slug = "0.1"
 
 [dev-dependencies]
-tempfile.workspace = true 
+common-test-utils = { path = "../common/test_utils" }
+mockall = "0.12.1"
+proptest = "1.4.0"
+ctor = "0.2.6"
+tempfile = "3.4"
+serial_test = "3.2.0"

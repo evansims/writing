@@ -1,9 +1,13 @@
-//! Property tests for content-stats
+//! Property-based tests for content-stats
+//!
+//! This module contains property-based tests for the content-stats tool.
+
+pub mod stats_properties;
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn property_holds() {
-        assert!(true);
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }
