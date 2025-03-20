@@ -1,12 +1,12 @@
 {
   "functions": {
     "api/*.py": {
-      "runtime": "python@3.12",
+      "runtime": "@vercel/python@4.7.1",
       "memory": 1024,
       "maxDuration": 10
     },
     "api/common/*.py": {
-      "runtime": "python@3.12",
+      "runtime": "@vercel/python@4.7.1",
       "memory": 512,
       "maxDuration": 5
     }
