@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+name: project-overview.mdc
+description: Detailed overview of this project, it's structure, and various components.
+globs: **/*.*
+---
+
+Strictly following the project structure and guidelines outlined in [STRUCTURE.md](mdc:STRUCTURE.md).

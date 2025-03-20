@@ -1,9 +1,8 @@
-//! Tests for validation extensions in the errors module
+//! Tests for option validation functionality
 //!
 //! This file contains tests for option validation extensions.
 
-use crate::validation::OptionValidationExt;
-use crate::{OptionExt, Result, WritingError};
+use crate::helpers::{OptionExt, OptionValidationExt, Result, WritingError};
 use std::path::Path;
 
 #[test]

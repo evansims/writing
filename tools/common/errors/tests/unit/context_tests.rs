@@ -1,8 +1,8 @@
-//! Tests for error context functionality in the errors module
+//! Tests for error context functionality
 //!
-//! This file contains tests for adding context to errors.
+//! This file contains tests for error context handling.
 
-use crate::{ErrorContext, IoResultExt, Result, ResultExt, WritingError};
+use crate::helpers::{ErrorContext, IoResultExt, Result, ResultExt, WritingError};
 use std::fs;
 use std::io;
 use std::path::Path;

@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/content/*.py": {
+      "runtime": "python@3.10",
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "api/images/*.py": {
+      "runtime": "python@3.10",
+      "memory": 1792,
+      "maxDuration": 15
+    }
+  }
+}

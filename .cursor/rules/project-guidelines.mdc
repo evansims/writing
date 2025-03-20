@@ -9,9 +9,9 @@ description: Guiding principles for this project.
 globs: **/*.*
 ---
 
-This is the personal website, blog and podcast of Evan Sims (hello@evansims.com):
+These are the guidelines for this project:
 
-1. STORES ALL BLOGGED ARTICLES IN MARKDOWN FORMAT:
+<!-- 1. STORES ALL BLOGGED ARTICLES IN MARKDOWN FORMAT:
    - All written content is stored in MDX format and is contained within the /content directory.
    - Content can either be "published" or in a draft (unpublished) state.
 
@@ -42,7 +42,7 @@ This is the personal website, blog and podcast of Evan Sims (hello@evansims.com)
         - The backend must use the `ruff` tool to the fullest extend to ensure code quality is optimal.
       - We dont need a database: store all the data inside the backend itself in as easily accessible and efficient a manner as possible.
       - It should be ultra-lightweight and be as simple and minimal as possible, while respecting DRY principles and best practices.
-   - When a new "build" is requested by me (either via the CLI or via a new GitHub release) it should automatically build the new frontend and backend code, and update the build on Vercel.
+   - When a new "build" is requested by me (either via the CLI or via a new GitHub release) it should automatically build the new frontend and backend code, and update the build on Vercel. -->
 
 6. THIS PROJECT IS OPEN SOURCE FOR EDUCATIONABLE PURPOSES, BUT ONLY PRACTICALLY INTENDED FOR PERSONAL USE:
    - All documentation (including API and usage documents) should be stored in the /docs directory, except:

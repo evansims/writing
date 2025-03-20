@@ -1,8 +1,8 @@
-//! Tests for error formatting functionality
+//! Tests for the error formatter
 //!
 //! This file contains tests for the error formatter and related functionality.
 
-use crate::{
+use crate::helpers::{
     print_error, ErrorCategory, ErrorContext, ErrorDisplayStyle, ErrorFormatter, ErrorFormatterExt,
     Verbosity, WritingError,
 };

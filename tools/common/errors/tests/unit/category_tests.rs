@@ -1,8 +1,8 @@
-//! # Error Category Tests
+//! Tests for the error category system
 //!
 //! This module contains tests for the error category system.
 
-use crate::{ErrorCategory, ResultExt, WritingError};
+use crate::helpers::{ErrorCategory, ResultExt, WritingError};
 use std::io;
 
 #[test]
