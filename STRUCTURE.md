@@ -50,13 +50,11 @@ Example:
 
 ```
 app/
-├── assets/
 ├── [slug]/
 │   └── page.tsx
 └── not-found.tsx
 ```
 
-- `assets/` - Static assets for the site.
 - `[slug]/page.tsx` - Dynamically serves the content for the site. Fetches the content from the backend API.
 - `not-found.tsx` - Serves the 404 page for the site.
 

@@ -1,9 +1,14 @@
 {
   "functions": {
-    "*.py": {
+    "api/*.py": {
       "runtime": "python@3.10",
       "memory": 1024,
       "maxDuration": 10
+    },
+    "api/common/*.py": {
+      "runtime": "python@3.10",
+      "memory": 512,
+      "maxDuration": 5
     }
   },
   "rewrites": [

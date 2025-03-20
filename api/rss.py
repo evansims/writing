@@ -9,7 +9,7 @@ import yaml
 import html
 import re
 
-from api.common.validation import CONTENT_DIR
+from api.common.validation import get_content_path
 
 rss_bp = Blueprint('rss_routes', url_prefix='/api/rss')
 
@@ -59,7 +59,7 @@ async def feed(request, slug):
     feed_path = feed_config.get('path', slug)
 
     # Get content from the specified path
-    content_path = os.path.join(CONTENT_DIR, feed_path)
+    content_path = get_content_path(feed_path)
     content_files = []
 
     if os.path.exists(content_path):
@@ -77,7 +77,7 @@ async def feed(request, slug):
                 post = frontmatter.load(f)
 
                 # Get relative path from content directory for URL
-                rel_path = os.path.relpath(content_file, CONTENT_DIR)
+                rel_path = os.path.relpath(content_file, get_content_path())
                 # Remove .md extension
                 path = os.path.splitext(rel_path)[0]
                 # Convert to URL path
