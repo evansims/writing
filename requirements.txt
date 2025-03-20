@@ -1,1 +1,4 @@
-sanic==19.6.0
+sanic>=24.12
+python-frontmatter>=1.0
+pyyaml>=6.0
+ruff>=0.11

@@ -25,23 +25,21 @@ api/
 ├── common/
 │   ├── filesystem.py
 │   └── validation.py
-├── content/
-│   └── [slug]/
-│       └── route.py
+├── content.py
+├── images.py
 ├── index.py
 ├── llms.py
-├── rss/
-│   └── [slug]/
-│       └── feed.py
+├── rss.py
 └── sitemap.py
 ```
 
 - `common/filesystem.py` - Common filesystem utilities for use in the API.
 - `common/validation.py` - Common validation utilities for use in the API.
-- `content/[slug]/route.py` - Serves the content for the site.
+- `content.py` - Serves the content for the site.
+- `images.py` - Serves the images for the site.
 - `index.py` - Serves a Hello World API response, for testing service status.
 - `llms.py` - Serves the `llms.txt` and `llms-full.txt` files.
-- `rss/[slug]/feed.py` - Serves the RSS feeds for the site.
+- `rss.py` - Serves the RSS feeds for the site.
 - `sitemap.py` - Serves the sitemap for the site.
 
 ## App

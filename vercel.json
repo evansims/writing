@@ -1,14 +1,17 @@
 {
   "functions": {
-    "api/content/*.py": {
+    "*.py": {
       "runtime": "python@3.10",
       "memory": 1024,
-      "maxDuration": 30
-    },
-    "api/images/*.py": {
-      "runtime": "python@3.10",
-      "memory": 1792,
-      "maxDuration": 15
+      "maxDuration": 10
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api", "destination": "/api/index.py" },
+    { "source": "/api/content/:slug", "destination": "/api/content.py" },
+    { "source": "/api/rss/:slug", "destination": "/api/rss.py" },
+    { "source": "/api/sitemap.xml", "destination": "/api/sitemap.py" },
+    { "source": "/api/llms.txt", "destination": "/api/llms.py" },
+    { "source": "/api/llms-full.txt", "destination": "/api/llms.py" }
+  ]
 }

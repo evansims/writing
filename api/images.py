@@ -1,11 +1,10 @@
 from sanic import Sanic, response
 from sanic.response import file_stream
 from pathlib import Path
-import hashlib
 import re
 from PIL import Image
 import io
-
+import asyncio
 app = Sanic("ImageServer")
 
 # Configuration
