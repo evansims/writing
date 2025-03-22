@@ -12,7 +12,7 @@ mod tests {
         let mut file = NamedTempFile::new().unwrap();
         let content = r#"---
 title: "Test Article"
-published: "2023-01-01"
+created: "2023-01-01"
 tags:
   - test
 ---

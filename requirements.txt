@@ -2,3 +2,4 @@ sanic>=24.12
 python-frontmatter>=1.0
 pyyaml>=6.0
 ruff>=0.11
+mistune>=3.1
