@@ -155,6 +155,7 @@
   --tw-prose-quote-borders: var(--color-slate-300);
   --tw-prose-quotes: var(--color-muted-foreground);
   --tw-prose-code: var(--color-primary);
+  --tw-prose-links: var(--color-primary);
 
   code {
     &::before,
@@ -166,6 +167,11 @@
 
   blockquote {
     font-weight: 400;
+  }
+
+  a {
+    text-decoration: none;
+    font-weight: inherit;
   }
 }
 

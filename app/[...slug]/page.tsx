@@ -5,20 +5,14 @@ import { Metadata } from "next";
 import { getContent } from "@/lib/api";
 import { getRelativeTimeString } from "@/lib/utils";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowUp,
-  ArrowUpLeft,
-  AudioWaveform,
-  ChevronRight,
-  CornerLeftUp,
-} from "lucide-react";
+import { ArrowUpLeft, AudioWaveform } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import HeaderAnchor from "@/components/HeaderAnchor";
 
 interface ContentPageProps {
   params: {
@@ -175,7 +169,90 @@ export default async function ContentPage({ params }: ContentPageProps) {
           )}
 
           <div className="content prose prose-shadcn mb-6 max-w-none">
-            <ReactMarkdown>{content.body}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                h1: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h1 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h1>
+                  );
+                },
+                h2: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h2 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h2>
+                  );
+                },
+                h3: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h3 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h3>
+                  );
+                },
+                h4: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h4 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h4>
+                  );
+                },
+                h5: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h5 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h5>
+                  );
+                },
+                h6: ({ node, ...props }) => {
+                  const id = props.children
+                    ? String(props.children)
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^\w-]/g, "")
+                    : "";
+                  return (
+                    <h6 id={id} {...props}>
+                      <HeaderAnchor id={id}>{props.children}</HeaderAnchor>
+                    </h6>
+                  );
+                },
+              }}
+            >
+              {content.body}
+            </ReactMarkdown>
           </div>
 
           {content.tags && content.tags.length > 0 && (

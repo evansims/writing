@@ -3,7 +3,6 @@ from sanic.response import json
 from sanic.request import Request
 
 from content import content_bp
-# from blueprints.test import bp as test_bp
 # from api.sitemap import sitemap_bp
 # from api.llms import llms_bp
 # from api.rss import rss_bp
@@ -29,7 +28,7 @@ async def handle_exception(request: Request, exception: Exception):
         status=status_code,
     )
 
-# app.blueprint(content_bp)
+
 app.blueprint(content_bp)
 # app.blueprint(sitemap_bp)
 # app.blueprint(llms_bp)
