@@ -18,6 +18,8 @@ export default function TableOfContents() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
   const tocRef = useRef<HTMLElement>(null);
+  const activeIdRef = useRef<string>(activeId);
+  const activeIdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle scroll events
   useEffect(() => {
@@ -85,46 +87,69 @@ export default function TableOfContents() {
 
     setHeadings(items);
 
-    // Set up intersection observer
+    // Keep a reference to the latest active ID
+    activeIdRef.current = activeId;
+
+    // Enhanced function to update the active ID with debouncing
+    const updateActiveId = (newId: string) => {
+      // Don't update if it's the same ID to prevent re-renders
+      if (newId === activeIdRef.current) return;
+
+      // Clear any existing timeout
+      if (activeIdTimeoutRef.current) {
+        clearTimeout(activeIdTimeoutRef.current);
+      }
+
+      // Set a timeout to update the active ID
+      activeIdTimeoutRef.current = setTimeout(() => {
+        setActiveId(newId);
+        activeIdRef.current = newId;
+      }, 100); // 100ms debounce
+    };
+
+    // Track which headings are visible and their visibility ratio
+    const visibleHeadings = new Map<string, number>();
+
+    // Set up intersection observer with multiple thresholds for smoother transitions
     const callback = (entries: IntersectionObserverEntry[]) => {
-      // Find the first heading that is intersecting and closest to the top
-      const intersecting = entries.filter((entry) => entry.isIntersecting);
+      // Update the visibility map
+      entries.forEach((entry) => {
+        const id = entry.target.id;
 
-      if (intersecting.length > 0) {
-        // Sort by how close they are to the top of the viewport
-        const sorted = [...intersecting].sort((a, b) => {
-          const aDistance = Math.abs(a.boundingClientRect.top);
-          const bDistance = Math.abs(b.boundingClientRect.top);
-          return aDistance - bDistance;
-        });
-
-        // Set the active ID to the closest heading
-        if (sorted[0].target.id) {
-          setActiveId(sorted[0].target.id);
+        if (entry.isIntersecting) {
+          visibleHeadings.set(id, entry.intersectionRatio);
+        } else {
+          visibleHeadings.delete(id);
         }
-      } else if (entries.length > 0) {
-        // If no headings are intersecting, find the one that was most recently in view
-        // This is determined by checking if the heading is above the viewport
-        const headingsAbove = entries.filter(
-          (entry) => entry.boundingClientRect.top < 0,
+      });
+
+      // If we have visible headings, find the most prominent one
+      if (visibleHeadings.size > 0) {
+        // Sort by intersection ratio (more visible = higher priority)
+        const sortedHeadings = Array.from(visibleHeadings.entries()).sort(
+          (a, b) => b[1] - a[1],
         );
 
-        if (headingsAbove.length > 0) {
-          // Sort to find the one closest to the viewport
-          const sorted = [...headingsAbove].sort((a, b) => {
-            return b.boundingClientRect.top - a.boundingClientRect.top;
-          });
+        // Update the active ID to the most visible heading
+        updateActiveId(sortedHeadings[0][0]);
+      } else {
+        // If no headings are visible, find the one just above the viewport
+        const headingsAbove = entries
+          .filter(
+            (entry) =>
+              !entry.isIntersecting && entry.boundingClientRect.top < 0,
+          )
+          .sort((a, b) => b.boundingClientRect.top - a.boundingClientRect.top);
 
-          if (sorted[0].target.id) {
-            setActiveId(sorted[0].target.id);
-          }
+        if (headingsAbove.length > 0 && headingsAbove[0].target.id) {
+          updateActiveId(headingsAbove[0].target.id);
         }
       }
     };
 
     const observer = new IntersectionObserver(callback, {
-      rootMargin: "0px 0px -80% 0px",
-      threshold: 0,
+      rootMargin: "-20px 0px -20px 0px", // Small margin to trigger a bit before headers enter/leave viewport
+      threshold: [0, 0.25, 0.5, 0.75, 1], // Multiple thresholds for smoother transitions
     });
 
     headingElements.forEach((heading) => {
@@ -133,6 +158,10 @@ export default function TableOfContents() {
 
     return () => {
       observer.disconnect();
+      // Clear any pending timeout on cleanup
+      if (activeIdTimeoutRef.current) {
+        clearTimeout(activeIdTimeoutRef.current);
+      }
     };
   }, []);
 
