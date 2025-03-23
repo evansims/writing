@@ -29,3 +29,10 @@ export function getRelativeTimeString(date: Date): string {
 
   return "just now";
 }
+
+/**
+ * Format a date in YYYY/MM format
+ */
+export function formatDate(date: Date): string {
+  return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+}
