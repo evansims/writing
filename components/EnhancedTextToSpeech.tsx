@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipForward, SkipBack, Loader2 } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Loader2,
+  Headphones,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -11,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { listenToSectionPlay, broadcastAudioState } from "@/lib/audioEvents";
 
 interface AudioChunk {
   id: string;
@@ -25,18 +33,59 @@ interface PageMetadata {
   title: string;
 }
 
+/**
+ * Props for the EnhancedTextToSpeech component
+ */
 interface TextToSpeechProps {
+  /** The text content to be converted to speech */
   content: string;
+
+  /** The title of the content */
   title: string;
+
+  /** The slug identifier for the content, used for API calls */
   slug: string;
+
+  /** Additional CSS classes for the main player element */
   className?: string;
+
+  /** CSS classes for the inner container of the player */
+  playerContainerClassName?: string;
+
+  /** CSS classes for the trigger button itself */
+  triggerClassName?: string;
+
+  /** CSS classes for the div wrapping the trigger button (for positioning) */
+  triggerWrapperClassName?: string;
+
+  /** Custom text for the trigger button (default is "Listen") */
+  triggerLabel?: string;
+
+  /** Custom text for when audio is playing (default is "Pause") */
+  triggerPauseLabel?: string;
 }
 
+/**
+ * Enhanced Text-to-Speech component that provides an audio player for content.
+ *
+ * Features:
+ * - Floating audio player that appears when triggered
+ * - Customizable trigger button with headphones icon
+ * - Section navigation for audio content
+ * - Keyboard shortcuts (Esc to close)
+ * - Fully accessible with ARIA attributes
+ * - Customizable styling through various className props
+ */
 export default function EnhancedTextToSpeech({
   content,
   title,
   slug,
   className,
+  playerContainerClassName,
+  triggerClassName,
+  triggerWrapperClassName,
+  triggerLabel = "Listen",
+  triggerPauseLabel = "Pause",
 }: TextToSpeechProps) {
   // State for audio playback
   const [isPlaying, setIsPlaying] = useState(false);
@@ -47,6 +96,9 @@ export default function EnhancedTextToSpeech({
     string | null
   >(null);
 
+  // State for player visibility - hidden by default
+  const [isVisible, setIsVisible] = useState(false);
+
   // State for content chunks
   const [audioChunks, setAudioChunks] = useState<AudioChunk[]>([]);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -55,8 +107,19 @@ export default function EnhancedTextToSpeech({
 
   // References
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Add a ref to track the current chunk index to avoid closure issues
   const currentIndexRef = useRef<number>(0);
+  const playerRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const placeholderRef = useRef<HTMLDivElement>(null);
+
+  // Create a ref for the component container and placeholder
+  const containerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<HTMLDivElement>(null);
+  const [audioPlayerHeight, setAudioPlayerHeight] = useState(0);
+
+  // Add refs to track animation state
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [animationClass, setAnimationClass] = useState("");
 
   // Determine the API URL based on the slug structure
   const getApiUrl = () => {
@@ -483,6 +546,28 @@ export default function EnhancedTextToSpeech({
       } else if (audioChunks.length > 0) {
         playChunk(currentChunkIndex);
       }
+      setIsPlaying(true);
+    }
+  };
+
+  // Toggle play/pause from trigger button (affects visibility too)
+  const togglePlayPauseFromTrigger = () => {
+    if (isPlaying) {
+      // If playing, pause and hide the player
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setIsPlaying(false);
+      setIsVisible(false);
+    } else {
+      // If not playing, show player and start playing
+      if (audioRef.current && audioRef.current.src) {
+        audioRef.current.play();
+      } else if (audioChunks.length > 0) {
+        playChunk(currentChunkIndex);
+      }
+      setIsPlaying(true);
+      setIsVisible(true);
     }
   };
 
@@ -517,15 +602,40 @@ export default function EnhancedTextToSpeech({
 
     // Handle different types of chunks
     if (chunkId === "intro") {
-      // For intro section, find the first paragraph
-      const firstParagraph = document.querySelector(".main-content > p");
-      if (firstParagraph) {
-        firstParagraph.classList.add("audio-playing");
-        setHighlightedElementId("intro-paragraph");
-        scrollToElement(firstParagraph as HTMLElement);
+      // For intro section, highlight the title and first paragraphs (before any h2)
+      const h1 = document.querySelector(".main-content h1");
+      if (h1) {
+        h1.classList.add("audio-playing");
+        setHighlightedElementId("intro-title");
+
+        // Find all content elements before the first h2
+        const mainContent = document.querySelector(".main-content");
+        if (mainContent) {
+          let currentElem = h1.nextElementSibling;
+          const firstH2 = document.querySelector(".main-content h2");
+
+          // Add the class to all elements between h1 and first h2 (or end of content)
+          while (
+            currentElem &&
+            (!firstH2 || !currentElem.isSameNode(firstH2))
+          ) {
+            // Only add to paragraph-like content, not other headings
+            if (
+              currentElem.nodeName.match(/^(P|UL|OL|BLOCKQUOTE|PRE|FIGURE)$/i)
+            ) {
+              currentElem.classList.add("audio-playing");
+            }
+            currentElem = currentElem.nextElementSibling;
+
+            // Break if we've reached the end
+            if (!currentElem) break;
+          }
+        }
+
+        scrollToElement(h1 as HTMLElement);
       }
     } else if (chunkId.startsWith("section_")) {
-      // For sections, find the corresponding h2 and add the audio-playing class
+      // For sections, find the corresponding h2 and all its content
       const sectionIndex = parseInt(chunkId.replace("section_", ""), 10);
       const h2Elements = document.querySelectorAll(".main-content h2");
 
@@ -533,15 +643,36 @@ export default function EnhancedTextToSpeech({
         const sectionH2 = h2Elements[sectionIndex] as HTMLElement;
         sectionH2.classList.add("audio-playing");
         setHighlightedElementId(sectionH2.id || `section-h2-${sectionIndex}`);
+
+        // Find all content elements until the next h2 or end of content
+        let currentElem = sectionH2.nextElementSibling;
+        const nextH2 = h2Elements[sectionIndex + 1] || null;
+
+        // Add the class to all elements between this h2 and the next h2 (or end of content)
+        while (currentElem && (!nextH2 || !currentElem.isSameNode(nextH2))) {
+          // Only add to paragraph-like content, not other headings
+          if (
+            currentElem.nodeName.match(/^(P|UL|OL|BLOCKQUOTE|PRE|FIGURE)$/i)
+          ) {
+            currentElem.classList.add("audio-playing");
+          }
+          currentElem = currentElem.nextElementSibling;
+
+          // Break if we've reached the end
+          if (!currentElem) break;
+        }
+
         scrollToElement(sectionH2);
       }
     } else if (chunkId === "full_content") {
-      // Handle case with no h2 headings
-      const firstParagraph = document.querySelector(".main-content > p");
-      if (firstParagraph) {
-        firstParagraph.classList.add("audio-playing");
-        setHighlightedElementId("full-content-paragraph");
-        scrollToElement(firstParagraph as HTMLElement);
+      // Handle case with no h2 headings - highlight all main content
+      const contentElements = document.querySelectorAll(
+        ".main-content > p, .main-content > ul, .main-content > ol, .main-content > blockquote, .main-content > pre, .main-content > figure",
+      );
+      if (contentElements.length > 0) {
+        contentElements.forEach((el) => el.classList.add("audio-playing"));
+        setHighlightedElementId("full-content");
+        scrollToElement(contentElements[0] as HTMLElement);
       }
     }
   };
@@ -645,122 +776,338 @@ export default function EnhancedTextToSpeech({
     }
   };
 
+  // Listen for section play events
+  useEffect(() => {
+    // Handler function to play audio for the clicked section
+    const handleSectionPlay = (sectionId: string, onlyIfPlaying: boolean) => {
+      // Only process if we have audio chunks
+      if (!audioChunks.length) return;
+
+      // If onlyIfPlaying is true, only proceed if audio is already playing
+      if (onlyIfPlaying && !isPlaying) {
+        console.log(
+          `Ignoring request to play section ${sectionId} because audio is not currently playing`,
+        );
+        return;
+      }
+
+      console.log(`Received request to play section with ID: ${sectionId}`);
+
+      // Find the heading element
+      const headingElement = document.getElementById(sectionId);
+      if (!headingElement) return;
+
+      // Determine which audio chunk to play based on heading
+      let chunkToPlay = -1;
+
+      if (headingElement.tagName === "H1") {
+        // If it's the title (H1), play the introduction
+        chunkToPlay = audioChunks.findIndex((chunk) => chunk.id === "intro");
+      } else if (headingElement.tagName === "H2") {
+        // If it's an H2, find its index among other H2s
+        const h2Elements = Array.from(
+          document.querySelectorAll(".main-content h2"),
+        );
+        const h2Index = h2Elements.findIndex((h2) => h2.id === sectionId);
+
+        if (h2Index >= 0) {
+          chunkToPlay = audioChunks.findIndex(
+            (chunk) => chunk.id === `section_${h2Index}`,
+          );
+        }
+      }
+
+      if (chunkToPlay >= 0) {
+        console.log(
+          `Playing audio chunk ${chunkToPlay} for section ${sectionId}`,
+        );
+        playChunk(chunkToPlay);
+      } else {
+        console.log(
+          `Couldn't find matching audio chunk for section ${sectionId}`,
+        );
+      }
+    };
+
+    // Set up event listener
+    const cleanup = listenToSectionPlay(handleSectionPlay);
+
+    // Cleanup function
+    return cleanup;
+  }, [audioChunks, isPlaying]); // Include isPlaying in dependencies
+
+  // Broadcast audio state changes
+  useEffect(() => {
+    // Get the current section ID based on the current chunk
+    let currentSectionId: string | undefined;
+
+    if (audioChunks[currentChunkIndex]) {
+      const chunk = audioChunks[currentChunkIndex];
+
+      if (chunk.id === "intro") {
+        // For intro, try to find the H1 title
+        const h1 = document.querySelector(".main-content h1");
+        if (h1) {
+          currentSectionId = h1.id;
+        }
+      } else if (chunk.id.startsWith("section_")) {
+        // For sections, find the corresponding H2
+        const sectionIndex = parseInt(chunk.id.replace("section_", ""), 10);
+        const h2Elements = document.querySelectorAll(".main-content h2");
+
+        if (sectionIndex < h2Elements.length) {
+          currentSectionId = h2Elements[sectionIndex].id;
+        }
+      }
+    }
+
+    // Broadcast current state
+    broadcastAudioState(isPlaying, currentSectionId, currentChunkIndex);
+  }, [isPlaying, currentChunkIndex, audioChunks]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Close the player when Escape is pressed and the player is visible
+      if (e.key === "Escape" && isVisible) {
+        setIsVisible(false);
+      }
+    };
+
+    // Add the event listener
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isVisible]);
+
   // If we have no chunks or encountered an error loading them
   if (audioChunks.length === 0 && !isLoading && !error) {
     return null;
   }
 
   return (
-    <div className={cn("fixed-audio-player", className)}>
-      <div className="relative space-y-2">
-        {/* First row: Controls and progress slider combined */}
-        <div className="flex items-center space-x-3">
-          {/* Playback controls */}
-          <div className="flex space-x-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={isLoading || audioChunks.length === 0}
-                    onClick={previousChunk}
-                  >
-                    <SkipBack className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Previous</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={isLoading || audioChunks.length === 0}
-                    onClick={togglePlayPause}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isPlaying ? (
-                      <Pause className="h-4 w-4" />
-                    ) : (
-                      <Play className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isLoading ? "Loading" : isPlaying ? "Pause" : "Play"}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    disabled={isLoading || audioChunks.length === 0}
-                    onClick={nextChunk}
-                  >
-                    <SkipForward className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Next</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          {/* Progress slider - now taking remaining space */}
-          <div className="relative flex-1">
-            <Slider
-              disabled={isLoading || audioChunks.length === 0}
-              value={[progress]}
-              max={100}
-              step={1}
-              className="z-10"
-              onValueChange={(value: number[]) => {
-                if (audioRef.current) {
-                  const newTime = (value[0] / 100) * audioRef.current.duration;
-                  audioRef.current.currentTime = newTime;
-                  setProgress(value[0]);
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Second row: Information about current playback */}
-        <div className="text-muted-foreground flex justify-between text-xs">
-          {audioChunks.length > 0 ? (
-            <>
-              <span>
-                {currentChunkIndex + 1} of {audioChunks.length}
-              </span>
-              <span className="max-w-[70%] truncate text-right">
-                {audioChunks[currentChunkIndex]?.title
-                  ? audioChunks[currentChunkIndex].title
-                  : audioChunks[currentChunkIndex]?.id === "intro"
-                    ? "Introduction"
-                    : audioChunks[currentChunkIndex]?.text?.slice(0, 40) +
-                      "..."}
-              </span>
-            </>
+    <>
+      {/* Trigger button wrapper for better positioning control */}
+      <div className={cn("mb-8", triggerWrapperClassName)}>
+        {/* Trigger button - headphones icon with text that toggles play/pause and visibility */}
+        <button
+          onClick={togglePlayPauseFromTrigger}
+          className={cn(
+            "border-muted inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+            isPlaying
+              ? "text-primary bg-primary/5 hover:bg-primary/10"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            triggerClassName,
+          )}
+          aria-label={
+            isPlaying
+              ? `Pause audio narration (${triggerPauseLabel})`
+              : `Listen to audio narration (${triggerLabel})`
+          }
+          title={
+            isPlaying
+              ? `Pause audio narration (${triggerPauseLabel})`
+              : `Listen to audio narration (${triggerLabel})`
+          }
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <span>No audio available</span>
+            <Headphones className="h-4 w-4" aria-hidden="true" />
+          )}
+          <span>{isPlaying ? triggerPauseLabel : triggerLabel}</span>
+        </button>
+      </div>
+
+      {/* Floating player - always fixed, but conditionally visible */}
+      <div
+        ref={playerRef}
+        className={cn(
+          "audio-player bg-background fixed right-0 bottom-0 left-0 z-50 border-t p-4 shadow-lg transition-all duration-300 ease-out",
+          isVisible
+            ? "translate-y-0 opacity-100"
+            : "translate-y-full opacity-0",
+          className,
+        )}
+        aria-hidden={!isVisible}
+        role="region"
+        aria-label="Audio player"
+      >
+        <div
+          className={cn(
+            "relative container mx-auto max-w-4xl space-y-2",
+            playerContainerClassName,
+          )}
+        >
+          {/* Close button in top right corner */}
+          <button
+            onClick={() => setIsVisible(false)}
+            className="text-muted-foreground hover:text-foreground absolute top-0 right-0 p-1"
+            aria-label="Close audio player"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          {/* First row: Controls and progress slider combined */}
+          <div className="flex items-center space-x-3">
+            {/* Playback controls */}
+            <div
+              className="flex items-center space-x-2"
+              role="group"
+              aria-label="Audio playback controls"
+            >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isLoading || audioChunks.length === 0}
+                      onClick={previousChunk}
+                      aria-label="Previous section"
+                      className="flex items-center justify-center"
+                    >
+                      <SkipBack className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Previous section</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isLoading || audioChunks.length === 0}
+                      onClick={togglePlayPause}
+                      aria-label={
+                        isLoading ? "Loading" : isPlaying ? "Pause" : "Play"
+                      }
+                      className="flex items-center justify-center"
+                    >
+                      {isLoading ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : isPlaying ? (
+                        <Pause className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isLoading ? "Loading" : isPlaying ? "Pause" : "Play"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={isLoading || audioChunks.length === 0}
+                      onClick={nextChunk}
+                      aria-label="Next section"
+                      className="flex items-center justify-center"
+                    >
+                      <SkipForward className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Next section</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            {/* Progress slider - taking remaining space */}
+            <div className="relative flex flex-1 items-center pr-8">
+              <Slider
+                disabled={isLoading || audioChunks.length === 0}
+                value={[progress]}
+                max={100}
+                step={1}
+                className="z-10"
+                onValueChange={(value: number[]) => {
+                  if (audioRef.current) {
+                    const newTime =
+                      (value[0] / 100) * audioRef.current.duration;
+                    audioRef.current.currentTime = newTime;
+                    setProgress(value[0]);
+                  }
+                }}
+                aria-label="Audio progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress}
+                aria-valuetext={`${Math.round(progress)}% complete`}
+              />
+            </div>
+          </div>
+
+          {/* Second row: Information about current playback */}
+          <div
+            className="text-muted-foreground flex items-center justify-between text-xs"
+            aria-live="polite"
+          >
+            {audioChunks.length > 0 ? (
+              <>
+                <span className="flex-shrink-0">
+                  Section {currentChunkIndex + 1} of {audioChunks.length}
+                </span>
+
+                {/* Keyboard shortcut information - now in the middle */}
+                <span className="mx-2 flex-shrink-0 text-center text-xs">
+                  Press{" "}
+                  <kbd className="rounded border px-1 py-0.5 text-xs">Esc</kbd>{" "}
+                  to close
+                </span>
+
+                <span className="max-w-[40%] flex-shrink-0 truncate text-right">
+                  {audioChunks[currentChunkIndex]?.title
+                    ? audioChunks[currentChunkIndex].title
+                    : audioChunks[currentChunkIndex]?.id === "intro"
+                      ? "Introduction"
+                      : audioChunks[currentChunkIndex]?.text?.slice(0, 40) +
+                        "..."}
+                </span>
+              </>
+            ) : (
+              <span>No audio available</span>
+            )}
+          </div>
+
+          {/* Error display */}
+          {error && (
+            <div
+              className="bg-destructive/10 text-destructive mt-2 rounded-md p-3 text-sm"
+              role="alert"
+            >
+              <p>{error}</p>
+            </div>
           )}
         </div>
-
-        {/* Error display */}
-        {error && (
-          <div className="bg-destructive/10 text-destructive mt-2 rounded-md p-3 text-sm">
-            <p>{error}</p>
-          </div>
-        )}
       </div>
-    </div>
+    </>
   );
 }

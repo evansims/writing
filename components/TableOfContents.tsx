@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ArrowUp } from "lucide-react";
+import { playSection, listenToAudioStateChange } from "@/lib/audioEvents";
 
 interface TOCItem {
   id: string;
@@ -18,9 +19,21 @@ export default function TableOfContents() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
   const [hasHeadings, setHasHeadings] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [h1Id, setH1Id] = useState<string>("");
+  const [pageTitle, setPageTitle] = useState<string>("");
   const tocRef = useRef<HTMLElement>(null);
   const activeIdRef = useRef<string>(activeId);
   const activeIdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Listen for audio state changes
+  useEffect(() => {
+    const cleanup = listenToAudioStateChange((state) => {
+      setIsAudioPlaying(state.isPlaying);
+    });
+
+    return cleanup;
+  }, []);
 
   // Handle scroll events
   useEffect(() => {
@@ -68,11 +81,38 @@ export default function TableOfContents() {
     });
   }, []);
 
+  // Main effect for setting up heading detection
   useEffect(() => {
-    const articleContent = document.querySelector(".content");
+    // Only run on client-side
+    if (typeof window === "undefined") return;
 
+    const articleContent = document.querySelector(".content");
     if (!articleContent) return;
 
+    // Get the h1 title element
+    const h1Element = document.querySelector(".main-content h1");
+
+    // Extract page title and ID
+    if (h1Element instanceof HTMLElement) {
+      if (h1Element.id) {
+        setH1Id(h1Element.id);
+      }
+
+      // Get and trim the title text
+      const titleText = h1Element.textContent || "";
+      const trimmedTitle = titleText.trim();
+
+      if (trimmedTitle) {
+        console.log("Found page title:", trimmedTitle);
+        setPageTitle(trimmedTitle);
+      } else {
+        console.warn("Found h1 element but no text content");
+      }
+    } else {
+      console.warn("Could not find main h1 element for title");
+    }
+
+    // Collect all headings
     const headingElements = articleContent.querySelectorAll(
       "h1, h2, h3, h4, h5, h6",
     );
@@ -96,83 +136,88 @@ export default function TableOfContents() {
       document.documentElement.classList.remove("no-toc-headings");
     }
 
-    // Keep a reference to the latest active ID
-    activeIdRef.current = activeId;
+    // Function to determine which heading is active based on scroll position
+    const determineActiveHeading = () => {
+      const scrollTop = window.scrollY;
+      const ACTIVATION_OFFSET = 150; // Distance from top to consider heading "active"
 
-    // Enhanced function to update the active ID with debouncing
-    const updateActiveId = (newId: string) => {
-      // Don't update if it's the same ID to prevent re-renders
-      if (newId === activeIdRef.current) return;
-
-      // Clear any existing timeout
-      if (activeIdTimeoutRef.current) {
-        clearTimeout(activeIdTimeoutRef.current);
+      // Check if we're at the top of the page
+      if (scrollTop < 100 && h1Element?.id) {
+        setActiveId(h1Element.id);
+        return;
       }
 
-      // Set a timeout to update the active ID
-      activeIdTimeoutRef.current = setTimeout(() => {
-        setActiveId(newId);
-        activeIdRef.current = newId;
-      }, 100); // 100ms debounce
-    };
+      // Find the heading just above the activation line
+      let activeHeadingId = "";
+      let smallestDistance = Infinity;
 
-    // Track which headings are visible and their visibility ratio
-    const visibleHeadings = new Map<string, number>();
+      // Iterate through all headings and find the one closest to the top
+      Array.from(headingElements).forEach((heading) => {
+        if (heading instanceof HTMLElement && heading.id) {
+          const headingTop = heading.offsetTop;
+          const positionFromTop = headingTop - scrollTop - ACTIVATION_OFFSET;
 
-    // Set up intersection observer with multiple thresholds for smoother transitions
-    const callback = (entries: IntersectionObserverEntry[]) => {
-      // Update the visibility map
-      entries.forEach((entry) => {
-        const id = entry.target.id;
-
-        if (entry.isIntersecting) {
-          visibleHeadings.set(id, entry.intersectionRatio);
-        } else {
-          visibleHeadings.delete(id);
+          // If heading is above activation line but closest to it
+          if (positionFromTop <= 0 && positionFromTop > -smallestDistance) {
+            activeHeadingId = heading.id;
+            smallestDistance = Math.abs(positionFromTop);
+          }
         }
       });
 
-      // If we have visible headings, find the most prominent one
-      if (visibleHeadings.size > 0) {
-        // Sort by intersection ratio (more visible = higher priority)
-        const sortedHeadings = Array.from(visibleHeadings.entries()).sort(
-          (a, b) => b[1] - a[1],
-        );
-
-        // Update the active ID to the most visible heading
-        updateActiveId(sortedHeadings[0][0]);
-      } else {
-        // If no headings are visible, find the one just above the viewport
-        const headingsAbove = entries
-          .filter(
-            (entry) =>
-              !entry.isIntersecting && entry.boundingClientRect.top < 0,
-          )
-          .sort((a, b) => b.boundingClientRect.top - a.boundingClientRect.top);
-
-        if (headingsAbove.length > 0 && headingsAbove[0].target.id) {
-          updateActiveId(headingsAbove[0].target.id);
-        }
+      // Update active heading if found
+      if (activeHeadingId) {
+        setActiveId(activeHeadingId);
       }
     };
 
-    const observer = new IntersectionObserver(callback, {
-      rootMargin: "-20px 0px -20px 0px", // Small margin to trigger a bit before headers enter/leave viewport
-      threshold: [0, 0.25, 0.5, 0.75, 1], // Multiple thresholds for smoother transitions
-    });
+    // Throttle scroll handling for performance
+    let isScrolling = false;
+    const handleScroll = () => {
+      if (!isScrolling) {
+        window.requestAnimationFrame(() => {
+          determineActiveHeading();
+          isScrolling = false;
+        });
+        isScrolling = true;
+      }
+    };
 
-    headingElements.forEach((heading) => {
-      observer.observe(heading);
-    });
+    // Do an initial check after a short delay to ensure DOM is ready
+    setTimeout(determineActiveHeading, 100);
+
+    // Set up scroll listener
+    window.addEventListener("scroll", handleScroll);
 
     return () => {
-      observer.disconnect();
+      window.removeEventListener("scroll", handleScroll);
+
       // Clear any pending timeout on cleanup
       if (activeIdTimeoutRef.current) {
         clearTimeout(activeIdTimeoutRef.current);
       }
     };
   }, []);
+
+  // Find the parent H2 for a given heading ID
+  const findParentH2Id = (headingId: string): string | null => {
+    const headingIndex = headings.findIndex((h) => h.id === headingId);
+    if (headingIndex === -1) return null;
+
+    const heading = headings[headingIndex];
+
+    // If it's already an H2 or H1, return it directly
+    if (heading.level <= 2) return heading.id;
+
+    // Look backwards to find the closest H2
+    for (let i = headingIndex; i >= 0; i--) {
+      if (headings[i].level === 2) {
+        return headings[i].id;
+      }
+    }
+
+    return null;
+  };
 
   // Handle smooth scrolling
   const handleLinkClick = (
@@ -191,11 +236,57 @@ export default function TableOfContents() {
 
       // Update URL hash without scrolling
       history.pushState(null, "", `#${id}`);
+
+      // Only trigger audio if already playing, and determine the right section
+      if (isAudioPlaying) {
+        const heading = headings.find((h) => h.id === id);
+
+        if (heading && heading.level > 2) {
+          // For subsections, find the parent H2
+          const parentH2Id = findParentH2Id(id);
+          if (parentH2Id) {
+            // Play the parent section
+            playSection(parentH2Id, true);
+          }
+        } else {
+          // Play directly for H1 and H2
+          playSection(id, true);
+        }
+      }
+    }
+  };
+
+  // Function to handle the title link click
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    // Find the main content and its first child
+    const mainContent = document.querySelector(".main-content");
+    const h1 = mainContent?.querySelector("h1");
+
+    if (h1) {
+      // Scroll to the H1 (title)
+      window.scrollTo({
+        top: h1.offsetTop - 100,
+        behavior: "smooth",
+      });
+
+      // Update active ID if possible
+      if (h1.id) {
+        setActiveId(h1.id);
+        // Update URL hash without scrolling
+        history.pushState(null, "", `#${h1.id}`);
+
+        // Only trigger audio playback for intro if already playing
+        if (isAudioPlaying) {
+          playSection("intro", true);
+        }
+      }
     }
   };
 
   if (headings.length === 0) {
-    return <div data-has-headings="false" className="hidden"></div>;
+    return <div className="toc-container" data-has-headings="false"></div>;
   }
 
   // Calculate progress for each heading
@@ -234,6 +325,9 @@ export default function TableOfContents() {
       isActive,
     };
   });
+
+  // Is the introduction active?
+  const isIntroActive = activeId === h1Id || activeId === "";
 
   return (
     <nav
@@ -276,6 +370,31 @@ export default function TableOfContents() {
         className={cn("toc-content", !isExpanded && "toc-content-collapsed")}
       >
         <ul className="toc-list space-y-2 text-sm">
+          {/* Title link - always first */}
+          <li
+            className={cn(
+              "toc-item",
+              "toc-item-h2",
+              isIntroActive ? "toc-item-active" : "toc-item-upcoming",
+            )}
+          >
+            <Link
+              href="#"
+              className={cn(
+                "hover:text-foreground relative flex items-center gap-2 py-1 transition-colors",
+                isIntroActive ? "toc-link-active" : "toc-link-upcoming",
+              )}
+              onClick={handleTitleClick}
+              tabIndex={0}
+            >
+              <span className="toc-line-indicator"></span>
+              <span className="toc-text font-semibold">
+                {pageTitle || "Article"}
+              </span>
+            </Link>
+          </li>
+
+          {/* Regular headings */}
           {headings.map((heading, index) => {
             const isActive = activeId === heading.id;
             const isPassed =
@@ -318,7 +437,7 @@ export default function TableOfContents() {
                 <Link
                   href={`#${heading.id}`}
                   className={cn(
-                    "hover:text-foreground relative block py-1 transition-colors",
+                    "hover:text-foreground relative flex items-center gap-2 py-1 transition-colors",
                     `toc-link-${headingStatus}`,
                   )}
                   onClick={(e) => handleLinkClick(e, heading.id)}
@@ -334,6 +453,20 @@ export default function TableOfContents() {
 
         {/* Progress indicator for collapsed state - integrated with the list */}
         <div className="toc-progress-indicator">
+          {/* Add a title item to the progress indicator */}
+          <button
+            onClick={handleTitleClick}
+            className={cn(
+              "progress-line",
+              isIntroActive
+                ? "progress-line-active"
+                : activeIndex === 0
+                  ? "progress-line-passed"
+                  : "",
+            )}
+            aria-label={`Jump to ${pageTitle}`}
+          />
+
           {h2Progress.map((h2) => (
             <button
               key={h2.id}
@@ -346,6 +479,9 @@ export default function TableOfContents() {
                     behavior: "smooth",
                   });
                   setActiveId(h2.id);
+
+                  // Trigger audio playback for this section only if already playing
+                  playSection(h2.id, true);
                 }
               }}
               className={cn(

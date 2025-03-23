@@ -762,7 +762,7 @@ li {
   transition: transform 0.3s ease;
 }
 
-/* Responsive audio player that matches content width */
+/* Base responsive styles for all screen sizes >= 768px */
 @media (min-width: 768px) {
   .fixed-audio-player {
     left: 50%;
@@ -775,14 +775,63 @@ li {
   }
 }
 
-/* Adjust for layouts with TOC by using the same offset as content */
+/* Adjust for layouts with TOC by using the same offset as content - higher specificity */
 @media (min-width: 1280px) {
-  html:has(.toc-container:not(:has([data-has-headings="false"])))
-    .fixed-audio-player {
-    width: var(--page-max-width);
-    max-width: var(--page-max-width);
+  /* Using higher specificity to override the 768px rule */
+  html:has(.toc-nav[data-has-headings="true"]) .fixed-audio-player {
+    width: var(
+      --page-max-width
+    ) !important; /* Using !important to ensure this rule takes precedence */
+    max-width: var(--page-max-width) !important;
     /* Align exactly with main-content by offsetting by the full TOC width (16rem) */
-    left: calc(50% + 16rem);
-    transform: translateX(-50%);
+    left: calc(50% + 8rem) !important;
+    transform: translateX(-50%) !important;
+  }
+}
+
+/* Audio playing indicator */
+.audio-playing {
+  animation: pulse-audio 2s infinite;
+}
+
+h2.audio-playing {
+  text-decoration: underline;
+}
+
+@keyframes pulse-audio {
+  0% {
+    color: color-mix(in srgb, var(--foreground) 50%, transparent);
+  }
+  50% {
+    color: color-mix(in srgb, var(--foreground) 100%, transparent);
+  }
+  100% {
+    color: color-mix(in srgb, var(--foreground) 50%, transparent);
+  }
+}
+
+/* Audio icon in TOC */
+.toc-link-active svg[data-icon="audio-waveform"] {
+  color: var(--foreground);
+  opacity: 1;
+}
+
+/* Show audio is playing in TOC */
+.toc-item:has(.toc-link-active) svg[data-icon="audio-waveform"] {
+  animation: pulse-wave 1.5s infinite;
+}
+
+@keyframes pulse-wave {
+  0% {
+    transform: scaleY(0.5);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(0.5);
+    opacity: 0.5;
   }
 }
