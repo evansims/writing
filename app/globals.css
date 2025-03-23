@@ -256,8 +256,8 @@ body {
   top: 2rem;
   width: 100%;
   max-height: calc(100vh - 4rem);
-  overflow-y: auto;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
@@ -267,18 +267,64 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Top link in both states */
+.toc-top-link,
+.toc-top-link-collapsed {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toc-top-link:hover svg,
+.toc-top-link-collapsed:hover svg {
+  transform: translateY(-2px);
+}
+
+.toc-top-link svg,
+.toc-top-link-collapsed svg {
+  transition: transform 0.2s ease;
+}
+
+/* Header container */
+.toc-header {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  margin-bottom: 1rem;
+}
+
 /* List styles */
 .toc-list {
   position: relative;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   margin-left: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 8rem);
+  padding-right: 1rem; /* Space for scrollbar */
+  margin-right: -1rem; /* Compensate for padding */
 }
 
 .toc-item {
   position: relative;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   margin: 0.5rem 0;
   line-height: 1.4;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toc-item-nested {
+  font-size: 0.9em;
+  margin-left: 0.75rem;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    height 0.3s ease,
+    margin 0.3s ease;
 }
 
 .toc-item a {
@@ -286,6 +332,20 @@ body {
   align-items: center;
   position: relative;
   transition: color 0.2s ease;
+}
+
+/* Link styling to match progress lines */
+.toc-link-upcoming {
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+}
+
+.toc-link-passed {
+  color: color-mix(in srgb, var(--foreground) 75%, transparent);
+}
+
+.toc-link-active {
+  color: var(--foreground);
+  font-weight: 500;
 }
 
 .toc-text {
@@ -300,6 +360,14 @@ body {
   padding-left: 1.5rem;
 }
 
+.toc-collapsed .toc-top-link-collapsed {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
 /* Progress indicator for collapsed state */
 .toc-progress-indicator {
   display: flex;
@@ -312,7 +380,7 @@ body {
   width: 20px;
   height: 3px;
   background-color: color-mix(in srgb, var(--foreground) 50%, transparent);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   border: none;
   padding: 0;
   cursor: pointer;
@@ -320,26 +388,40 @@ body {
 }
 
 .progress-line-passed {
-  background-color: color-mix(in srgb, var(--foreground) 25%, transparent);
+  background-color: color-mix(in srgb, var(--foreground) 75%, transparent);
 }
 
 .progress-line-active {
   width: 40px;
-  background-color: color-mix(in srgb, var(--foreground) 100%, transparent);
+  background-color: var(--foreground);
 }
 
 /* Expanded state */
 .toc-expanded {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-y: hidden;
 }
 
 .toc-expanded .toc-item {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    all 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease 0.1s,
+    transform 0.3s ease 0.1s;
 }
 
-/* Expand on hover */
+/* Hover on collapsed state */
 .toc-nav:hover.toc-collapsed {
   padding-left: 0;
+}
+
+.toc-nav:hover.toc-collapsed .toc-top-link-collapsed,
+.toc-nav:focus-within.toc-collapsed .toc-top-link-collapsed {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .toc-nav:hover.toc-collapsed .progress-line,

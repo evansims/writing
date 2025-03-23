@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ArrowUp } from "lucide-react";
 
 interface TOCItem {
   id: string;
@@ -15,6 +16,8 @@ export default function TableOfContents() {
   const [activeId, setActiveId] = useState<string>("");
   const [isExpanded, setIsExpanded] = useState(true);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [isSticky, setIsSticky] = useState(false);
+  const tocRef = useRef<HTMLElement>(null);
 
   // Handle scroll events
   useEffect(() => {
@@ -26,6 +29,12 @@ export default function TableOfContents() {
       } else if (window.scrollY < 150 && hasScrolled) {
         setHasScrolled(false);
         setIsExpanded(true);
+      }
+
+      // Check if TOC is sticky
+      if (tocRef.current) {
+        const tocTop = tocRef.current.getBoundingClientRect().top;
+        setIsSticky(tocTop <= 10);
       }
     };
 
@@ -44,6 +53,14 @@ export default function TableOfContents() {
       setIsExpanded(false);
     }
   }, [hasScrolled]);
+
+  // Scroll to top
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }, []);
 
   useEffect(() => {
     const articleContent = document.querySelector(".content");
@@ -177,11 +194,40 @@ export default function TableOfContents() {
     };
   });
 
+  // For expanded state, we want to show only relevant sections
+  // Start with all H2 headings
+  const visibleHeadings = headings.filter((heading) => {
+    // Always show H2 headings
+    if (heading.level === 2) return true;
+
+    // For H3-H6, only show if they're under the active H2
+    if (heading.level > 2) {
+      // Find parent H2
+      const headingIndex = headings.findIndex((h) => h.id === heading.id);
+      let parentH2Index = -1;
+
+      // Look backward to find the most recent H2
+      for (let i = headingIndex; i >= 0; i--) {
+        if (headings[i].level === 2) {
+          parentH2Index = i;
+          break;
+        }
+      }
+
+      // Only show if this heading is under the active H2
+      return parentH2Index >= 0 && headings[parentH2Index].id === activeH2Id;
+    }
+
+    return false;
+  });
+
   return (
     <nav
+      ref={tocRef}
       className={cn(
         "toc-nav",
         hasScrolled && !isExpanded ? "toc-collapsed" : "toc-expanded",
+        isSticky && "is-sticky",
       )}
       aria-label="Table of contents"
       onMouseEnter={expandTOC}
@@ -193,37 +239,90 @@ export default function TableOfContents() {
         }
       }}
     >
-      <h2 className="toc-title text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
-        {isExpanded ? "IN THIS ARTICLE" : "READING PROGRESS"}
-      </h2>
+      <div className="toc-header">
+        {isExpanded ? (
+          isSticky ? (
+            <button
+              onClick={scrollToTop}
+              className="toc-top-link text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 text-sm font-medium transition-colors"
+              aria-label="Scroll to top"
+            >
+              <ArrowUp size={14} />
+              <span>TOP</span>
+            </button>
+          ) : (
+            <h2 className="toc-title text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+              IN THIS ARTICLE
+            </h2>
+          )
+        ) : (
+          <button
+            onClick={scrollToTop}
+            className="toc-top-link-collapsed text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 text-sm font-medium transition-colors"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={14} />
+            <span>TOP</span>
+          </button>
+        )}
+      </div>
 
       {/* Main TOC list - visible when expanded */}
       {isExpanded ? (
         <ul className="toc-list space-y-2 text-sm">
           {headings.map((heading, index) => {
             const isActive = activeId === heading.id;
-            const isPassed = activeIndex >= index;
+            const isPassed =
+              activeIndex >= headings.findIndex((h) => h.id === heading.id);
+            const isChildHeading = heading.level > 2;
+
+            // Find parent H2 for this heading
+            let isUnderActiveH2 = false;
+            if (isChildHeading) {
+              const headingIndex = headings.findIndex(
+                (h) => h.id === heading.id,
+              );
+              let parentH2Index = -1;
+
+              // Look backward to find the most recent H2
+              for (let i = headingIndex; i >= 0; i--) {
+                if (headings[i].level === 2) {
+                  parentH2Index = i;
+                  break;
+                }
+              }
+
+              // Check if under active H2
+              isUnderActiveH2 =
+                parentH2Index >= 0 && headings[parentH2Index].id === activeH2Id;
+            }
+
+            // Only show H2s and child headings under the active H2
+            if (isChildHeading && !isUnderActiveH2) {
+              return null;
+            }
+
+            // Determine heading status for styling
+            const headingStatus = isActive
+              ? "active"
+              : isPassed
+                ? "passed"
+                : "upcoming";
 
             return (
               <li
                 key={heading.id}
                 className={cn(
                   "toc-item",
-                  "toc-item-expanded",
-                  isActive && "toc-item-active",
-                  isPassed && "toc-item-passed",
+                  `toc-item-${headingStatus}`,
+                  isChildHeading && "toc-item-nested",
                 )}
-                style={{
-                  paddingLeft: `${(heading.level - 1) * 0.75}rem`,
-                }}
               >
                 <Link
                   href={`#${heading.id}`}
                   className={cn(
                     "hover:text-foreground relative block py-1 transition-colors",
-                    isActive
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground",
+                    `toc-link-${headingStatus}`,
                   )}
                   onClick={(e) => handleLinkClick(e, heading.id)}
                   tabIndex={0}
