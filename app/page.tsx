@@ -169,7 +169,10 @@ async function LatestContent() {
                   {item.topic && (
                     <Link
                       href={`/${item.topic.toLowerCase()}`}
-                      className="text-muted-foreground mb-2 text-sm"
+                      className="text-muted-foreground mb-2 block text-sm hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       {item.topic}
                     </Link>
@@ -199,7 +202,10 @@ async function LatestContent() {
                   {item.topic && (
                     <Link
                       href={`/${item.topic.toLowerCase()}`}
-                      className="text-muted-foreground mb-2 text-sm"
+                      className="text-muted-foreground mb-2 block text-sm hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
                     >
                       {item.topic}
                     </Link>
