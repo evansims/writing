@@ -131,10 +131,6 @@ export default async function ContentPage({ params }: ContentPageProps) {
         </header>
 
         <div className="content-layout">
-          <div className="toc-container">
-            <TableOfContents />
-          </div>
-
           <article className="main-content">
             {content.banner ? (
               <div className="-mx-[var(--page-padding-inline)] mb-10 w-[calc(100%+var(--page-padding-left)+var(--page-padding-right))]">
@@ -292,6 +288,10 @@ export default async function ContentPage({ params }: ContentPageProps) {
               </footer>
             )}
           </article>
+
+          <div className="toc-container">
+            <TableOfContents />
+          </div>
         </div>
       </div>
     );
