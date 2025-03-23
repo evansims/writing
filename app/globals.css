@@ -262,39 +262,54 @@ body {
 }
 
 /* Title styles */
-.toc-title {
-  transition: opacity 0.3s ease;
+.toc-title,
+.toc-top-link {
+  transition: all 0.3s ease;
   margin-bottom: 1rem;
 }
 
 /* Top link in both states */
-.toc-top-link,
-.toc-top-link-collapsed {
+.toc-top-link {
   display: inline-flex;
   align-items: center;
   padding: 0;
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.2s ease;
 }
 
-.toc-top-link:hover svg,
-.toc-top-link-collapsed:hover svg {
+.toc-top-link:hover svg {
   transform: translateY(-2px);
 }
 
-.toc-top-link svg,
-.toc-top-link-collapsed svg {
+.toc-top-link svg {
   transition: transform 0.2s ease;
 }
 
 /* Header container */
 .toc-header {
+  position: absolute;
+  left: 0;
   transition:
     opacity 0.3s ease,
     transform 0.3s ease;
-  margin-bottom: 1rem;
+}
+
+/* Content container for list and progress indicator */
+.toc-content {
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  margin-top: 2rem;
+}
+
+.toc-content-collapsed .toc-list {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toc-content-collapsed .toc-progress-indicator {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* List styles */
@@ -306,20 +321,23 @@ body {
   max-height: calc(100vh - 8rem);
   padding-right: 1rem; /* Space for scrollbar */
   margin-right: -1rem; /* Compensate for padding */
+  opacity: 1;
+  z-index: 2;
 }
 
 .toc-item {
   position: relative;
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-  margin: 0.5rem 0;
-  line-height: 1.4;
+  margin: 0.25rem 0;
   opacity: 1;
   transform: translateY(0);
 }
 
+.toc-item-h2 {
+  position: relative;
+}
+
 .toc-item-nested {
-  font-size: 0.9em;
-  margin-left: 0.75rem;
   transition:
     opacity 0.3s ease,
     transform 0.3s ease,
@@ -332,6 +350,23 @@ body {
   align-items: center;
   position: relative;
   transition: color 0.2s ease;
+}
+
+/* Line indicators that transform into text */
+.toc-line-indicator {
+  position: absolute;
+  left: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 0;
+  transition: all 0.3s ease;
+}
+
+.toc-item-h2 .toc-line-indicator {
+  opacity: 0;
 }
 
 /* Link styling to match progress lines */
@@ -353,27 +388,23 @@ body {
     opacity 0.3s ease,
     transform 0.3s ease;
   display: inline-block;
-}
-
-/* Collapsed state */
-.toc-collapsed {
-  padding-left: 1.5rem;
-}
-
-.toc-collapsed .toc-top-link-collapsed {
-  opacity: 1;
-  transform: translateY(0);
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
+  position: relative;
 }
 
 /* Progress indicator for collapsed state */
 .toc-progress-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-left: -1.5rem;
   margin-top: 0.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1;
 }
 
 .progress-line {
@@ -396,6 +427,26 @@ body {
   background-color: var(--foreground);
 }
 
+/* Collapsed state */
+.toc-collapsed {
+  padding-left: 1.5rem;
+}
+
+.toc-collapsed .toc-line-indicator {
+  width: 20px;
+  opacity: 1;
+}
+
+.toc-collapsed .toc-item-active .toc-line-indicator {
+  width: 40px;
+  background-color: currentColor;
+}
+
+.toc-collapsed .toc-text {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
 /* Expanded state */
 .toc-expanded {
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
@@ -409,27 +460,40 @@ body {
     transform 0.3s ease 0.1s;
 }
 
+.toc-expanded .toc-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toc-expanded .toc-line-indicator {
+  width: 0;
+  opacity: 0;
+}
+
 /* Hover on collapsed state */
 .toc-nav:hover.toc-collapsed {
   padding-left: 0;
 }
 
-.toc-nav:hover.toc-collapsed .toc-top-link-collapsed,
-.toc-nav:focus-within.toc-collapsed .toc-top-link-collapsed {
-  opacity: 0;
-  transform: translateY(-10px);
-  pointer-events: none;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+.toc-nav:hover.toc-collapsed .toc-content-collapsed .toc-list {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.toc-nav:hover.toc-collapsed .progress-line,
-.toc-nav:focus-within.toc-collapsed .progress-line {
+.toc-nav:hover.toc-collapsed .toc-content-collapsed .toc-progress-indicator {
   opacity: 0;
-  height: 0;
-  margin: 0;
-  transition: all 0.2s ease-out;
+  pointer-events: none;
+}
+
+.toc-nav:hover.toc-collapsed .toc-text {
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: 0.1s;
+}
+
+.toc-nav:hover.toc-collapsed .toc-line-indicator {
+  width: 0;
+  opacity: 0;
 }
 
 /* Media queries */
