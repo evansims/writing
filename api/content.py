@@ -4,7 +4,6 @@ from sanic import Blueprint, Request
 from sanic.response import json, JSONResponse
 from sanic.exceptions import NotFound
 import frontmatter
-import mistune
 
 from _validation import safe_path, is_valid_slug, is_valid_path
 from _filesystem import cached_file_exists, cached_file_read, get_content_dir
@@ -15,7 +14,12 @@ content_bp = Blueprint("content_routes", url_prefix="/api/content")
 
 @content_bp.get("/")
 async def list_pages(request: Request) -> JSONResponse:
+    content_type = request.args.get("type")
     ps = await _pages(get_content_dir())
+
+    if content_type:
+        types = content_type.split(",")
+        ps = [p for p in ps if p.type in types]
 
     return json(
         {
@@ -34,7 +38,12 @@ async def list_nested_pages(request: Request, folder) -> JSONResponse:
     except Exception:
         return json([])
 
+    content_type = request.args.get("type")
     ps = await _pages(f)
+
+    if content_type:
+        types = content_type.split(",")
+        ps = [p for p in ps if p.type in types]
 
     return json(
         {
@@ -109,16 +118,17 @@ async def _page(path: str, slug: str) -> Page:
         post = frontmatter.loads(content)
         markdown_content = post.content
 
+        page_slug: str = slug
         page_title: str = str(post.get("title", slug.replace("-", " ").title()))
         page_description: str | None = str(post.get("description", None))
         page_created: datetime | None = None
         page_updated: datetime | None = None
         page_tags: list[str] = []
-        page_banner: str | None = str(post.get("banner", None))
+        page_banner: str | None = None
         page_body: str = str(markdown_content)
-        page_slug: str = slug
         page_folder: str = os.path.basename(os.path.dirname(path))
         page_path: str = path
+        page_type: str | None = None
 
         # Determine the topic based on path structure
         content_dir = get_content_dir()
@@ -142,6 +152,8 @@ async def _page(path: str, slug: str) -> Page:
         _tags = post.get("tags", None)
         _created = post.get("created", None)
         _updated = post.get("updated", None)
+        _banner = post.get("banner", None)
+        _type = post.get("type", None)
 
         if type(_tags) is list:
             page_tags = _tags
@@ -152,18 +164,25 @@ async def _page(path: str, slug: str) -> Page:
         if type(_updated) is str:
             page_updated = datetime.strptime(_updated, "%Y-%m-%d")
 
+        if type(_banner) is str:
+            page_banner = _banner
+
+        if type(_type) is str:
+            page_type = _type
+
         return Page(
-            page_slug,
-            page_title,
-            page_description,
-            page_created,
-            page_updated,
-            page_tags,
-            page_banner,
-            page_body,
-            page_folder,
-            page_path,
-            page_topic,
+            slug=page_slug,
+            title=page_title,
+            body=page_body,
+            path=page_path,
+            description=page_description,
+            created=page_created,
+            updated=page_updated,
+            tags=page_tags,
+            banner=page_banner,
+            folder=page_folder,
+            topic=page_topic,
+            type=page_type,
         )
     except Exception:
         raise NotFound()

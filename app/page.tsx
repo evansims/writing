@@ -165,11 +165,14 @@ async function LatestContent() {
                 href={`${item.url}`}
                 className="group block"
               >
-                <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
+                <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 focus-within:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
                   {item.topic && (
-                    <div className="text-muted-foreground mb-2 text-sm">
+                    <Link
+                      href={`/${item.topic.toLowerCase()}`}
+                      className="text-muted-foreground mb-2 text-sm"
+                    >
                       {item.topic}
-                    </div>
+                    </Link>
                   )}
                   <h3 className="text-xl font-semibold">{item.title}</h3>
                   {item.description && (
@@ -192,11 +195,14 @@ async function LatestContent() {
                 href={`${item.url}`}
                 className="group block"
               >
-                <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
+                <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 focus-within:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
                   {item.topic && (
-                    <div className="text-muted-foreground mb-2 text-sm">
+                    <Link
+                      href={`/${item.topic.toLowerCase()}`}
+                      className="text-muted-foreground mb-2 text-sm"
+                    >
                       {item.topic}
-                    </div>
+                    </Link>
                   )}
                   <h3 className="text-lg font-semibold">{item.title}</h3>
                 </article>
@@ -229,9 +235,12 @@ async function LatestContent() {
                       <h3 className="flex-1 font-semibold">{item.title}</h3>
 
                       {item.topic && (
-                        <div className="text-muted-foreground text-sm">
+                        <Link
+                          href={`/${item.topic.toLowerCase()}`}
+                          className="text-muted-foreground text-sm"
+                        >
                           {item.topic}
-                        </div>
+                        </Link>
                       )}
                     </article>
                   </Link>

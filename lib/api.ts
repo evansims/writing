@@ -1,14 +1,15 @@
 export interface ContentItem {
   slug: string;
   title: string;
+  body: string;
   description?: string;
   created?: string;
   updated?: string;
   tags: string[];
   banner?: string;
-  body: string;
   url: string;
   topic?: string;
+  type?: string;
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5328";

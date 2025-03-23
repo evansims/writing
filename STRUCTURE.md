@@ -151,6 +151,7 @@ created: "2024-02-18"
 updated: "2025-03-19"
 tags: ["mindset", "philosophy", "engineering"]
 banner: "banner.png"
+type: "article"
 ---
 
 # Title
@@ -168,3 +169,38 @@ Any arbitrary properties can be added to the frontmatter. This is not an exhaust
 | `updated`     | The date of when the page was last updated.                            | `"2025-03-19"`                             |
 | `tags`        | A list of tags associated with the page.                               | `["mindset", "philosophy", "engineering"]` |
 | `banner`      | Filename of an image to use as the featured banner image for the page. | `"banner.png"`                             |
+| `type`        | The type of content.                                                   | `"article"`                                |
+
+## Tools
+
+The `/tools` directory contains a series of Rust-based CLI tools for managing the site and its content.
+
+```
+tools/
+├── common/
+├── content-validate
+├── content-delete
+├── content-edit
+├── content-move
+├── content-new
+├── content-search
+├── content-stats
+├── image-new
+├── image-delete
+├── image-edit
+├── image-search
+└── write
+```
+
+- `common/` - Common utilities for the tools.
+- `content-validate` - Validates the content of the site.
+- `content-delete` - Deletes content from the site.
+- `content-edit` - Edits content from the site.
+- `content-move` - Moves content from the site.
+- `content-new` - Creates new content for the site.
+- `content-search` - Searches for content in the site.
+- `content-stats` - Generates statistics for the content of the site.
+- `image-new` - Creates new images for the site.
+- `image-delete` - Deletes images from the site.
+- `image-edit` - Edits images from the site.
+- `image-search` - Searches for images in the site.

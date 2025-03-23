@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -6,15 +6,16 @@ from datetime import datetime
 class Page:
     slug: str
     title: str
-    description: str | None
-    created: datetime | None
-    updated: datetime | None
-    tags: list[str]
-    banner: str | None
     body: str
-    folder: str | None
     path: str
+    description: str | None = None
+    created: datetime | None = None
+    updated: datetime | None = None
+    tags: list[str] = field(default_factory=list)
+    banner: str | None = None
+    folder: str | None = None
     topic: str | None = None
+    type: str | None = None
 
     def json(self) -> dict:
         from _filesystem import get_content_dir
@@ -38,9 +39,10 @@ class Page:
             "updated": self.updated.isoformat() if self.updated else None,
             "tags": self.tags,
             "banner": self.banner,
-            "body": self.body,
             "url": f"/{_url}",
             "topic": self.topic,
+            "type": self.type,
+            "body": self.body,
         }
 
 
