@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Settings,
-  ChevronDown,
-} from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -18,7 +11,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
-import { useVoiceSelection } from "@/hooks/useVoiceSelection";
 
 interface TextToSpeechProps {
   content: string;
@@ -32,12 +24,8 @@ export default function TextToSpeech({
   className,
 }: TextToSpeechProps) {
   const [showSettings, setShowSettings] = useState(false);
-  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
 
-  // Get available voices
-  const { voices, selectedVoice, selectVoiceByURI } = useVoiceSelection();
-
-  // Configure text-to-speech with selected voice
+  // Configure text-to-speech with Will's voice
   const {
     isSupported,
     isPlaying,
@@ -54,8 +42,7 @@ export default function TextToSpeech({
     text: content,
     rate: 1,
     pitch: 1,
-    lang: selectedVoice?.lang || "en-US",
-    voiceURI: selectedVoice?.voiceURI,
+    lang: "en-US",
   });
 
   if (!isSupported) {
@@ -120,10 +107,7 @@ export default function TextToSpeech({
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => {
-                setShowSettings(!showSettings);
-                setShowVoiceSelector(false);
-              }}
+              onClick={() => setShowSettings(!showSettings)}
               aria-label="Playback settings"
             >
               <Settings size={18} />
@@ -134,30 +118,6 @@ export default function TextToSpeech({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-
-      {/* Voice selector button */}
-      {voices.length > 1 && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  setShowVoiceSelector(!showVoiceSelector);
-                  setShowSettings(false);
-                }}
-                aria-label="Select voice"
-              >
-                <ChevronDown size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Select voice</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
 
       {showSettings && (
         <div className="bg-popover absolute top-12 right-0 z-10 min-w-[200px] rounded-md border p-4 shadow-md">
@@ -174,40 +134,6 @@ export default function TextToSpeech({
                 className="flex-1"
               >
                 {speedRate}x
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showVoiceSelector && voices.length > 0 && (
-        <div className="bg-popover absolute top-12 right-0 z-10 max-h-[300px] min-w-[240px] overflow-y-auto rounded-md border p-4 shadow-md">
-          <p className="text-muted-foreground mb-2 text-sm font-medium">
-            Select Voice
-          </p>
-          <div className="flex flex-col space-y-1">
-            {voices.map((voice) => (
-              <Button
-                key={voice.voiceURI}
-                variant={
-                  selectedVoice?.voiceURI === voice.voiceURI
-                    ? "default"
-                    : "outline"
-                }
-                size="sm"
-                onClick={() => {
-                  selectVoiceByURI(voice.voiceURI);
-                  setShowVoiceSelector(false);
-
-                  // If playing, restart with new voice
-                  if (isPlaying) {
-                    stop();
-                    setTimeout(() => play(), 50);
-                  }
-                }}
-                className="justify-start overflow-hidden text-ellipsis whitespace-nowrap"
-              >
-                {voice.name} ({voice.lang})
               </Button>
             ))}
           </div>

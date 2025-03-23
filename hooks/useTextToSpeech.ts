@@ -5,7 +5,6 @@ interface UseTextToSpeechOptions {
   rate?: number;
   pitch?: number;
   lang?: string;
-  voiceURI?: string;
 }
 
 export function useTextToSpeech({
@@ -13,7 +12,6 @@ export function useTextToSpeech({
   rate = 1,
   pitch = 1,
   lang = "en-US",
-  voiceURI,
 }: UseTextToSpeechOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -60,15 +58,6 @@ export function useTextToSpeech({
     sentencesRef.current = cleanText.split(/(?<=[.!?])\s+/);
   }, [text, isSupported]);
 
-  // Helper function to find voice by URI
-  const findVoiceByURI = useCallback((uri?: string) => {
-    if (!uri || typeof window === "undefined" || !("speechSynthesis" in window))
-      return null;
-
-    const voices = window.speechSynthesis.getVoices();
-    return voices.find((voice) => voice.voiceURI === uri) || null;
-  }, []);
-
   // Create and configure the utterance
   const setupUtterance = useCallback(() => {
     if (!isSupported) return null;
@@ -77,14 +66,6 @@ export function useTextToSpeech({
     utterance.rate = currentRate;
     utterance.pitch = pitch;
     utterance.lang = lang;
-
-    // Set voice if specified
-    if (voiceURI) {
-      const voice = findVoiceByURI(voiceURI);
-      if (voice) {
-        utterance.voice = voice;
-      }
-    }
 
     utterance.onend = () => {
       const nextIndex = currentSentenceIndex + 1;
@@ -114,15 +95,7 @@ export function useTextToSpeech({
     };
 
     return utterance;
-  }, [
-    currentRate,
-    pitch,
-    lang,
-    voiceURI,
-    findVoiceByURI,
-    isSupported,
-    currentSentenceIndex,
-  ]);
+  }, [currentRate, pitch, lang, isSupported, currentSentenceIndex]);
 
   // Speak the current sentence
   useEffect(() => {

@@ -1,18 +1,26 @@
 from functools import lru_cache
 import os
 
+
 @lru_cache(maxsize=1024)
 def cached_file_exists(path: str) -> bool:
     return os.path.exists(path)
 
+
 @lru_cache(maxsize=1024)
 def cached_file_read(path: str) -> str:
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         return f.read()
+
 
 @lru_cache(maxsize=1024)
 def get_content_dir(path: str | None = None) -> str:
+    # Get the parent directory (one level up from api/)
+    parent_dir = os.path.dirname(os.getcwd())
+
     if path is None:
-        return os.path.abspath(os.path.join(os.getcwd(), "content"))
+        # Return the content directory in the parent directory
+        return os.path.abspath(os.path.join(parent_dir, "content"))
     else:
-        return os.path.abspath(os.path.join(os.getcwd(), "content", path))
+        # Return the content path in the parent directory
+        return os.path.abspath(os.path.join(parent_dir, "content", path))

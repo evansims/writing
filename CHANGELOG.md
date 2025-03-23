@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Converts HTML to Markdown format
   - Allows customization of title, tags, and draft status
   - Creates properly formatted MDX files with frontmatter
+- Added text-to-speech functionality using Eleven Labs API
+  - Integrated Eleven Labs SDK (version 1.54.0)
+  - Added audio generation for article content
+  - Implemented audio caching with checksum-based validation
+  - Created API endpoints for audio retrieval and generation
+  - Added an audio player component with playback controls
+  - Implemented text highlighting during audio playback
+  - Added diagnostic endpoints to check API status and test audio generation
 
 ### Changed
 
@@ -47,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved embedded tests from source files to separate test modules
 - Improved CI workflow with optimized test execution profiles
 - Enhanced test coverage reporting with detailed metrics
+- Updated Eleven Labs SDK from version 0.2.26 to 1.54.0
 
 ### Removed
 

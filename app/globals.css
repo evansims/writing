@@ -181,6 +181,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: none;
   overflow-wrap: hidden;
+  padding-bottom: 120px;
 }
 
 .layout-root {
@@ -255,6 +256,46 @@ body {
   display: flex;
   gap: 0.25rem;
   margin-top: 0.5rem;
+}
+
+/* Text highlight styles for text-to-speech */
+.tts-highlight {
+  background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 0.25rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  transition: background-color 0.5s ease;
+  animation: pulse-highlight 2s infinite;
+  box-shadow: 0 0 10px 5px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+@keyframes pulse-highlight {
+  0% {
+    background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 5px 2px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    box-shadow: 0 0 15px 5px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  100% {
+    background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 5px 2px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+}
+
+/* Transition for smooth highlighting - apply to all elements that might be highlighted */
+p,
+h2,
+h3,
+ul,
+ol,
+li {
+  transition:
+    background-color 0.5s ease,
+    box-shadow 0.5s ease;
 }
 
 .stacker {
@@ -703,5 +744,45 @@ body {
   html.no-toc-headings .layout-content {
     max-width: var(--page-max-width) !important;
     padding-right: var(--page-padding-right) !important;
+  }
+}
+
+/* Fixed audio player styles */
+.fixed-audio-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  padding: 1rem;
+  z-index: 50;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+/* Responsive audio player that matches content width */
+@media (min-width: 768px) {
+  .fixed-audio-player {
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 2rem);
+    max-width: var(--page-max-width);
+    border-radius: 0.75rem 0.75rem 0 0;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+}
+
+/* Adjust for layouts with TOC by using the same offset as content */
+@media (min-width: 1280px) {
+  html:has(.toc-container:not(:has([data-has-headings="false"])))
+    .fixed-audio-player {
+    width: var(--page-max-width);
+    max-width: var(--page-max-width);
+    /* Align exactly with main-content by offsetting by the full TOC width (16rem) */
+    left: calc(50% + 16rem);
+    transform: translateX(-50%);
   }
 }

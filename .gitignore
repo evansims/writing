@@ -92,3 +92,4 @@ htmlcov/
 .venv/
 venv/
 ENV/
+.env

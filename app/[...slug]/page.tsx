@@ -167,13 +167,12 @@ export default async function ContentPage({ params }: ContentPageProps) {
               </p>
             )}
 
-            {/* Text-to-Speech feature */}
-            <div className="mb-8">
-              <ContentTextToSpeech
-                content={content.body}
-                title={content.title}
-              />
-            </div>
+            {/* Text-to-Speech feature - no wrapper div needed since it's now fixed at the bottom */}
+            <ContentTextToSpeech
+              content={content.body}
+              title={content.title}
+              slug={slug}
+            />
 
             <div className="content prose prose-shadcn mb-6 max-w-none">
               <ReactMarkdown
