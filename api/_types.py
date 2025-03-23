@@ -14,6 +14,7 @@ class Page:
     body: str
     folder: str | None
     path: str
+    topic: str | None = None
 
     def json(self) -> dict:
         from _filesystem import get_content_dir
@@ -39,6 +40,7 @@ class Page:
             "banner": self.banner,
             "body": self.body,
             "url": f"/{_url}",
+            "topic": self.topic,
         }
 
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLatestContent } from "@/lib/api";
-import { Bot, Rss } from "lucide-react";
+import { AudioWaveform, Bot, Rss } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -9,12 +9,6 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/utils";
 import { Suspense } from "react";
-
-export const metadata = {
-  title: "The Essential Path | Evan Sims",
-  description:
-    "Engineering, philosophy, productivity, and the art of living by Evan Sims",
-};
 
 function LatestContentSkeleton() {
   return (
@@ -61,9 +55,18 @@ export default async function Home() {
       </nav>
 
       <header className="mt-8 mb-10">
-        <h1 className="text-2xl font-semibold">The Essential Path</h1>
+        <div className="flex items-center">
+          <AudioWaveform
+            size={16}
+            aria-hidden="true"
+            className="mr-2 inline-block"
+          />
+          <h1 className="inline-block text-2xl font-semibold">
+            The Essential Path
+          </h1>
+        </div>
         <p className="text-muted-foreground">
-          Engineering, philosophy, productivity, and the art of living by{" "}
+          Navigating life's complexity with intentional simplicity — by{" "}
           <Link href="/about" className="text-foreground">
             Evan Sims
           </Link>
@@ -177,9 +180,11 @@ async function LatestContent() {
                 className="group block"
               >
                 <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
-                  <div className="text-muted-foreground mb-2 text-sm">
-                    {item.tags && item.tags.length > 0 ? item.tags[0] : "Topic"}
-                  </div>
+                  {item.topic && (
+                    <div className="text-muted-foreground mb-2 text-sm">
+                      {item.topic}
+                    </div>
+                  )}
                   <h3 className="text-xl font-semibold">{item.title}</h3>
                   {item.description && (
                     <p className="text-muted-foreground mt-2 line-clamp-2">
@@ -202,9 +207,11 @@ async function LatestContent() {
                 className="group block"
               >
                 <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
-                  <div className="text-muted-foreground mb-2 text-sm">
-                    {item.tags && item.tags.length > 0 ? item.tags[0] : "Topic"}
-                  </div>
+                  {item.topic && (
+                    <div className="text-muted-foreground mb-2 text-sm">
+                      {item.topic}
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold">{item.title}</h3>
                 </article>
               </Link>
@@ -235,11 +242,11 @@ async function LatestContent() {
 
                       <h3 className="flex-1 font-semibold">{item.title}</h3>
 
-                      <div className="text-muted-foreground text-sm">
-                        {item.tags && item.tags.length > 0
-                          ? item.tags[0]
-                          : "Topic"}
-                      </div>
+                      {item.topic && (
+                        <div className="text-muted-foreground text-sm">
+                          {item.topic}
+                        </div>
+                      )}
                     </article>
                   </Link>
                 </li>

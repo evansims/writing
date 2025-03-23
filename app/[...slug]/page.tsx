@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ArrowUp,
   ArrowUpLeft,
+  AudioWaveform,
   ChevronRight,
   CornerLeftUp,
 } from "lucide-react";
@@ -33,8 +34,8 @@ export async function generateMetadata({
     const content = await getContent(slug);
 
     return {
-      title: `${content.title} | Evan Sims`,
-      description: content.description || `Article on ${content.title}`,
+      title: `${content.title}`,
+      description: content.description || ``,
       openGraph: {
         title: content.title,
         description: content.description,
@@ -84,7 +85,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
           aria-label="Content header"
           className="text-muted-foreground mt-8 mb-10 flex flex-row items-center"
         >
-          <ArrowUp size={12} className="mr-1" aria-hidden="true" />
+          <AudioWaveform size={12} aria-hidden="true" className="mr-1" />
 
           <div className="flex flex-1 items-center font-semibold">
             <h2>
@@ -93,42 +94,56 @@ export default async function ContentPage({ params }: ContentPageProps) {
               </Link>
             </h2>
 
-            <ArrowUpLeft size={12} className="mr-1 ml-6" aria-hidden="true" />
+            {content.topic && (
+              <>
+                <ArrowUpLeft
+                  size={12}
+                  className="mr-1 ml-6"
+                  aria-hidden="true"
+                />
 
-            <Link
-              href="/mindset"
-              className="text-muted-foreground font-semibold"
-            >
-              Mindset
-            </Link>
+                <Link
+                  href={`/${content.topic.toLowerCase()}`}
+                  className="text-muted-foreground font-semibold"
+                >
+                  {content.topic}
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="text-sm">
-            {content.created && (
-              <time
-                dateTime={content.created}
-                title={new Date(content.created).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              >
-                {getRelativeTimeString(new Date(content.created))}
-              </time>
-            )}
-            {content.updated && content.updated !== content.created && (
-              <time
-                dateTime={content.updated}
-                className="ml-2"
-                title={new Date(content.updated).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              >
-                (Updated)
-              </time>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    {content.created && (
+                      <time dateTime={content.created}>
+                        {getRelativeTimeString(new Date(content.created))}
+                      </time>
+                    )}
+                    {content.updated && content.updated !== content.created && (
+                      <time dateTime={content.updated} className="ml-2">
+                        (Updated)
+                      </time>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {content.created &&
+                      new Date(content.created).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    {content.updated &&
+                      content.updated !== content.created &&
+                      " (Updated)"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </header>
 
@@ -159,11 +174,9 @@ export default async function ContentPage({ params }: ContentPageProps) {
             <p className="text-muted-foreground mb-8">{content.description}</p>
           )}
 
-          <div
-            className="content prose prose-shadcn mb-6 max-w-none"
-            // Replace dangerouslySetInnerHTML with ReactMarkdown when content is in markdown format
-            dangerouslySetInnerHTML={{ __html: content.body }}
-          />
+          <div className="content prose prose-shadcn mb-6 max-w-none">
+            <ReactMarkdown>{content.body}</ReactMarkdown>
+          </div>
 
           {content.tags && content.tags.length > 0 && (
             <footer>

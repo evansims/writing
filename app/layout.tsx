@@ -7,10 +7,11 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    template: "%s - The Essential Path",
+    template: "%s | The Essential Path",
     default: "The Essential Path",
   },
-  description: "",
+  description:
+    "Navigating life's complexity with intentional simplicity, by Evan Sims.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -34,7 +35,7 @@ export default function RootLayout({
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
-            enableSystem
+            enableSystem={false}
             disableTransitionOnChange
           >
             <div className="layout-root">

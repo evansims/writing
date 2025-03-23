@@ -8,12 +8,13 @@ export interface ContentItem {
   banner?: string;
   body: string;
   url: string;
+  topic?: string;
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5328";
 
 export async function getContent(
-  slug: string | string[]
+  slug: string | string[],
 ): Promise<ContentItem> {
   let s = Array.isArray(slug) ? slug.join("/") : String(slug);
   s = s.replace(/,/g, "/");
@@ -31,7 +32,7 @@ export async function getContent(
 }
 
 export async function getLatestContent(
-  limit: number = 6
+  limit: number = 6,
 ): Promise<ContentItem[]> {
   const r = await fetch(`${apiUrl}/api/content/`, {
     next: { revalidate: 60 },

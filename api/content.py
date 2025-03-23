@@ -107,7 +107,7 @@ async def _page(path: str, slug: str) -> Page:
     try:
         content = cached_file_read(path)
         post = frontmatter.loads(content)
-        html = mistune.markdown(post.content)
+        markdown_content = post.content
 
         page_title: str = str(post.get("title", slug.replace("-", " ").title()))
         page_description: str | None = str(post.get("description", None))
@@ -115,10 +115,29 @@ async def _page(path: str, slug: str) -> Page:
         page_updated: datetime | None = None
         page_tags: list[str] = []
         page_banner: str | None = str(post.get("banner", None))
-        page_body: str = str(html)
+        page_body: str = str(markdown_content)
         page_slug: str = slug
         page_folder: str = os.path.basename(os.path.dirname(path))
         page_path: str = path
+
+        # Determine the topic based on path structure
+        content_dir = get_content_dir()
+        relative_path = path
+        if relative_path.startswith(content_dir):
+            relative_path = relative_path[len(content_dir) :]
+            if relative_path.startswith("/"):
+                relative_path = relative_path[1:]
+
+        # Split path components
+        path_parts = relative_path.split("/")
+
+        # The topic is the first directory in the path, if it exists
+        # and isn't just the folder containing the markdown file with the same name
+        page_topic = None
+        if len(path_parts) > 2:  # More than [folder]/[file].md
+            first_dir = path_parts[0]
+            if first_dir != page_slug:
+                page_topic = first_dir.capitalize()
 
         _tags = post.get("tags", None)
         _created = post.get("created", None)
@@ -144,6 +163,7 @@ async def _page(path: str, slug: str) -> Page:
             page_body,
             page_folder,
             page_path,
+            page_topic,
         )
     except Exception:
         raise NotFound()
