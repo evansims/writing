@@ -15,7 +15,7 @@ import {
 import HeaderAnchor from "@/components/HeaderAnchor";
 import MainNavigation from "@/components/MainNavigation";
 import TableOfContents from "@/components/TableOfContents";
-import ParticleBlackHole from "@/components/art/ParticleBlackHole";
+import ParticleNetworkWrapper from "@/components/art/ParticleNetworkWrapper";
 
 interface ContentPageProps {
   params: {
@@ -147,7 +147,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
             ) : (
               <div className="border-muted relative -mx-[var(--page-padding-inline)] mb-10 h-96 w-[calc(100%+var(--page-padding-left)+var(--page-padding-right))] overflow-hidden rounded-lg border-1">
                 <div className="absolute inset-0">
-                  <ParticleBlackHole />
+                  <ParticleNetworkWrapper />
                 </div>
               </div>
             )}
