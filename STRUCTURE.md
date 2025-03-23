@@ -185,6 +185,7 @@ tools/
 ├── content-new
 ├── content-search
 ├── content-stats
+├── content-import
 ├── image-new
 ├── image-delete
 ├── image-edit
@@ -200,6 +201,7 @@ tools/
 - `content-new` - Creates new content for the site.
 - `content-search` - Searches for content in the site.
 - `content-stats` - Generates statistics for the content of the site.
+- `content-import` - Scraps a URL and creates a new content page from it.
 - `image-new` - Creates new images for the site.
 - `image-delete` - Deletes images from the site.
 - `image-edit` - Edits images from the site.

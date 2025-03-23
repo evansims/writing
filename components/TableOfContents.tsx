@@ -266,7 +266,7 @@ export default function TableOfContents() {
           </button>
         ) : (
           <h2 className="toc-title text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
-            ON THIS PAGE
+            YOU ARE HERE
           </h2>
         )}
       </div>

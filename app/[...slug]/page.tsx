@@ -15,7 +15,7 @@ import {
 import HeaderAnchor from "@/components/HeaderAnchor";
 import MainNavigation from "@/components/MainNavigation";
 import TableOfContents from "@/components/TableOfContents";
-import ParticleNetworkWrapper from "@/components/art/ParticleNetworkWrapper";
+import GeometricScene from "@/components/art/TriangleGravity";
 
 interface ContentPageProps {
   params: {
@@ -147,7 +147,11 @@ export default async function ContentPage({ params }: ContentPageProps) {
             ) : (
               <div className="border-muted relative -mx-[var(--page-padding-inline)] mb-10 h-96 w-[calc(100%+var(--page-padding-left)+var(--page-padding-right))] overflow-hidden rounded-lg border-1">
                 <div className="absolute inset-0">
-                  <ParticleNetworkWrapper />
+                  <GeometricScene
+                    seed={content.title}
+                    complexity={50}
+                    rotationSpeed={0.5}
+                  />
                 </div>
               </div>
             )}
