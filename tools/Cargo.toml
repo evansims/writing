@@ -1,34 +1,42 @@
 [workspace]
 resolver = "2"
 members = [
+    "benchmark-analyze",
     "common/cli",
+    "common/complexity",
     "common/config",
     "common/errors",
     "common/fs",
+    "common/macros",
     "common/markdown",
     "common/models",
+    "common/templates",
     "common/test_utils",
     "common/traits",
+    "common/utils",
     "common/validation",
-    "content-edit",
-    "content-new",
-    "content-move",
-    "content-delete",
-    "content-stats",
     "content-build",
+    "content-delete",
+    "content-edit",
+    "content-import",
+    "content-migrate",
+    "content-move",
+    "content-new",
+    "content-search",
+    "content-stats",
+    "content-template",
+    "content-validate",
     "image-build",
     "image-optimize",
     "llms-generate",
     "toc-generate",
     "topic-add",
+    "topic-delete",
     "topic-edit",
     "topic-rename",
-    "topic-delete",
+    "tools",
     "write",
-    "content-template",
-    "content-validate",
-    "content-search"
-, "benchmark-analyze"]
+]
 
 [workspace.dependencies]
 anyhow = "1.0.75"

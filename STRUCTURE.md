@@ -194,7 +194,7 @@ tools/
 ```
 
 - `common/` - Common utilities for the tools.
-- `content-validate` - Validates the content of the site.
+- `content-validate` - Validates the content of the site. Checks for broken links and other issues.
 - `content-delete` - Deletes content from the site.
 - `content-edit` - Edits content from the site.
 - `content-move` - Moves content from the site.
@@ -206,3 +206,4 @@ tools/
 - `image-delete` - Deletes images from the site.
 - `image-edit` - Edits images from the site.
 - `image-search` - Searches for images in the site.
+- `write` is an LLM-powered interactive CLI tool for managing content.

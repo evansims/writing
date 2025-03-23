@@ -1,15 +1,15 @@
 use anyhow::Result;
 use common_config::load_config;
-use common_fs::{read_file, find_files_with_extension};
+use common_fs::{find_files_with_extension, read_file};
 use common_markdown::extract_frontmatter_and_content;
 use common_models::Config;
+use common_models::Frontmatter;
+use pulldown_cmark::{Event, Options, Parser, Tag};
 use reqwest::blocking::Client;
 use reqwest::Url;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use thiserror::Error;
-use pulldown_cmark::{Parser, Event, Tag, Options};
-use common_models::Frontmatter;
 
 /// Link kind
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -29,7 +29,12 @@ pub struct Link {
 
 impl Link {
     /// Create a new link
-    pub fn new(url: String, kind: LocalLinkKind, line: Option<usize>, column: Option<usize>) -> Self {
+    pub fn new(
+        url: String,
+        kind: LocalLinkKind,
+        line: Option<usize>,
+        column: Option<usize>,
+    ) -> Self {
         Self {
             url,
             kind,
@@ -183,20 +188,28 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
         if let Some(topic_key) = &options.topic {
             // Validate a specific article in a specific topic
             if let Some(topic_config) = config.content.topics.get(topic_key) {
-                let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
+                let topic_dir =
+                    PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
                 let article_dir = topic_dir.join(article_slug);
 
                 if !article_dir.exists() {
                     return Err(ValidationError::ArticleNotFound(article_slug.clone()).into());
                 }
 
-                let index_file = article_dir.join("index.md");
+                // Check for content file with matching name
+                let content_file_md = article_dir.join(format!("{}.md", article_slug));
+                let content_file_mdx = article_dir.join(format!("{}.mdx", article_slug));
 
-                if !index_file.exists() {
+                // Determine which file to use
+                let content_file = if content_file_md.exists() {
+                    content_file_md
+                } else if content_file_mdx.exists() {
+                    content_file_mdx
+                } else {
                     return Err(ValidationError::ArticleNotFound(article_slug.clone()).into());
-                }
+                };
 
-                let content = read_file(&index_file)?;
+                let content = read_file(&content_file)?;
 
                 // Validate the article
                 let mut issues = Vec::new();
@@ -204,20 +217,20 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                 for validation_type in &options.validation_types {
                     match validation_type {
                         ValidationType::Links => {
-                            validate_links(&index_file, &content, &config, options, &mut issues)?;
+                            validate_links(&content_file, &content, &config, options, &mut issues)?;
                         }
                         ValidationType::Markdown => {
-                            validate_markdown(&index_file, &content, &mut issues)?;
+                            validate_markdown(&content_file, &content, &mut issues)?;
                         }
                         ValidationType::All => {
-                            validate_links(&index_file, &content, &config, options, &mut issues)?;
-                            validate_markdown(&index_file, &content, &mut issues)?;
+                            validate_links(&content_file, &content, &config, options, &mut issues)?;
+                            validate_markdown(&content_file, &content, &mut issues)?;
                         }
                     }
                 }
 
                 results.push(ValidationResult {
-                    file_path: index_file,
+                    file_path: content_file,
                     issues,
                 });
             } else {
@@ -228,15 +241,27 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
             let mut found = false;
 
             for (_topic_key, topic_config) in &config.content.topics {
-                let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
+                let topic_dir =
+                    PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
                 let article_dir = topic_dir.join(article_slug);
 
                 if article_dir.exists() {
-                    let index_file = article_dir.join("index.md");
+                    // Check for content file with matching name
+                    let content_file_md = article_dir.join(format!("{}.md", article_slug));
+                    let content_file_mdx = article_dir.join(format!("{}.mdx", article_slug));
 
-                    if index_file.exists() {
+                    // Determine which file to use
+                    let content_file = if content_file_md.exists() {
+                        Some(content_file_md)
+                    } else if content_file_mdx.exists() {
+                        Some(content_file_mdx)
+                    } else {
+                        None
+                    };
+
+                    if let Some(content_file) = content_file {
                         found = true;
-                        let content = read_file(&index_file)?;
+                        let content = read_file(&content_file)?;
 
                         // Validate the article
                         let mut issues = Vec::new();
@@ -244,24 +269,34 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                         for validation_type in &options.validation_types {
                             match validation_type {
                                 ValidationType::Links => {
-                                    validate_links(&index_file, &content, &config, options, &mut issues)?;
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
                                 }
                                 ValidationType::Markdown => {
-                                    validate_markdown(&index_file, &content, &mut issues)?;
+                                    validate_markdown(&content_file, &content, &mut issues)?;
                                 }
                                 ValidationType::All => {
-                                    validate_links(&index_file, &content, &config, options, &mut issues)?;
-                                    validate_markdown(&index_file, &content, &mut issues)?;
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
+                                    validate_markdown(&content_file, &content, &mut issues)?;
                                 }
                             }
                         }
 
                         results.push(ValidationResult {
-                            file_path: index_file,
+                            file_path: content_file,
                             issues,
                         });
-
-                        break;
                     }
                 }
             }
@@ -279,43 +314,80 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                 return Err(ValidationError::TopicNotFound(topic_key.clone()).into());
             }
 
-            let markdown_files = find_files_with_extension(&topic_dir, ".md")?;
+            // Find all content directories in the topic
+            let entries = std::fs::read_dir(&topic_dir)?;
 
-            for file_path in markdown_files {
-                if file_path.file_name().unwrap_or_default() == "index.md" {
-                    let content = read_file(&file_path)?;
+            for entry in entries {
+                let entry = entry?;
+                let path = entry.path();
 
-                    // Skip drafts if not included
-                    if !options.include_drafts {
-                        if let Ok((frontmatter, _)) = extract_frontmatter_and_content(&content) {
-                            if frontmatter.is_draft.unwrap_or(false) {
-                                continue;
-                            }
-                        }
+                if path.is_dir() {
+                    let slug = path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    if slug.is_empty() {
+                        continue;
                     }
 
-                    // Validate the article
-                    let mut issues = Vec::new();
+                    // Check for content files with matching name
+                    let content_file_md = path.join(format!("{}.md", slug));
+                    let content_file_mdx = path.join(format!("{}.mdx", slug));
 
-                    for validation_type in &options.validation_types {
-                        match validation_type {
-                            ValidationType::Links => {
-                                validate_links(&file_path, &content, &config, options, &mut issues)?;
-                            }
-                            ValidationType::Markdown => {
-                                validate_markdown(&file_path, &content, &mut issues)?;
-                            }
-                            ValidationType::All => {
-                                validate_links(&file_path, &content, &config, options, &mut issues)?;
-                                validate_markdown(&file_path, &content, &mut issues)?;
+                    // Determine which file to use
+                    let content_file = if content_file_md.exists() {
+                        Some(content_file_md)
+                    } else if content_file_mdx.exists() {
+                        Some(content_file_mdx)
+                    } else {
+                        None
+                    };
+
+                    if let Some(content_file) = content_file {
+                        let content = read_file(&content_file)?;
+
+                        // Check if the content is a draft
+                        if !options.include_drafts && is_draft(&content) {
+                            continue;
+                        }
+
+                        // Validate the article
+                        let mut issues = Vec::new();
+
+                        for validation_type in &options.validation_types {
+                            match validation_type {
+                                ValidationType::Links => {
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
+                                }
+                                ValidationType::Markdown => {
+                                    validate_markdown(&content_file, &content, &mut issues)?;
+                                }
+                                ValidationType::All => {
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
+                                    validate_markdown(&content_file, &content, &mut issues)?;
+                                }
                             }
                         }
-                    }
 
-                    results.push(ValidationResult {
-                        file_path,
-                        issues,
-                    });
+                        results.push(ValidationResult {
+                            file_path: content_file,
+                            issues,
+                        });
+                    }
                 }
             }
         } else {
@@ -330,43 +402,80 @@ pub fn validate_content(options: &ValidationOptions) -> Result<Vec<ValidationRes
                 continue;
             }
 
-            let markdown_files = find_files_with_extension(&topic_dir, ".md").unwrap_or_default();
+            // Find all content directories in the topic
+            let entries = std::fs::read_dir(&topic_dir)?;
 
-            for file_path in markdown_files {
-                if file_path.file_name().unwrap_or_default() == "index.md" {
-                    let content = read_file(&file_path)?;
+            for entry in entries {
+                let entry = entry?;
+                let path = entry.path();
 
-                    // Skip drafts if not included
-                    if !options.include_drafts {
-                        if let Ok((frontmatter, _)) = extract_frontmatter_and_content(&content) {
-                            if frontmatter.is_draft.unwrap_or(false) {
-                                continue;
-                            }
-                        }
+                if path.is_dir() {
+                    let slug = path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    if slug.is_empty() {
+                        continue;
                     }
 
-                    // Validate the article
-                    let mut issues = Vec::new();
+                    // Check for content files with matching name
+                    let content_file_md = path.join(format!("{}.md", slug));
+                    let content_file_mdx = path.join(format!("{}.mdx", slug));
 
-                    for validation_type in &options.validation_types {
-                        match validation_type {
-                            ValidationType::Links => {
-                                validate_links(&file_path, &content, &config, options, &mut issues)?;
-                            }
-                            ValidationType::Markdown => {
-                                validate_markdown(&file_path, &content, &mut issues)?;
-                            }
-                            ValidationType::All => {
-                                validate_links(&file_path, &content, &config, options, &mut issues)?;
-                                validate_markdown(&file_path, &content, &mut issues)?;
+                    // Determine which file to use
+                    let content_file = if content_file_md.exists() {
+                        Some(content_file_md)
+                    } else if content_file_mdx.exists() {
+                        Some(content_file_mdx)
+                    } else {
+                        None
+                    };
+
+                    if let Some(content_file) = content_file {
+                        let content = read_file(&content_file)?;
+
+                        // Check if the content is a draft
+                        if !options.include_drafts && is_draft(&content) {
+                            continue;
+                        }
+
+                        // Validate the article
+                        let mut issues = Vec::new();
+
+                        for validation_type in &options.validation_types {
+                            match validation_type {
+                                ValidationType::Links => {
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
+                                }
+                                ValidationType::Markdown => {
+                                    validate_markdown(&content_file, &content, &mut issues)?;
+                                }
+                                ValidationType::All => {
+                                    validate_links(
+                                        &content_file,
+                                        &content,
+                                        &config,
+                                        options,
+                                        &mut issues,
+                                    )?;
+                                    validate_markdown(&content_file, &content, &mut issues)?;
+                                }
                             }
                         }
-                    }
 
-                    results.push(ValidationResult {
-                        file_path,
-                        issues,
-                    });
+                        results.push(ValidationResult {
+                            file_path: content_file,
+                            issues,
+                        });
+                    }
                 }
             }
         }
@@ -492,11 +601,21 @@ fn validate_frontmatter_fields(
             }
         }
         _ => {
-            return Err(ValidationError::MarkdownError(format!("Unknown content type: {}", content_type)).into());
+            return Err(ValidationError::MarkdownError(format!(
+                "Unknown content type: {}",
+                content_type
+            ))
+            .into());
         }
     }
 
     Ok(())
+}
+
+/// Check if content is a draft
+fn is_draft(content: &str) -> bool {
+    let (frontmatter, _) = extract_frontmatter_and_content(content).unwrap_or_default();
+    frontmatter.is_draft.unwrap_or(false)
 }
 
 #[cfg(test)]

@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced coverage workflow with regression detection
   - Added dashboards for coverage visualization
   - Established minimum coverage thresholds for all components
+- New `content-import` tool for importing web content as articles
+  - Supports importing content from any URL
+  - Automatically extracts title and main content
+  - Converts HTML to Markdown format
+  - Allows customization of title, tags, and draft status
+  - Creates properly formatted MDX files with frontmatter
 
 ### Changed
 

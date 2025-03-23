@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
     author,
     version,
     about = "Content Management CLI",
-    long_about = "A tool for managing writing content, topics, images, and build processes.",
+    long_about = "A tool for managing writing content, topics, images, and build processes."
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -33,6 +33,10 @@ pub enum Commands {
     /// Build management commands
     #[command(subcommand)]
     Build(BuildCommands),
+
+    /// Content migration commands
+    #[command(subcommand)]
+    Migrate(MigrateCommands),
 
     /// Generate statistics about content
     Stats {
@@ -351,6 +355,28 @@ pub enum BuildCommands {
         json: bool,
 
         /// Enable verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum MigrateCommands {
+    /// Migrate content from old index.md/index.mdx structure to the new structure
+    Content {
+        /// Topic to migrate (if not specified, all topics will be migrated)
+        #[arg(short, long)]
+        topic: Option<String>,
+
+        /// Dry run (don't actually modify files)
+        #[arg(short = 'd', long)]
+        dry_run: bool,
+
+        /// Delete old index files after migration
+        #[arg(short, long)]
+        delete_old: bool,
+
+        /// Verbose output
         #[arg(short, long)]
         verbose: bool,
     },

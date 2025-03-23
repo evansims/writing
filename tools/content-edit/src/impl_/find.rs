@@ -3,11 +3,11 @@
 //! This module provides functionality to find content by slug and topic.
 
 use anyhow::Result;
-use std::path::{PathBuf};
 use std::fs;
+use std::path::PathBuf;
 
-use crate::errors::ContentEditError;
 use super::frontmatter::extract_frontmatter_from_string;
+use crate::errors::ContentEditError;
 
 /// Find the path to content by slug and optionally topic.
 ///
@@ -48,7 +48,7 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
     let content_dir = PathBuf::from("content");
     if !content_dir.exists() {
         return Err(ContentEditError::Validation {
-            reason: "Content directory not found".to_string()
+            reason: "Content directory not found".to_string(),
         });
     }
 
@@ -58,23 +58,25 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
         if !topic_dir.exists() {
             return Err(ContentEditError::ContentNotFound {
                 slug: slug.to_string(),
-                topic: Some(topic_name.to_string())
+                topic: Some(topic_name.to_string()),
             });
         }
 
-        let content_path = topic_dir.join(slug).join("index.md");
-        if content_path.exists() {
-            return Ok(content_path);
+        // Check for the matching-name file with .md extension
+        let content_path_md = topic_dir.join(slug).join(format!("{}.md", slug));
+        if content_path_md.exists() {
+            return Ok(content_path_md);
         }
 
-        let content_path_mdx = topic_dir.join(slug).join("index.mdx");
+        // Check for the matching-name file with .mdx extension
+        let content_path_mdx = topic_dir.join(slug).join(format!("{}.mdx", slug));
         if content_path_mdx.exists() {
             return Ok(content_path_mdx);
         }
 
         return Err(ContentEditError::ContentNotFound {
             slug: slug.to_string(),
-            topic: Some(topic_name.to_string())
+            topic: Some(topic_name.to_string()),
         });
     }
 
@@ -84,20 +86,23 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
     for topic_dir in fs::read_dir(&content_dir)? {
         let topic_dir = topic_dir?.path();
         if topic_dir.is_dir() {
-            let topic_key = topic_dir.file_name()
+            let topic_key = topic_dir
+                .file_name()
                 .ok_or_else(|| ContentEditError::InvalidPath {
                     path: topic_dir.clone(),
-                    reason: "Invalid directory name (not UTF-8)".to_string()
+                    reason: "Invalid directory name (not UTF-8)".to_string(),
                 })?
                 .to_string_lossy()
                 .to_string();
 
-            let content_path = topic_dir.join(slug).join("index.md");
-            if content_path.exists() {
-                return Ok(content_path);
+            // Check for the matching-name file with .md extension
+            let content_path_md = topic_dir.join(slug).join(format!("{}.md", slug));
+            if content_path_md.exists() {
+                return Ok(content_path_md);
             }
 
-            let content_path_mdx = topic_dir.join(slug).join("index.mdx");
+            // Check for the matching-name file with .mdx extension
+            let content_path_mdx = topic_dir.join(slug).join(format!("{}.mdx", slug));
             if content_path_mdx.exists() {
                 return Ok(content_path_mdx);
             }
@@ -109,7 +114,18 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
                     continue;
                 }
 
-                let content_path = entry.join("index.md");
+                let entry_slug = entry
+                    .file_name()
+                    .ok_or_else(|| ContentEditError::InvalidPath {
+                        path: entry.clone(),
+                        reason: "Invalid directory name (not UTF-8)".to_string(),
+                    })?
+                    .to_string_lossy()
+                    .to_string();
+
+                // Only check for the file with matching name
+                let content_path = entry.join(format!("{}.md", entry_slug));
+
                 if !content_path.exists() {
                     continue;
                 }
@@ -119,13 +135,7 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
 
                 let title = match frontmatter.get("title") {
                     Some(serde_yaml::Value::String(t)) => t.to_string(),
-                    _ => entry.file_name()
-                        .ok_or_else(|| ContentEditError::InvalidPath {
-                            path: entry.clone(),
-                            reason: "Invalid directory name (not UTF-8)".to_string()
-                        })?
-                        .to_string_lossy()
-                        .to_string(),
+                    _ => entry_slug,
                 };
 
                 content_list.push((topic_key.clone(), title, content_path));
@@ -135,6 +145,6 @@ pub fn find_content_path(slug: &str, topic: Option<&str>) -> Result<PathBuf, Con
 
     Err(ContentEditError::ContentNotFound {
         slug: slug.to_string(),
-        topic: None
+        topic: None,
     })
 }

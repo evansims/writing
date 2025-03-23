@@ -2,25 +2,77 @@ use anyhow::Result;
 use common_config::load_config;
 use common_fs::{create_dir_all, write_file};
 use common_models::{Frontmatter, TopicConfig};
+use std::collections::HashMap;
+use std::error::Error;
+use std::fmt;
 use std::path::PathBuf;
 
+#[derive(Debug)]
+pub enum ContentNewError {
+    /// Topic not found
+    TopicNotFound(String),
+    /// Slug already exists
+    SlugAlreadyExists(String),
+    /// Invalid slug
+    InvalidSlug(String),
+    /// Required field missing
+    MissingRequiredField(String),
+    /// IO error
+    IoError(std::io::Error),
+}
+
+impl fmt::Display for ContentNewError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ContentNewError::TopicNotFound(topic) => write!(f, "Topic not found: {}", topic),
+            ContentNewError::SlugAlreadyExists(slug) => {
+                write!(f, "Content with slug already exists: {}", slug)
+            }
+            ContentNewError::InvalidSlug(slug) => write!(f, "Invalid slug: {}", slug),
+            ContentNewError::MissingRequiredField(field) => {
+                write!(f, "Missing required field: {}", field)
+            }
+            ContentNewError::IoError(err) => write!(f, "IO error: {}", err),
+        }
+    }
+}
+
+impl Error for ContentNewError {}
+
+impl From<std::io::Error> for ContentNewError {
+    fn from(err: std::io::Error) -> Self {
+        ContentNewError::IoError(err)
+    }
+}
+
+impl From<ContentNewError> for anyhow::Error {
+    fn from(err: ContentNewError) -> Self {
+        anyhow::anyhow!(err.to_string())
+    }
+}
+
 pub struct NewOptions {
-    pub slug: Option<String>,
-    pub title: Option<String>,
-    pub topic: Option<String>,
+    pub slug: String,
+    pub title: String,
+    pub topic: String,
     pub description: Option<String>,
     pub template: Option<String>,
     pub tags: Option<Vec<String>>,
     pub draft: Option<bool>,
+    pub publish: bool,
+    pub subtitle: Option<String>,
+    pub author: Option<String>,
+    pub date: Option<String>,
+    pub aliases: Option<Vec<String>>,
 }
 
 /// Create new content
 ///
-/// This function creates new content in the specified topic.
+/// This function creates a new piece of content based on the provided options.
 ///
 /// # Parameters
 ///
-/// * `options` - New content options
+/// * `options` - Creation options
 ///
 /// # Returns
 ///
@@ -28,123 +80,121 @@ pub struct NewOptions {
 ///
 /// # Errors
 ///
-/// Returns an error if the content cannot be created
-pub fn create_content(options: &NewOptions) -> Result<PathBuf> {
-    // Validate options
-    let slug = options
-        .slug
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Content slug is required"))?;
-    let topic = options
-        .topic
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Topic is required"))?;
-    let title = options
-        .title
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Title is required"))?;
-
-    // Load config
+/// Returns an error if the creation fails
+pub fn create_new_content(options: &NewOptions) -> Result<PathBuf> {
     let config = load_config()?;
 
-    // Check if topic exists
+    // Get the topic configuration
     let topic_config = config
         .content
         .topics
-        .get(topic)
-        .ok_or_else(|| anyhow::anyhow!("Topic not found: {}", topic))?;
+        .get(&options.topic)
+        .ok_or_else(|| ContentNewError::TopicNotFound(options.topic.clone()))?;
 
-    // Create content directory
-    let content_dir = PathBuf::from(&config.content.base_dir)
-        .join(&topic_config.directory)
-        .join(slug);
+    // Verify the slug doesn't already exist in other topics
+    for (topic_key, topic_conf) in &config.content.topics {
+        if topic_key == &options.topic {
+            continue;
+        }
 
-    if content_dir.exists() {
-        return Err(anyhow::anyhow!("Content already exists: {}", slug));
+        let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_conf.directory);
+        let article_dir = topic_dir.join(&options.slug);
+
+        if article_dir.exists() {
+            return Err(ContentNewError::SlugAlreadyExists(options.slug.clone()).into());
+        }
     }
 
-    create_dir_all(&content_dir)?;
+    // Create the content
+    let topic_dir = PathBuf::from(&config.content.base_dir).join(&topic_config.directory);
+    let article_dir = topic_dir.join(&options.slug);
 
-    // Check if we're in a test environment
-    let is_test = std::env::var("TEST_MODE").is_ok();
+    // Create the directory if it doesn't exist
+    if !article_dir.exists() {
+        std::fs::create_dir_all(&article_dir)?;
+    }
 
-    // Create frontmatter
-    let topics = vec![topic.clone()];
-    let date_str = if options.draft.unwrap_or(false) {
-        "DRAFT".to_string()
+    // Create the content file path using the slug name format
+    let content_file = article_dir.join(format!("{}.md", options.slug));
+
+    // Check if the file already exists
+    if content_file.exists() {
+        return Err(ContentNewError::SlugAlreadyExists(options.slug.clone()).into());
+    }
+
+    // Create the frontmatter
+    let mut frontmatter = HashMap::new();
+
+    // Add title to frontmatter
+    frontmatter.insert("title".to_string(), options.title.clone());
+
+    // Add optional description if provided
+    if let Some(description) = &options.description {
+        frontmatter.insert("description".to_string(), description.clone());
+    }
+
+    // Add published status
+    frontmatter.insert("published".to_string(), "true".to_string());
+
+    // Add draft status
+    let is_draft = options.draft.unwrap_or(false);
+    frontmatter.insert("draft".to_string(), is_draft.to_string());
+
+    // Add optional subtitle if provided
+    if let Some(subtitle) = &options.subtitle {
+        frontmatter.insert("subtitle".to_string(), subtitle.clone());
+    }
+
+    // Add optional author if provided
+    if let Some(author) = &options.author {
+        frontmatter.insert("author".to_string(), author.clone());
+    }
+
+    // Add date (either provided or current)
+    if let Some(date) = &options.date {
+        frontmatter.insert("date".to_string(), date.clone());
     } else {
-        chrono::Local::now().format("%Y-%m-%d").to_string()
-    };
+        let now = chrono::Local::now();
+        frontmatter.insert("date".to_string(), now.format("%Y-%m-%d").to_string());
+    }
 
-    let frontmatter = Frontmatter {
-        title: title.clone(),
-        published_at: Some(date_str.clone()),
-        updated_at: Some(date_str.clone()),
-        slug: Some(slug.clone()),
-        description: options.description.clone(),
-        tags: options.tags.clone(),
-        topics: Some(topics),
-        is_draft: options.draft,
-        featured_image_path: None,
-    };
-
-    // Convert frontmatter to YAML
-    let frontmatter_yaml = serde_yaml::to_string(&frontmatter)?;
-
-    // In test mode, use a simple template instead of loading from files
-    let content = if is_test {
-        // Format in a way that matches the test expectations
-        let mut frontmatter_string = format!(
-            "---\ntitle: \"{}\"\ndescription: \"{}\"\n",
-            title,
-            options.description.as_deref().unwrap_or("")
-        );
-
-        // Add date
-        if options.draft.unwrap_or(false) {
-            frontmatter_string.push_str("date: DRAFT\n");
-            frontmatter_string.push_str("draft: true\n");
-        } else {
-            frontmatter_string.push_str(&format!("date: \"{}\"\n", date_str));
+    // Add aliases if provided
+    if let Some(aliases) = &options.aliases {
+        if !aliases.is_empty() {
+            let aliases_string = format!("[{}]", aliases.join(", "));
+            frontmatter.insert("aliases".to_string(), aliases_string);
         }
+    }
 
-        // Add tags if present
-        if let Some(tags) = &options.tags {
-            if !tags.is_empty() {
-                frontmatter_string.push_str("tags: [\n");
-                for tag in tags {
-                    frontmatter_string.push_str(&format!("  \"{}\",\n", tag));
-                }
-                frontmatter_string.push_str("]\n");
-            }
+    // Add tags if provided
+    if let Some(tags) = &options.tags {
+        if !tags.is_empty() {
+            let tags_string = format!("[{}]", tags.join(", "));
+            frontmatter.insert("tags".to_string(), tags_string);
         }
+    }
 
-        frontmatter_string.push_str("---\n\n");
+    // Create the content
+    let mut content = String::new();
 
-        // Add content
-        let basic_content = format!(
-            "# {}\n\n{}",
-            title,
-            options
-                .description
-                .as_deref()
-                .unwrap_or("Write your content here...")
-        );
+    // Add the frontmatter
+    content.push_str("---\n");
+    for (key, value) in &frontmatter {
+        content.push_str(&format!("{}: {}\n", key, value));
+    }
+    content.push_str("---\n\n");
 
-        format!("{}{}", frontmatter_string, basic_content)
-    } else {
-        // For normal operation, use the template system
-        let default_template = String::from("article");
-        let template_name = options.template.as_ref().unwrap_or(&default_template);
-        let mut template = common_templates::load_template(template_name)?;
-        let template_content = template.get_content()?;
-        format!("---\n{}---\n\n{}", frontmatter_yaml, template_content)
-    };
+    // Add the content
+    content.push_str(&format!("# {}\n\n", options.title));
+    if let Some(subtitle) = &options.subtitle {
+        content.push_str(&format!("_{}_\n\n", subtitle));
+    }
+    content.push_str("Your content here...\n");
 
-    // Write content to file
-    let content_file = content_dir.join("index.mdx");
-    write_file(&content_file, &content)?;
+    // Write the content to the file
+    std::fs::write(&content_file, content)?;
 
+    // Return the path to the created content
     Ok(content_file)
 }
 
