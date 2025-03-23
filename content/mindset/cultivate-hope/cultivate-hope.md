@@ -1,8 +1,6 @@
 ---
 title: "Cultivate Hope"
 description: "Transform challenges into opportunities and let hope light the way to a brighter future."
-slug: "cultivate-hope"
-topics: ["mindset", "strategy"]
 tags:
   [
     "optimism",

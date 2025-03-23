@@ -1,8 +1,6 @@
 ---
 title: "Prune to Prosper"
 description: "Growth isn’t about adding more—it’s about removing what holds you back."
-slug: "prune-to-prosper"
-topics: ["mindset", "strategy", "focus"]
 tags:
   [
     "minimalism",

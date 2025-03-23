@@ -13,6 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import HeaderAnchor from "@/components/HeaderAnchor";
+import MainNavigation from "@/components/MainNavigation";
 
 interface ContentPageProps {
   params: {
@@ -24,7 +25,8 @@ export async function generateMetadata({
   params,
 }: ContentPageProps): Promise<Metadata> {
   try {
-    const slug = params.slug.join("/");
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug.join("/");
     const content = await getContent(slug);
 
     return {
@@ -49,7 +51,8 @@ export async function generateMetadata({
 
 export default async function ContentPage({ params }: ContentPageProps) {
   try {
-    const slug = params.slug.join("/");
+    const resolvedParams = await params;
+    const slug = resolvedParams.slug.join("/");
     const content = await getContent(slug);
 
     if (!content) {
@@ -58,22 +61,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
 
     return (
       <div className="layout-content">
-        <nav aria-label="Main navigation" className="mt-8 mb-10">
-          <ul className="text-muted-foreground flex space-x-6">
-            <li>
-              <Link href="/about">About</Link>
-            </li>
-            <li>
-              <Link href="/audio">Audio</Link>
-            </li>
-            <li>
-              <Link href="/store">Store</Link>
-            </li>
-            <li>
-              <Link href="/now">Now</Link>
-            </li>
-          </ul>
-        </nav>
+        <MainNavigation label="Main navigation" />
 
         <header
           aria-label="Content header"

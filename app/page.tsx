@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDate } from "@/lib/utils";
 import { Suspense } from "react";
+import MainNavigation from "@/components/MainNavigation";
 
 function LatestContentSkeleton() {
   return (
@@ -37,22 +38,7 @@ export default async function Home() {
         Skip to main content
       </a>
 
-      <nav aria-label="Site Navigation" className="mt-8 mb-10">
-        <ul className="text-muted-foreground flex space-x-6">
-          <li>
-            <Link href="/about">About</Link>
-          </li>
-          <li>
-            <Link href="/audio">Audio</Link>
-          </li>
-          <li>
-            <Link href="/store">Store</Link>
-          </li>
-          <li>
-            <Link href="/now">Now</Link>
-          </li>
-        </ul>
-      </nav>
+      <MainNavigation />
 
       <header className="mt-8 mb-10">
         <div className="flex items-center">

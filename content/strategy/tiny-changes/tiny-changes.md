@@ -1,8 +1,6 @@
 ---
 title: "Little Wins"
 description: "Embrace the power of tiny victories to pave your path to greatness."
-slug: "tiny-changes"
-topics: ["mindset", "strategy"]
 tags:
   [
     "habit building",

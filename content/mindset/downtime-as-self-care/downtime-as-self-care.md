@@ -1,8 +1,6 @@
 ---
 title: "Downtime as Self-Care"
 description: "Transform your evenings into a retreat that recharges your mind and nurtures your soul."
-slug: "downtime-as-self-care"
-topics: ["mindset", "strategy"]
 tags:
   [
     "self-care",
