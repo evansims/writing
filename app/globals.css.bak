@@ -607,11 +607,6 @@ body {
     padding-right: 1.5rem;
   }
 
-  /* Always hide TOC when no headings exist */
-  .toc-container:has([data-has-headings="false"]) {
-    display: none !important;
-  }
-
   .main-content {
     order: 2;
   }
@@ -633,22 +628,6 @@ body {
   }
 
   html:has(.toc-container:has([data-has-headings="false"])) .layout-content {
-    max-width: var(--page-max-width) !important;
-    padding-right: var(--page-padding-right) !important;
-  }
-
-  /* Use the class approach as a fallback/additional method */
-  html.no-toc-headings .content-layout {
-    grid-template-columns: 1fr !important;
-    max-width: var(--page-max-width) !important;
-  }
-
-  html.no-toc-headings .main-content {
-    width: 100% !important;
-    order: 1 !important;
-  }
-
-  html.no-toc-headings .layout-content {
     max-width: var(--page-max-width) !important;
     padding-right: var(--page-padding-right) !important;
   }

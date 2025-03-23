@@ -17,6 +17,7 @@ export default function TableOfContents() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
+  const [hasHeadings, setHasHeadings] = useState(false);
   const tocRef = useRef<HTMLElement>(null);
   const activeIdRef = useRef<string>(activeId);
   const activeIdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,6 +87,14 @@ export default function TableOfContents() {
     });
 
     setHeadings(items);
+    setHasHeadings(items.length > 0);
+
+    // Add or remove a class on the document element based on whether headings exist
+    if (items.length === 0) {
+      document.documentElement.classList.add("no-toc-headings");
+    } else {
+      document.documentElement.classList.remove("no-toc-headings");
+    }
 
     // Keep a reference to the latest active ID
     activeIdRef.current = activeId;
@@ -186,7 +195,7 @@ export default function TableOfContents() {
   };
 
   if (headings.length === 0) {
-    return null;
+    return <div data-has-headings="false" className="hidden"></div>;
   }
 
   // Calculate progress for each heading
@@ -234,6 +243,7 @@ export default function TableOfContents() {
         hasScrolled && !isExpanded ? "toc-collapsed" : "toc-expanded",
         isSticky && "is-sticky",
       )}
+      data-has-headings="true"
       aria-label="Table of contents"
       onMouseEnter={expandTOC}
       onMouseLeave={collapseTOC}
