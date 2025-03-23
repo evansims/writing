@@ -243,6 +243,29 @@ export default async function ContentPage({ params }: ContentPageProps) {
             </ReactMarkdown>
           </div>
 
+          {content.reading && content.reading.length > 0 && (
+            <div className="border-muted my-8 border-t pt-6">
+              <h3 className="mb-4 text-lg font-semibold">Further Reading</h3>
+              <ul className="space-y-3">
+                {content.reading.map((item, index) => (
+                  <li key={index} className="flex flex-col">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground font-medium hover:underline"
+                    >
+                      {item.title}
+                    </a>
+                    <span className="text-muted-foreground text-sm">
+                      by {item.author}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {content.tags && content.tags.length > 0 && (
             <footer>
               <div

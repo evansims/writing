@@ -1,6 +1,7 @@
 ---
 title: "Downtime as Self-Care"
 description: "Transform your evenings into a retreat that recharges your mind and nurtures your soul."
+type: "article"
 tags:
   [
     "self-care",
@@ -15,7 +16,7 @@ tags:
     "productivity",
   ]
 created: "2025-02-16"
-references:
+reading:
   - title: "The Daily Stoic: 366 Meditations on Wisdom, Perseverance, and the Art of Living"
     author: Ryan Holiday
     url: https://dailystoic.com/daily-stoic-book/

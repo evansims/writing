@@ -1,3 +1,9 @@
+export interface ReadingItem {
+  title: string;
+  author: string;
+  url: string;
+}
+
 export interface ContentItem {
   slug: string;
   title: string;
@@ -10,6 +16,7 @@ export interface ContentItem {
   url: string;
   topic?: string;
   type?: string;
+  reading?: ReadingItem[];
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5328";
@@ -34,10 +41,14 @@ export async function getContent(
 
 export async function getLatestContent(
   limit: number = 6,
+  types: string[] = [],
 ): Promise<ContentItem[]> {
-  const r = await fetch(`${apiUrl}/api/content/`, {
-    next: { revalidate: 60 },
-  });
+  const r = await fetch(
+    `${apiUrl}/api/content/?limit=${limit}&types=${types.join(",")}`,
+    {
+      next: { revalidate: 60 },
+    },
+  );
 
   if (!r.ok) {
     throw new Error(`Failed to fetch content: ${r.statusText}`);

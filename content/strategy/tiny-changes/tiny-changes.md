@@ -1,6 +1,7 @@
 ---
 title: "Little Wins"
 description: "Embrace the power of tiny victories to pave your path to greatness."
+type: "article"
 tags:
   [
     "habit building",
@@ -15,7 +16,7 @@ tags:
     "resilience",
   ]
 created: "2025-02-16"
-references:
+reading:
   - title: "Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones"
     author: James Clear
     url: "https://jamesclear.com/atomic-habits"

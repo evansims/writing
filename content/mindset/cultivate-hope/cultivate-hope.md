@@ -1,6 +1,7 @@
 ---
 title: "Cultivate Hope"
 description: "Transform challenges into opportunities and let hope light the way to a brighter future."
+type: "article"
 tags:
   [
     "optimism",
@@ -15,7 +16,7 @@ tags:
     "resilience",
   ]
 created: "2025-02-16"
-references:
+reading:
   - title: "The Power of Positive Thinking"
     author: Norman Vincent Peale
     url: "https://www.normanvincentpealeinstitute.org/books/the-power-of-positive-thinking/"

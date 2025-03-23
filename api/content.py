@@ -7,7 +7,7 @@ import frontmatter
 
 from _validation import safe_path, is_valid_slug, is_valid_path
 from _filesystem import cached_file_exists, cached_file_read, get_content_dir
-from _types import Page
+from _types import Page, ReadingItem
 
 content_bp = Blueprint("content_routes", url_prefix="/api/content")
 
@@ -129,6 +129,7 @@ async def _page(path: str, slug: str) -> Page:
         page_folder: str = os.path.basename(os.path.dirname(path))
         page_path: str = path
         page_type: str | None = None
+        page_reading: list[ReadingItem] = []
 
         # Determine the topic based on path structure
         content_dir = get_content_dir()
@@ -154,6 +155,7 @@ async def _page(path: str, slug: str) -> Page:
         _updated = post.get("updated", None)
         _banner = post.get("banner", None)
         _type = post.get("type", None)
+        _reading = post.get("reading", None)
 
         if type(_tags) is list:
             page_tags = _tags
@@ -170,6 +172,20 @@ async def _page(path: str, slug: str) -> Page:
         if type(_type) is str:
             page_type = _type
 
+        if type(_reading) is list:
+            for item in _reading:
+                if (
+                    type(item) is dict
+                    and "title" in item
+                    and "author" in item
+                    and "url" in item
+                ):
+                    page_reading.append(
+                        ReadingItem(
+                            title=item["title"], author=item["author"], url=item["url"]
+                        )
+                    )
+
         return Page(
             slug=page_slug,
             title=page_title,
@@ -183,6 +199,7 @@ async def _page(path: str, slug: str) -> Page:
             folder=page_folder,
             topic=page_topic,
             type=page_type,
+            reading=page_reading,
         )
     except Exception:
         raise NotFound()

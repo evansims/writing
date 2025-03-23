@@ -1,6 +1,7 @@
 ---
 title: "Prune to Prosper"
 description: "Growth isn’t about adding more—it’s about removing what holds you back."
+type: "article"
 tags:
   [
     "minimalism",
@@ -15,7 +16,7 @@ tags:
     "self-improvement",
   ]
 created: "2025-02-16"
-references:
+reading:
   - title: "Essentialism: The Disciplined Pursuit of Less"
     author: Greg McKeown
     url: "https://gregmckeown.com/book/essentialism/"

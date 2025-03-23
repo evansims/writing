@@ -3,6 +3,16 @@ from datetime import datetime
 
 
 @dataclass
+class ReadingItem:
+    title: str
+    author: str
+    url: str
+
+    def json(self) -> dict:
+        return {"title": self.title, "author": self.author, "url": self.url}
+
+
+@dataclass
 class Page:
     slug: str
     title: str
@@ -16,6 +26,7 @@ class Page:
     folder: str | None = None
     topic: str | None = None
     type: str | None = None
+    reading: list[ReadingItem] = field(default_factory=list)
 
     def json(self) -> dict:
         from _filesystem import get_content_dir
@@ -43,6 +54,7 @@ class Page:
             "topic": self.topic,
             "type": self.type,
             "body": self.body,
+            "reading": [item.json() for item in self.reading] if self.reading else None,
         }
 
 

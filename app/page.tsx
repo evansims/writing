@@ -10,6 +10,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { Suspense } from "react";
 import MainNavigation from "@/components/MainNavigation";
+import TopicLink from "@/components/TopicLink";
 
 function LatestContentSkeleton() {
   return (
@@ -147,7 +148,7 @@ export default async function Home() {
 
 async function LatestContent() {
   try {
-    const latestContent = await getLatestContent();
+    const latestContent = await getLatestContent(20, ["article"]);
 
     if (!latestContent || latestContent.length === 0) {
       return <p>No content available at the moment.</p>;
@@ -167,15 +168,10 @@ async function LatestContent() {
               >
                 <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 focus-within:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
                   {item.topic && (
-                    <Link
-                      href={`/${item.topic.toLowerCase()}`}
-                      className="text-muted-foreground mb-2 block text-sm hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      {item.topic}
-                    </Link>
+                    <TopicLink
+                      topic={item.topic}
+                      className="text-muted-foreground mb-2 block text-sm"
+                    />
                   )}
                   <h3 className="text-xl font-semibold">{item.title}</h3>
                   {item.description && (
@@ -200,15 +196,10 @@ async function LatestContent() {
               >
                 <article className="bg-card group-hover:bg-muted/25 group-focus:bg-muted/25 focus-within:bg-muted/25 h-full rounded-lg border-1 p-6 transition-colors">
                   {item.topic && (
-                    <Link
-                      href={`/${item.topic.toLowerCase()}`}
-                      className="text-muted-foreground mb-2 block text-sm hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      {item.topic}
-                    </Link>
+                    <TopicLink
+                      topic={item.topic}
+                      className="text-muted-foreground mb-2 block text-sm"
+                    />
                   )}
                   <h3 className="text-lg font-semibold">{item.title}</h3>
                 </article>
@@ -241,12 +232,10 @@ async function LatestContent() {
                       <h3 className="flex-1 font-semibold">{item.title}</h3>
 
                       {item.topic && (
-                        <Link
-                          href={`/${item.topic.toLowerCase()}`}
+                        <TopicLink
+                          topic={item.topic}
                           className="text-muted-foreground text-sm"
-                        >
-                          {item.topic}
-                        </Link>
+                        />
                       )}
                     </article>
                   </Link>
