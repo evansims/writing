@@ -145,7 +145,37 @@ export default function TableOfContents() {
     headings.findIndex((heading) => heading.id === activeId),
     0,
   );
-  const progress = (activeIndex + 1) / headings.length;
+
+  // Filter to get only H2 headings for the collapsed view
+  const h2Headings = headings.filter((heading) => heading.level === 2);
+
+  // Find which H2 section is active
+  const activeH2 = headings.find((heading) => heading.id === activeId);
+  let activeH2Id = activeH2?.id;
+
+  // If the active heading is not an H2, find the parent H2
+  if (activeH2 && activeH2.level > 2) {
+    // Find the closest H2 that comes before this heading
+    const h2Index = headings.findIndex((h) => h.id === activeH2Id);
+    for (let i = h2Index; i >= 0; i--) {
+      if (headings[i].level === 2) {
+        activeH2Id = headings[i].id;
+        break;
+      }
+    }
+  }
+
+  // Calculate which H2 sections have been passed
+  const h2Progress = h2Headings.map((h2) => {
+    const h2Index = headings.findIndex((h) => h.id === h2.id);
+    const isPassed = activeIndex >= h2Index;
+    const isActive = h2.id === activeH2Id;
+    return {
+      ...h2,
+      isPassed,
+      isActive,
+    };
+  });
 
   return (
     <nav
@@ -167,58 +197,70 @@ export default function TableOfContents() {
         {isExpanded ? "IN THIS ARTICLE" : "READING PROGRESS"}
       </h2>
 
-      <div className="toc-progress-container">
-        <div
-          className="toc-progress-bar"
-          style={{ height: `${progress * 100}%` }}
-          aria-hidden="true"
-        />
-      </div>
+      {/* Main TOC list - visible when expanded */}
+      {isExpanded ? (
+        <ul className="toc-list space-y-2 text-sm">
+          {headings.map((heading, index) => {
+            const isActive = activeId === heading.id;
+            const isPassed = activeIndex >= index;
 
-      <ul
-        className={cn(
-          "toc-list space-y-2 text-sm",
-          !isExpanded && "toc-list-collapsed",
-        )}
-      >
-        {headings.map((heading, index) => {
-          const isActive = activeId === heading.id;
-          const isPassed = activeIndex >= index;
-
-          return (
-            <li
-              key={heading.id}
-              className={cn(
-                "toc-item",
-                isExpanded ? "toc-item-expanded" : "toc-item-collapsed",
-                isActive && "toc-item-active",
-                isPassed && "toc-item-passed",
-              )}
-            >
-              <Link
-                href={`#${heading.id}`}
+            return (
+              <li
+                key={heading.id}
                 className={cn(
-                  "hover:text-foreground relative block py-1 transition-colors",
-                  isActive
-                    ? "text-foreground font-medium"
-                    : "text-muted-foreground",
+                  "toc-item",
+                  "toc-item-expanded",
+                  isActive && "toc-item-active",
+                  isPassed && "toc-item-passed",
                 )}
-                onClick={(e) => handleLinkClick(e, heading.id)}
-                tabIndex={0}
+                style={{
+                  paddingLeft: `${(heading.level - 1) * 0.75}rem`,
+                }}
               >
-                <span className="toc-text">{heading.text}</span>
-                <span
+                <Link
+                  href={`#${heading.id}`}
                   className={cn(
-                    "toc-indicator",
-                    isActive && "toc-indicator-active",
+                    "hover:text-foreground relative block py-1 transition-colors",
+                    isActive
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
                   )}
-                  aria-hidden="true"
-                ></span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                  onClick={(e) => handleLinkClick(e, heading.id)}
+                  tabIndex={0}
+                >
+                  <span className="toc-text">{heading.text}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        // Progress indicator - visible when collapsed
+        <div className="toc-progress-indicator">
+          {h2Progress.map((h2) => (
+            <button
+              key={h2.id}
+              onClick={(e) => {
+                e.preventDefault();
+                const element = document.getElementById(h2.id);
+                if (element) {
+                  window.scrollTo({
+                    top: element.offsetTop - 100,
+                    behavior: "smooth",
+                  });
+                  setActiveId(h2.id);
+                }
+              }}
+              className={cn(
+                "progress-line",
+                h2.isPassed && "progress-line-passed",
+                h2.isActive && "progress-line-active",
+              )}
+              aria-label={`Jump to section: ${h2.text}`}
+            />
+          ))}
+        </div>
+      )}
     </nav>
   );
 }
