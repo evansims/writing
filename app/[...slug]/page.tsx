@@ -16,6 +16,7 @@ import HeaderAnchor from "@/components/HeaderAnchor";
 import MainNavigation from "@/components/MainNavigation";
 import TableOfContents from "@/components/TableOfContents";
 import GeometricScene from "@/components/art/TriangleGravity";
+import ContentTextToSpeech from "@/components/ContentTextToSpeech";
 
 interface ContentPageProps {
   params: {
@@ -165,6 +166,14 @@ export default async function ContentPage({ params }: ContentPageProps) {
                 {content.description}
               </p>
             )}
+
+            {/* Text-to-Speech feature */}
+            <div className="mb-8">
+              <ContentTextToSpeech
+                content={content.body}
+                title={content.title}
+              />
+            </div>
 
             <div className="content prose prose-shadcn mb-6 max-w-none">
               <ReactMarkdown

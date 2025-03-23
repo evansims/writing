@@ -205,6 +205,58 @@ body {
   margin-inline: auto;
 }
 
+/* Text-to-Speech Component Styling */
+.text-to-speech-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--secondary);
+  padding: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.text-to-speech-progress {
+  flex: 1;
+  height: 0.5rem;
+  background: var(--muted);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.text-to-speech-progress-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 9999px;
+  transition: width 0.2s ease;
+}
+
+.text-to-speech-settings {
+  position: relative;
+}
+
+.text-to-speech-settings-panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  min-width: 12rem;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  z-index: 10;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.text-to-speech-speed-buttons {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
 .stacker {
   a:hover article:before,
   a:focus-within article:before {

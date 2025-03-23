@@ -26,6 +26,7 @@ api/
 │   ├── filesystem.py
 │   └── validation.py
 ├── content.py
+├── audio.py
 ├── images.py
 ├── index.py
 ├── llms.py
@@ -36,6 +37,7 @@ api/
 - `common/filesystem.py` - Common filesystem utilities for use in the API.
 - `common/validation.py` - Common validation utilities for use in the API.
 - `content.py` - Serves the content for the site.
+- `content-audio.py` - Generates an audio version of page's content using Eleven Labs' text-to-speech API.
 - `images.py` - Serves the images for the site.
 - `index.py` - Serves a Hello World API response, for testing service status.
 - `llms.py` - Serves the `llms.txt` and `llms-full.txt` files.
