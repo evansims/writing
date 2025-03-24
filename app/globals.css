@@ -787,44 +787,25 @@ li {
 }
 
 /* Audio playing indicator */
-.audio-playing {
-  animation: pulse-audio 2s infinite;
+.main-content.audio-playing .content-section,
+.main-content.audio-playing .intro-section {
+  opacity: 0.5;
+  transition: all 0.5s ease-in-out;
 }
 
-@keyframes pulse-audio {
+.content-section.audio-playing,
+.intro-section.audio-playing {
+  animation: gentle-pulse 1s ease-in-out infinite;
+}
+
+@keyframes gentle-pulse {
   0% {
-    color: color-mix(in srgb, var(--foreground) 50%, transparent);
+    opacity: 0.75;
   }
   50% {
-    color: color-mix(in srgb, var(--foreground) 100%, transparent);
-  }
-  100% {
-    color: color-mix(in srgb, var(--foreground) 50%, transparent);
-  }
-}
-
-/* Audio icon in TOC */
-.toc-link-active svg[data-icon="audio-waveform"] {
-  color: var(--foreground);
-  opacity: 1;
-}
-
-/* Show audio is playing in TOC */
-.toc-item:has(.toc-link-active) svg[data-icon="audio-waveform"] {
-  animation: pulse-wave 1.5s infinite;
-}
-
-@keyframes pulse-wave {
-  0% {
-    transform: scaleY(0.5);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scaleY(1);
     opacity: 1;
   }
   100% {
-    transform: scaleY(0.5);
-    opacity: 0.5;
+    opacity: 0.75;
   }
 }

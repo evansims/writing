@@ -24,120 +24,23 @@ export default function TableOfContents() {
   const [pageTitle, setPageTitle] = useState<string>("");
   const tocRef = useRef<HTMLElement>(null);
   const activeIdRef = useRef<string>(activeId);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  // Function to determine which heading is active based on intersection
-  const handleIntersection = useCallback(
-    (entries: Array<IntersectionObserverEntry & { target: Element }>) => {
-      // Find the most visible heading
-      let bestEntry: (IntersectionObserverEntry & { target: Element }) | null =
-        null;
-      let bestRatio = 0;
-
-      entries.forEach((entry) => {
-        // Only consider entries that are intersecting
-        if (entry.isIntersecting) {
-          // Calculate how much of the heading is visible
-          const ratio = entry.intersectionRatio;
-          if (ratio > bestRatio) {
-            bestRatio = ratio;
-            bestEntry = entry;
-          }
-        }
-      });
-
-      // If we found a visible heading, update the active ID
-      const target = bestEntry?.target as HTMLElement;
-      if (target?.id) {
-        const newActiveId = target.id;
-        if (activeIdRef.current !== newActiveId) {
-          setActiveId(newActiveId);
-          activeIdRef.current = newActiveId;
-        }
-      }
-    },
+  const sections = useRef<Array<{ id: string; top: number; bottom: number }>>(
     [],
   );
+  const isScrollingRef = useRef<boolean>(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollY = useRef<number>(0);
 
-  // Set up intersection observer
+  // Listen for audio state changes
   useEffect(() => {
-    // Only run on client-side
-    if (typeof window === "undefined") return;
-
-    // Create the observer with options
-    const options = {
-      root: null, // Use viewport
-      rootMargin: "-150px 0px -50% 0px", // Start observing 150px from top, end at middle of viewport
-      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], // Multiple thresholds for better accuracy
-    };
-
-    observerRef.current = new IntersectionObserver(handleIntersection, options);
-
-    // Get all headings
-    const headings = document.querySelectorAll(
-      ".content h1, h2, h3, h4, h5, h6",
-    );
-
-    // Observe each heading
-    headings.forEach((heading) => {
-      if (heading instanceof HTMLElement) {
-        observerRef.current?.observe(heading);
-      }
+    const cleanup = listenToAudioStateChange((state) => {
+      setIsAudioPlaying(state.isPlaying);
     });
 
-    // Cleanup
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [handleIntersection]);
+    return cleanup;
+  }, []);
 
-  // Handle scroll events for TOC collapse/expand
-  useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout | undefined;
-
-    const handleScroll = () => {
-      // Clear any existing timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-
-      // Get the H1 element position
-      const h1Element = document.querySelector(".main-content h1");
-      const h1Bottom = h1Element
-        ? h1Element.getBoundingClientRect().bottom + window.scrollY
-        : 0;
-
-      // Set hasScrolled to true only after passing the H1
-      if (window.scrollY > h1Bottom && !hasScrolled) {
-        setHasScrolled(true);
-        setIsExpanded(false);
-      } else if (window.scrollY < h1Bottom - 100 && hasScrolled) {
-        setHasScrolled(false);
-        setIsExpanded(true);
-      }
-
-      // Check if TOC is sticky
-      if (tocRef.current) {
-        const tocTop = tocRef.current.getBoundingClientRect().top;
-        setIsSticky(window.scrollY > 100);
-      }
-    };
-
-    // Initial check
-    handleScroll();
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-    };
-  }, [hasScrolled]);
-
-  // Main effect for setting up heading detection
+  // Calculate section positions and set up scroll event
   useEffect(() => {
     // Only run on client-side
     if (typeof window === "undefined") return;
@@ -191,16 +94,203 @@ export default function TableOfContents() {
     } else {
       document.documentElement.classList.remove("no-toc-headings");
     }
-  }, []);
 
-  // Listen for audio state changes
-  useEffect(() => {
-    const cleanup = listenToAudioStateChange((state) => {
-      setIsAudioPlaying(state.isPlaying);
-    });
+    // Calculate section positions
+    const calculateSectionPositions = () => {
+      const allSections = [];
 
-    return cleanup;
-  }, []);
+      // Add the intro/title section - this should go from the top of the page
+      // to just before the first heading that's not the H1
+      if (h1Element instanceof HTMLElement) {
+        // Find the first non-H1 heading to determine the bottom of intro section
+        const firstNonH1Index = items.findIndex((item) => item.level > 1);
+        const firstNonH1Id =
+          firstNonH1Index > -1 ? items[firstNonH1Index].id : null;
+
+        const introBottom = firstNonH1Id
+          ? (document.getElementById(firstNonH1Id)?.offsetTop ||
+              document.body.scrollHeight) - 10
+          : document.body.scrollHeight;
+
+        allSections.push({
+          id: h1Element.id || "intro",
+          top: 0,
+          bottom: introBottom,
+        });
+      }
+
+      // Add each heading as a section
+      items.forEach((item, i) => {
+        // Skip the H1 as it's already covered by the intro section
+        if (item.level === 1 && h1Element && item.id === h1Element.id) {
+          return;
+        }
+
+        const element = document.getElementById(item.id);
+        if (!element) return;
+
+        const top = element.offsetTop - 10; // Small offset
+        const bottom =
+          i < items.length - 1
+            ? (document.getElementById(items[i + 1].id)?.offsetTop ||
+                document.body.scrollHeight) - 10
+            : document.body.scrollHeight;
+
+        allSections.push({
+          id: item.id,
+          top,
+          bottom,
+        });
+      });
+
+      sections.current = allSections;
+    };
+
+    // Initial calculation
+    calculateSectionPositions();
+
+    // Recalculate on window resize
+    window.addEventListener("resize", calculateSectionPositions);
+
+    // Handle scroll with throttling and hysteresis
+    const handleScroll = () => {
+      // Skip if already processing a scroll event, but don't block for too long
+      if (isScrollingRef.current) {
+        // Still schedule the next check to ensure we don't get stuck
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+
+        scrollTimeoutRef.current = setTimeout(() => {
+          isScrollingRef.current = false;
+          // Try again after a short delay
+          handleScroll();
+        }, 100);
+        return;
+      }
+
+      isScrollingRef.current = true;
+
+      // Use requestAnimationFrame for smoother handling
+      window.requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        const viewportHeight = window.innerHeight;
+        const SCROLL_BUFFER = 100; // Hysteresis buffer
+        const h1Bottom =
+          h1Element instanceof HTMLElement
+            ? h1Element.getBoundingClientRect().bottom + window.scrollY
+            : 0;
+
+        // Handle TOC collapse/expand
+        if (scrollY > h1Bottom && !hasScrolled) {
+          setHasScrolled(true);
+          setIsExpanded(false);
+        } else if (scrollY < h1Bottom - 100 && hasScrolled) {
+          setHasScrolled(false);
+          setIsExpanded(true);
+        }
+
+        // Check if TOC is sticky
+        if (tocRef.current) {
+          setIsSticky(scrollY > 100);
+        }
+
+        // Find which section we're in
+        const scrollPosition = scrollY + 150; // Use a fixed position from the top for more reliable detection
+        let newActiveId = "";
+
+        // Special case: ensure introduction is active when at top of page
+        // This takes priority over all other section detection
+        if (scrollY < 150) {
+          if (h1Id) {
+            // Always set intro as active when at top, regardless of previous state
+            setActiveId(h1Id);
+            activeIdRef.current = h1Id;
+            // Store the current scroll position for next comparison
+            lastScrollY.current = scrollY;
+            // Reset scrolling flag immediately to be responsive
+            isScrollingRef.current = false;
+            return;
+          } else if (activeIdRef.current !== "intro") {
+            // Fallback if h1Id is not set
+            setActiveId("intro");
+            activeIdRef.current = "intro";
+            lastScrollY.current = scrollY;
+            isScrollingRef.current = false;
+            return;
+          }
+        }
+
+        // Apply hysteresis to prevent jumping between sections too easily
+        const isScrollingDown = scrollY > lastScrollY.current;
+        const detectionOffset = isScrollingDown ? 0 : SCROLL_BUFFER;
+
+        // Find the appropriate section
+        for (const section of sections.current) {
+          // Check if we're within this section's bounds
+          if (
+            scrollPosition >= section.top - detectionOffset &&
+            scrollPosition <
+              section.bottom + (isScrollingDown ? SCROLL_BUFFER : 0)
+          ) {
+            // Get section ID, but check if it's a sub-heading (H3-H6)
+            const sectionHeading = headings.find((h) => h.id === section.id);
+
+            if (sectionHeading && sectionHeading.level > 2) {
+              // If it's an H3-H6, find the parent H2 instead
+              const parentH2Id = findParentH2Id(section.id);
+              if (parentH2Id) {
+                newActiveId = parentH2Id;
+              } else {
+                newActiveId = section.id; // Fallback if no parent found
+              }
+            } else {
+              // For H1 and H2, use the section ID directly
+              newActiveId = section.id;
+            }
+
+            break; // Take the first matching section
+          }
+        }
+
+        // If we didn't find a section but have scrolled down, use the last section
+        if (!newActiveId && sections.current.length > 0 && scrollY > 0) {
+          const lastSection = sections.current[sections.current.length - 1];
+          if (scrollPosition >= lastSection.top) {
+            newActiveId = lastSection.id;
+          }
+        }
+
+        // Only update if the active section has changed
+        if (newActiveId && activeIdRef.current !== newActiveId) {
+          setActiveId(newActiveId);
+          activeIdRef.current = newActiveId;
+        }
+
+        // Store the current scroll position for next comparison
+        lastScrollY.current = scrollY;
+
+        // Always reset the scrolling flag when done
+        isScrollingRef.current = false;
+      });
+    };
+
+    // Initial check
+    handleScroll();
+
+    // Set up scroll listener with passive option for performance
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Clean up
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", calculateSectionPositions);
+
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [hasScrolled, h1Id]);
 
   // Expand TOC on hover or focus
   const expandTOC = useCallback(() => {
@@ -234,13 +324,48 @@ export default function TableOfContents() {
     return null;
   };
 
+  // Function to handle the title link click
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    // Find the main content and its first child
+    const mainContent = document.querySelector(".main-content");
+    const h1 = mainContent?.querySelector("h1");
+
+    if (h1) {
+      // Scroll to the H1 (title)
+      window.scrollTo({
+        top: 0, // Always go to the very top
+        behavior: "smooth",
+      });
+
+      // Update active ID if possible
+      if (h1.id) {
+        setActiveId(h1.id);
+        // Update URL hash without scrolling
+        history.pushState(null, "", `#${h1.id}`);
+
+        // Only trigger audio playback for intro if already playing
+        if (isAudioPlaying) {
+          playSection("intro", true);
+        }
+      }
+    }
+  };
+
   // Handle smooth scrolling
   const handleLinkClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     id: string,
   ) => {
     e.preventDefault();
-    setActiveId(id);
+
+    // Find proper active ID - if it's a sub-heading, use its parent H2
+    const heading = headings.find((h) => h.id === id);
+    const activeIdToSet =
+      heading && heading.level > 2 ? findParentH2Id(id) || id : id;
+
+    setActiveId(activeIdToSet);
 
     const element = document.getElementById(id);
     if (element) {
@@ -266,35 +391,6 @@ export default function TableOfContents() {
         } else {
           // Play directly for H1 and H2
           playSection(id, true);
-        }
-      }
-    }
-  };
-
-  // Function to handle the title link click
-  const handleTitleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-
-    // Find the main content and its first child
-    const mainContent = document.querySelector(".main-content");
-    const h1 = mainContent?.querySelector("h1");
-
-    if (h1) {
-      // Scroll to the H1 (title)
-      window.scrollTo({
-        top: h1.offsetTop - 100,
-        behavior: "smooth",
-      });
-
-      // Update active ID if possible
-      if (h1.id) {
-        setActiveId(h1.id);
-        // Update URL hash without scrolling
-        history.pushState(null, "", `#${h1.id}`);
-
-        // Only trigger audio playback for intro if already playing
-        if (isAudioPlaying) {
-          playSection("intro", true);
         }
       }
     }
@@ -329,10 +425,24 @@ export default function TableOfContents() {
     }
   }
 
+  // Is the introduction active?
+  const isIntroActive =
+    activeId === h1Id ||
+    activeId === "intro" ||
+    activeId === "" ||
+    (sections.current.length > 0 && sections.current[0]?.id === activeId);
+
   // Calculate which H2 sections have been passed
   const h2Progress = h2Headings.map((h2) => {
     const h2Index = headings.findIndex((h) => h.id === h2.id);
-    const isPassed = activeIndex >= h2Index;
+
+    // Only consider a section passed if:
+    // 1. We've scrolled down (as tracked by lastScrollY)
+    // 2. The activeIndex is past this heading's index
+    // 3. The active section is not the introduction/H1
+    const isPassed =
+      lastScrollY.current > 100 && !isIntroActive && activeIndex > h2Index;
+
     const isActive = h2.id === activeH2Id;
     return {
       ...h2,
@@ -340,9 +450,6 @@ export default function TableOfContents() {
       isActive,
     };
   });
-
-  // Is the introduction active?
-  const isIntroActive = activeId === h1Id || activeId === "";
 
   return (
     <nav
@@ -375,14 +482,22 @@ export default function TableOfContents() {
             className={cn(
               "toc-item",
               "toc-item-h1",
-              isIntroActive ? "toc-item-active" : "toc-item-upcoming",
+              isIntroActive
+                ? "toc-item-active"
+                : lastScrollY.current > 100
+                  ? "toc-item-passed"
+                  : "toc-item-upcoming",
             )}
           >
             <Link
               href="#"
               className={cn(
                 "hover:text-foreground relative flex items-center gap-2 py-1 transition-colors",
-                isIntroActive ? "toc-link-active" : "toc-link-upcoming",
+                isIntroActive
+                  ? "toc-link-active"
+                  : lastScrollY.current > 100
+                    ? "toc-link-passed"
+                    : "toc-link-upcoming",
               )}
               onClick={handleTitleClick}
               tabIndex={0}
@@ -395,9 +510,18 @@ export default function TableOfContents() {
           {/* Regular headings */}
           {headings.map((heading, index) => {
             const isActive = activeId === heading.id;
+
+            // Use the same improved passed logic we use for h2Progress
             const isPassed =
-              activeIndex >= headings.findIndex((h) => h.id === heading.id);
+              lastScrollY.current > 100 &&
+              activeIndex > headings.findIndex((h) => h.id === heading.id);
+
             const isChildHeading = heading.level > 2;
+
+            // Skip the H1 that's already shown as the introduction
+            if (heading.level === 1 && heading.id === h1Id) {
+              return null;
+            }
 
             // Find parent H2 for this heading
             let parentH2Index = -1;
@@ -442,7 +566,10 @@ export default function TableOfContents() {
                   tabIndex={0}
                 >
                   <span className="toc-line-indicator"></span>
-                  <span className="toc-text">{heading.text}</span>
+                  <span className="toc-text">
+                    {isChildHeading && "— "}
+                    {heading.text}
+                  </span>
                 </Link>
               </li>
             );
@@ -458,11 +585,11 @@ export default function TableOfContents() {
               "progress-line",
               isIntroActive
                 ? "progress-line-active"
-                : activeIndex === 0
+                : lastScrollY.current > 100
                   ? "progress-line-passed"
                   : "",
             )}
-            aria-label={`Jump to ${pageTitle}`}
+            aria-label={`Jump to introduction`}
           />
 
           {h2Progress.map((h2) => (
@@ -479,7 +606,9 @@ export default function TableOfContents() {
                   setActiveId(h2.id);
 
                   // Trigger audio playback for this section only if already playing
-                  playSection(h2.id, true);
+                  if (isAudioPlaying) {
+                    playSection(h2.id, true);
+                  }
                 }
               }}
               className={cn(

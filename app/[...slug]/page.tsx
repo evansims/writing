@@ -225,7 +225,7 @@ export default async function ContentPage({ params }: ContentPageProps) {
               {content.title}
             </h1>
 
-            {content.description && (
+            {content.description && content.description !== "None" && (
               <p className="text-muted-foreground mb-8">
                 {content.description}
               </p>

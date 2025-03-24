@@ -178,7 +178,7 @@ def split_content_into_chunks(
     intro_prefix = ""
     if title:
         intro_prefix += f"{title}. "
-    if description:
+    if description and description.lower() != "none":
         intro_prefix += f"{description} "
     intro_prefix += (
         "by Evan Sims. . . . . "  # Multiple periods to create a longer pause

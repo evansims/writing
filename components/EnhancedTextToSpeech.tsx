@@ -144,7 +144,6 @@ export default function EnhancedTextToSpeech({
   // Update the ref when currentChunkIndex changes
   useEffect(() => {
     currentIndexRef.current = currentChunkIndex;
-    console.log(`Updated currentIndexRef to ${currentChunkIndex}`);
   }, [currentChunkIndex]);
 
   // Fetch audio metadata on component mount
@@ -155,7 +154,6 @@ export default function EnhancedTextToSpeech({
         setError(null);
 
         const apiUrl = getApiUrl();
-        console.log(`Fetching audio metadata from: ${apiUrl}`);
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
@@ -168,7 +166,6 @@ export default function EnhancedTextToSpeech({
         setAudioChunks(data.chunks);
         setPageMetadata(data.page);
       } catch (err) {
-        console.error("Error fetching audio metadata:", err);
         setError("Failed to load audio information");
       } finally {
         setIsLoading(false);
@@ -178,7 +175,7 @@ export default function EnhancedTextToSpeech({
     if (slug) {
       fetchMetadata();
     }
-  }, [slug]); // Explicit dependency on slug to prevent unnecessary reruns
+  }, [slug]);
 
   // Create audio element on mount
   useEffect(() => {
@@ -190,33 +187,28 @@ export default function EnhancedTextToSpeech({
 
     // Basic event handlers
     const handlePlay = () => {
-      console.log("Audio play event");
       setIsPlaying(true);
     };
 
     const handlePause = () => {
-      console.log("Audio pause event");
       setIsPlaying(false);
+      removeHighlight();
     };
 
     // Auto-progression handler for when audio ends
     const handleEnded = () => {
       // Prevent multiple calls
       if (transitioning) {
-        console.log("Already transitioning, ignoring ended event");
         return;
       }
 
       transitioning = true;
-      console.log("Audio ended event - preparing for next chunk");
 
       // Manually get current index from ref
       const currentIdx = currentIndexRef.current;
       const nextIdx = currentIdx + 1;
 
       if (nextIdx < audioChunks.length) {
-        console.log(`Moving from chunk ${currentIdx} to ${nextIdx}`);
-
         // Important: Remove event handler during transition to prevent double firing
         audio.onended = null;
 
@@ -229,23 +221,19 @@ export default function EnhancedTextToSpeech({
           // Wait for React to process state updates
           setTimeout(() => {
             // Play the next chunk
-            console.log(`Playing next chunk ${nextIdx}`);
             playNextChunkDirectly(nextIdx, audio)
               .then(() => {
-                console.log("Auto-progression successful");
                 // Re-attach event handler
                 audio.onended = handleEnded;
                 transitioning = false;
               })
               .catch((error) => {
-                console.error("Error in auto-progression:", error);
                 transitioning = false;
                 setError("Error advancing to next section");
               });
           }, 300);
         }, 0);
       } else {
-        console.log("Reached the end of all chunks");
         setIsPlaying(false);
         setCurrentChunkIndex(0);
         currentIndexRef.current = 0;
@@ -260,15 +248,13 @@ export default function EnhancedTextToSpeech({
     audio.onpause = handlePause;
     audio.onended = handleEnded;
     audio.ontimeupdate = handleTimeUpdate;
-    audio.onerror = (e) => {
-      console.error("Audio error:", e);
+    audio.onerror = () => {
       setError("Error playing audio");
       setIsPlaying(false);
       setIsLoading(false);
     };
     audio.onloadstart = () => setIsLoading(true);
     audio.oncanplaythrough = () => {
-      console.log("Audio canplaythrough event");
       setIsLoading(false);
     };
 
@@ -281,8 +267,6 @@ export default function EnhancedTextToSpeech({
 
     // Cleanup function
     return () => {
-      console.log("Cleaning up audio element");
-
       audio.pause();
       audio.onplay = null;
       audio.onpause = null;
@@ -310,29 +294,21 @@ export default function EnhancedTextToSpeech({
     }
   }, [playbackRate]);
 
-  // Handle highlighting the current chunk during playback
+  // Effect to ensure highlight state matches playback state
   useEffect(() => {
-    if (isPlaying && audioChunks[currentChunkIndex]) {
+    if (!isPlaying) {
+      // When not playing, ensure all highlights are removed
+      removeHighlight();
+    } else if (isPlaying && audioChunks[currentChunkIndex]) {
+      // When playing, ensure the correct section is highlighted
       const chunkId = audioChunks[currentChunkIndex].id;
       highlightChunk(chunkId);
     }
-
-    return () => {
-      // Remove highlight when component unmounts or playback stops
-      if (highlightedElementId) {
-        removeHighlight();
-      }
-    };
   }, [isPlaying, currentChunkIndex, audioChunks]);
 
   // Play a specific chunk
   const playChunk = async (index: number) => {
-    console.log(
-      `playChunk called with index: ${index} (total chunks: ${audioChunks.length})`,
-    );
-
     if (!audioChunks || index < 0 || index >= audioChunks.length) {
-      console.warn(`Invalid chunk index: ${index}, not playing`);
       return;
     }
 
@@ -341,7 +317,6 @@ export default function EnhancedTextToSpeech({
       setCurrentChunkIndex(index);
       // Update the ref immediately for tracking
       currentIndexRef.current = index;
-      console.log(`Updated currentIndexRef in playChunk to ${index}`);
 
       setIsLoading(true);
       setError(null);
@@ -352,27 +327,19 @@ export default function EnhancedTextToSpeech({
       // Construct the URL for the chunk
       let audioUrl = `${apiUrl}/${chunk.id}`;
 
-      console.log(`Fetching audio from: ${audioUrl}`);
-
       // Try to pre-fetch the next chunk while this one is playing
       prefetchNextChunk(index);
 
       // Check if the API is working by making a health check request
-      // Use the base URL of the current API endpoint rather than a hardcoded path
       const baseApiUrl = `/api${apiUrl.split("/api")[1].split("/").slice(0, 2).join("/")}`;
-      console.log(`Checking API health at: ${baseApiUrl}`);
 
       try {
         const healthCheck = await fetch(baseApiUrl);
         if (!healthCheck.ok) {
-          console.error(
-            `API health check failed with status: ${healthCheck.status}`,
-          );
           // Continue anyway since this is just a precaution
         } else {
           const healthData = await healthCheck.json();
           if (healthData.status === "WARNING" || !healthData.api_key_valid) {
-            console.warn("API health check warning:", healthData);
             setError(
               "Text-to-speech API key is invalid or missing. Please contact the site administrator.",
             );
@@ -381,12 +348,10 @@ export default function EnhancedTextToSpeech({
           }
         }
       } catch (healthError) {
-        console.error("Failed to check API health:", healthError);
         // Continue anyway since this is just a precaution
       }
 
       try {
-        console.log(`Fetching audio data for chunk ${index}: ${chunk.id}`);
         const response = await fetch(audioUrl);
 
         if (!response.ok) {
@@ -396,12 +361,8 @@ export default function EnhancedTextToSpeech({
               "Server error generating audio. The API key might be invalid or missing.",
             );
           } else if (response.status === 404) {
-            console.error(`Audio chunk not found at URL: ${audioUrl}`);
             throw new Error("Audio chunk not found. Try refreshing the page.");
           } else {
-            console.error(
-              `Failed to fetch audio with status: ${response.status} ${response.statusText}`,
-            );
             throw new Error(`Failed to fetch audio: ${response.statusText}`);
           }
         }
@@ -410,15 +371,10 @@ export default function EnhancedTextToSpeech({
 
         // Check if blob is empty
         if (audioBlob.size === 0) {
-          console.error("Received empty audio file from server");
           throw new Error(
             "Received empty audio file. The API key might be invalid or there was a server error.",
           );
         }
-
-        console.log(
-          `Successfully fetched audio chunk with size: ${audioBlob.size} bytes`,
-        );
 
         // Clean up any previous object URL before creating a new one
         if (
@@ -432,30 +388,24 @@ export default function EnhancedTextToSpeech({
         const audioObjectUrl = URL.createObjectURL(audioBlob);
 
         if (audioRef.current) {
-          console.log(`Setting audio source to blob URL for chunk ${index}`);
           audioRef.current.src = audioObjectUrl;
           audioRef.current.load();
 
           try {
-            console.log(`Starting playback for chunk ${index}`);
             await audioRef.current.play();
             setIsPlaying(true);
           } catch (err) {
-            console.error("Failed to play audio:", err);
             setError(
               "Failed to play audio. Your browser may be blocking autoplay.",
             );
           }
         } else {
-          console.error("Audio element reference is null");
           throw new Error("Audio player not initialized");
         }
       } catch (fetchError) {
-        console.error("Error fetching audio chunk:", fetchError);
         throw fetchError;
       }
     } catch (err) {
-      console.error("Error loading audio chunk:", err);
       setError(err instanceof Error ? err.message : "Failed to load audio");
     } finally {
       setIsLoading(false);
@@ -466,7 +416,6 @@ export default function EnhancedTextToSpeech({
   const prefetchNextChunk = (currentIndex: number) => {
     const nextIndex = currentIndex + 1;
     if (nextIndex >= audioChunks.length) {
-      console.log("No next chunk to prefetch");
       return;
     }
 
@@ -474,34 +423,17 @@ export default function EnhancedTextToSpeech({
     const apiUrl = getApiUrl();
 
     // First, try to fetch with generate_all parameter to ensure the audio is generated
-    console.log(`Pre-generating audio for next chunk: ${nextChunk.id}`);
-
-    // Make a request to generate the audio file in the background
     fetch(`${apiUrl}?generate_all=true`, {
       method: "GET",
       headers: {
         "Cache-Control": "no-cache",
       },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Failed to trigger audio generation: ${response.status}`,
-          );
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log(`Successfully pre-generated audio for next chunks:`, data);
-      })
-      .catch((err) => {
-        console.warn("Error pre-generating audio:", err);
-        // Don't need to show this error to the user
-      });
+    }).catch(() => {
+      // Don't need to show this error to the user
+    });
 
     // Also try to pre-fetch the specific next chunk directly
     const nextChunkUrl = `${apiUrl}/${nextChunk.id}`;
-    console.log(`Pre-fetching next chunk audio from: ${nextChunkUrl}`);
 
     // Using a simple HEAD request to get the browser to cache the response
     fetch(nextChunkUrl, {
@@ -509,19 +441,9 @@ export default function EnhancedTextToSpeech({
       headers: {
         "Cache-Control": "no-cache",
       },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to pre-fetch next chunk: ${response.status}`);
-        }
-        console.log(
-          `Successfully pre-fetched audio for next chunk: ${nextChunk.id}`,
-        );
-      })
-      .catch((err) => {
-        console.warn("Error pre-fetching next chunk:", err);
-        // Don't need to show this error to the user
-      });
+    }).catch(() => {
+      // Don't need to show this error to the user
+    });
   };
 
   // Update progress based on current audio time
@@ -539,6 +461,7 @@ export default function EnhancedTextToSpeech({
     if (isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
+        removeHighlight();
       }
       setIsPlaying(false);
     } else {
@@ -557,6 +480,7 @@ export default function EnhancedTextToSpeech({
       // If playing, pause and hide the player
       if (audioRef.current) {
         audioRef.current.pause();
+        removeHighlight();
       }
       setIsPlaying(false);
       setIsVisible(false);
@@ -600,6 +524,12 @@ export default function EnhancedTextToSpeech({
 
     const currentChunk = audioChunks.find((chunk) => chunk.id === chunkId);
     if (!currentChunk) return;
+
+    // Always add the audio-playing class to the main content article
+    const mainContent = document.querySelector("article.main-content");
+    if (mainContent) {
+      mainContent.classList.add("audio-playing");
+    }
 
     // Handle different types of chunks
     if (chunkId === "intro") {
@@ -679,10 +609,6 @@ export default function EnhancedTextToSpeech({
     // Calculate position to scroll to (accounting for the audio player at the bottom)
     const scrollPosition = absoluteElementTop - topOffset;
 
-    console.log(
-      `Scrolling element ${element.tagName} to top position: ${scrollPosition}`,
-    );
-
     // Perform the scroll with smooth behavior
     window.scrollTo({
       top: scrollPosition,
@@ -697,7 +623,6 @@ export default function EnhancedTextToSpeech({
     audioElement: HTMLAudioElement,
   ) => {
     if (!audioChunks || index < 0 || index >= audioChunks.length) {
-      console.warn(`Invalid chunk index: ${index}, not playing`);
       return;
     }
 
@@ -707,8 +632,6 @@ export default function EnhancedTextToSpeech({
       const chunk = audioChunks[index];
       const apiUrl = getApiUrl();
       const audioUrl = `${apiUrl}/${chunk.id}`;
-
-      console.log(`Direct fetch for audio from: ${audioUrl}`);
 
       // Try to pre-fetch the next chunk too
       prefetchNextChunk(index);
@@ -739,7 +662,6 @@ export default function EnhancedTextToSpeech({
       audioElement.load();
 
       // Play the audio
-      console.log("Starting auto-playback");
       await audioElement.play();
 
       // Update the UI
@@ -748,7 +670,6 @@ export default function EnhancedTextToSpeech({
       // Highlight the correct chunk
       highlightChunk(chunk.id);
     } catch (error) {
-      console.error("Error in direct playback:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -764,13 +685,8 @@ export default function EnhancedTextToSpeech({
 
       // If onlyIfPlaying is true, only proceed if audio is already playing
       if (onlyIfPlaying && !isPlaying) {
-        console.log(
-          `Ignoring request to play section ${sectionId} because audio is not currently playing`,
-        );
         return;
       }
-
-      console.log(`Received request to play section with ID: ${sectionId}`);
 
       // Find the heading element
       const headingElement = document.getElementById(sectionId);
@@ -797,14 +713,7 @@ export default function EnhancedTextToSpeech({
       }
 
       if (chunkToPlay >= 0) {
-        console.log(
-          `Playing audio chunk ${chunkToPlay} for section ${sectionId}`,
-        );
         playChunk(chunkToPlay);
-      } else {
-        console.log(
-          `Couldn't find matching audio chunk for section ${sectionId}`,
-        );
       }
     };
 
