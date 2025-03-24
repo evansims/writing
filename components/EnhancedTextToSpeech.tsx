@@ -327,8 +327,14 @@ export default function EnhancedTextToSpeech({
       // Construct the URL for the chunk
       let audioUrl = `${apiUrl}/${chunk.id}`;
 
-      // Try to pre-fetch the next chunk while this one is playing
-      prefetchNextChunk(index);
+      // Start prefetching next chunks in the background
+      // We'll do this for the next 2 chunks to ensure smooth playback
+      for (let i = 1; i <= 2; i++) {
+        const nextIndex = index + i;
+        if (nextIndex < audioChunks.length) {
+          prefetchNextChunk(nextIndex);
+        }
+      }
 
       // Check if the API is working by making a health check request
       const baseApiUrl = `/api${apiUrl.split("/api")[1].split("/").slice(0, 2).join("/")}`;
