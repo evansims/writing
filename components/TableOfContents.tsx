@@ -24,91 +24,78 @@ export default function TableOfContents() {
   const [pageTitle, setPageTitle] = useState<string>("");
   const tocRef = useRef<HTMLElement>(null);
   const activeIdRef = useRef<string>(activeId);
-  const activeIdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Function to determine which heading is active based on scroll position
-  const determineActiveHeading = useCallback(() => {
-    const ACTIVATION_OFFSET = 150; // Distance from top to consider heading "active"
+  // Function to determine which heading is active based on intersection
+  const handleIntersection = useCallback(
+    (entries: Array<IntersectionObserverEntry & { target: Element }>) => {
+      // Find the most visible heading
+      let bestEntry: (IntersectionObserverEntry & { target: Element }) | null =
+        null;
+      let bestRatio = 0;
 
-    // Get the H1 element position
-    const h1Element = document.querySelector(".main-content h1");
-    const h1Rect = h1Element?.getBoundingClientRect();
+      entries.forEach((entry) => {
+        // Only consider entries that are intersecting
+        if (entry.isIntersecting) {
+          // Calculate how much of the heading is visible
+          const ratio = entry.intersectionRatio;
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestEntry = entry;
+          }
+        }
+      });
 
-    // If we're at the top of the page, always make the intro active
-    if (window.scrollY === 0 && h1Element?.id) {
-      if (activeIdRef.current !== h1Element.id) {
-        setActiveId(h1Element.id);
-        activeIdRef.current = h1Element.id;
+      // If we found a visible heading, update the active ID
+      const target = bestEntry?.target as HTMLElement;
+      if (target?.id) {
+        const newActiveId = target.id;
+        if (activeIdRef.current !== newActiveId) {
+          setActiveId(newActiveId);
+          activeIdRef.current = newActiveId;
+        }
       }
-      return;
-    }
+    },
+    [],
+  );
 
-    // If we're near the top of the page and the H1 is visible, make it active
-    if (
-      h1Element?.id &&
-      h1Rect &&
-      h1Rect.top < ACTIVATION_OFFSET &&
-      h1Rect.bottom > 0
-    ) {
-      if (activeIdRef.current !== h1Element.id) {
-        setActiveId(h1Element.id);
-        activeIdRef.current = h1Element.id;
-      }
-      return;
-    }
+  // Set up intersection observer
+  useEffect(() => {
+    // Only run on client-side
+    if (typeof window === "undefined") return;
+
+    // Create the observer with options
+    const options = {
+      root: null, // Use viewport
+      rootMargin: "-150px 0px -50% 0px", // Start observing 150px from top, end at middle of viewport
+      threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], // Multiple thresholds for better accuracy
+    };
+
+    observerRef.current = new IntersectionObserver(handleIntersection, options);
 
     // Get all headings
-    const headingElements = document.querySelectorAll(
+    const headings = document.querySelectorAll(
       ".content h1, h2, h3, h4, h5, h6",
     );
 
-    // Find the heading closest to the top of the viewport
-    let activeHeadingId = "";
-    let smallestDistance = Infinity;
-
-    Array.from(headingElements).forEach((heading) => {
-      if (heading instanceof HTMLElement && heading.id) {
-        const rect = heading.getBoundingClientRect();
-        const distanceFromTop = rect.top;
-
-        // Only consider headings that are above or near the activation line
-        if (distanceFromTop < ACTIVATION_OFFSET) {
-          // For headings above the activation line, prefer the one closest to it
-          if (distanceFromTop > 0 && distanceFromTop < smallestDistance) {
-            activeHeadingId = heading.id;
-            smallestDistance = distanceFromTop;
-          }
-          // For headings below the activation line, prefer the one closest to it
-          else if (
-            distanceFromTop <= 0 &&
-            Math.abs(distanceFromTop) < smallestDistance
-          ) {
-            activeHeadingId = heading.id;
-            smallestDistance = Math.abs(distanceFromTop);
-          }
-        }
+    // Observe each heading
+    headings.forEach((heading) => {
+      if (heading instanceof HTMLElement) {
+        observerRef.current?.observe(heading);
       }
     });
 
-    // Update active heading if found and changed
-    if (activeHeadingId && activeIdRef.current !== activeHeadingId) {
-      setActiveId(activeHeadingId);
-      activeIdRef.current = activeHeadingId;
-    }
-  }, []);
+    // Cleanup
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [handleIntersection]);
 
-  // Listen for audio state changes
+  // Handle scroll events for TOC collapse/expand
   useEffect(() => {
-    const cleanup = listenToAudioStateChange((state) => {
-      setIsAudioPlaying(state.isPlaying);
-    });
-
-    return cleanup;
-  }, []);
-
-  // Handle scroll events
-  useEffect(() => {
-    let scrollTimeout: NodeJS.Timeout;
+    let scrollTimeout: NodeJS.Timeout | undefined;
 
     const handleScroll = () => {
       // Clear any existing timeout
@@ -136,11 +123,6 @@ export default function TableOfContents() {
         const tocTop = tocRef.current.getBoundingClientRect().top;
         setIsSticky(window.scrollY > 100);
       }
-
-      // Update active heading after a small delay to prevent too many updates
-      scrollTimeout = setTimeout(() => {
-        determineActiveHeading();
-      }, 50);
     };
 
     // Initial check
@@ -153,18 +135,6 @@ export default function TableOfContents() {
         clearTimeout(scrollTimeout);
       }
     };
-  }, [hasScrolled, determineActiveHeading]);
-
-  // Expand TOC on hover or focus
-  const expandTOC = useCallback(() => {
-    setIsExpanded(true);
-  }, []);
-
-  // Collapse TOC when leaving, but only if we've scrolled
-  const collapseTOC = useCallback(() => {
-    if (hasScrolled) {
-      setIsExpanded(false);
-    }
   }, [hasScrolled]);
 
   // Main effect for setting up heading detection
@@ -221,16 +191,28 @@ export default function TableOfContents() {
     } else {
       document.documentElement.classList.remove("no-toc-headings");
     }
+  }, []);
 
-    // Do an initial check after a short delay to ensure DOM is ready
-    const initialCheckTimeout = setTimeout(determineActiveHeading, 100);
+  // Listen for audio state changes
+  useEffect(() => {
+    const cleanup = listenToAudioStateChange((state) => {
+      setIsAudioPlaying(state.isPlaying);
+    });
 
-    return () => {
-      if (initialCheckTimeout) {
-        clearTimeout(initialCheckTimeout);
-      }
-    };
-  }, [determineActiveHeading]);
+    return cleanup;
+  }, []);
+
+  // Expand TOC on hover or focus
+  const expandTOC = useCallback(() => {
+    setIsExpanded(true);
+  }, []);
+
+  // Collapse TOC when leaving, but only if we've scrolled
+  const collapseTOC = useCallback(() => {
+    if (hasScrolled) {
+      setIsExpanded(false);
+    }
+  }, [hasScrolled]);
 
   // Find the parent H2 for a given heading ID
   const findParentH2Id = (headingId: string): string | null => {
@@ -392,7 +374,7 @@ export default function TableOfContents() {
           <li
             className={cn(
               "toc-item",
-              "toc-item-h2",
+              "toc-item-h1",
               isIntroActive ? "toc-item-active" : "toc-item-upcoming",
             )}
           >

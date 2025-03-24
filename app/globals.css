@@ -431,6 +431,7 @@ li {
   transform: translateY(0);
 }
 
+.toc-item-h1,
 .toc-item-h2 {
   position: relative;
 }
