@@ -20,9 +20,9 @@ import ContentTextToSpeech from "@/components/ContentTextToSpeech";
 import { ReactNode } from "react";
 
 interface ContentPageProps {
-  params: {
+  params: Promise<{
     slug: string[];
-  };
+  }>;
 }
 
 export async function generateMetadata({

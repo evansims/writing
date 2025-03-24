@@ -26,6 +26,6 @@ export default function Error({
       headers: {
         "Content-Type": "text/plain",
       },
-    }
-  ) as unknown as JSX.Element;
+    },
+  );
 }
