@@ -8,6 +8,7 @@ import {
   SkipBack,
   Loader2,
   Headphones,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -916,31 +917,20 @@ export default function EnhancedTextToSpeech({
       >
         <div
           className={cn(
-            "relative container mx-auto max-w-4xl space-y-2",
+            "layout-content relative container mx-auto space-y-2",
             playerContainerClassName,
           )}
         >
           {/* Close button in top right corner */}
-          <button
+          <Button
             onClick={() => setIsVisible(false)}
-            className="text-muted-foreground hover:text-foreground absolute top-0 right-0 p-1"
+            variant="outline"
+            size="icon"
+            className="absolute top-0 right-3"
             aria-label="Close audio player"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
 
           {/* First row: Controls and progress slider combined */}
           <div className="flex items-center space-x-3">

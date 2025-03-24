@@ -26,6 +26,77 @@ export default function TableOfContents() {
   const activeIdRef = useRef<string>(activeId);
   const activeIdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Function to determine which heading is active based on scroll position
+  const determineActiveHeading = useCallback(() => {
+    const ACTIVATION_OFFSET = 150; // Distance from top to consider heading "active"
+
+    // Get the H1 element position
+    const h1Element = document.querySelector(".main-content h1");
+    const h1Rect = h1Element?.getBoundingClientRect();
+
+    // If we're at the top of the page, always make the intro active
+    if (window.scrollY === 0 && h1Element?.id) {
+      if (activeIdRef.current !== h1Element.id) {
+        setActiveId(h1Element.id);
+        activeIdRef.current = h1Element.id;
+      }
+      return;
+    }
+
+    // If we're near the top of the page and the H1 is visible, make it active
+    if (
+      h1Element?.id &&
+      h1Rect &&
+      h1Rect.top < ACTIVATION_OFFSET &&
+      h1Rect.bottom > 0
+    ) {
+      if (activeIdRef.current !== h1Element.id) {
+        setActiveId(h1Element.id);
+        activeIdRef.current = h1Element.id;
+      }
+      return;
+    }
+
+    // Get all headings
+    const headingElements = document.querySelectorAll(
+      ".content h1, h2, h3, h4, h5, h6",
+    );
+
+    // Find the heading closest to the top of the viewport
+    let activeHeadingId = "";
+    let smallestDistance = Infinity;
+
+    Array.from(headingElements).forEach((heading) => {
+      if (heading instanceof HTMLElement && heading.id) {
+        const rect = heading.getBoundingClientRect();
+        const distanceFromTop = rect.top;
+
+        // Only consider headings that are above or near the activation line
+        if (distanceFromTop < ACTIVATION_OFFSET) {
+          // For headings above the activation line, prefer the one closest to it
+          if (distanceFromTop > 0 && distanceFromTop < smallestDistance) {
+            activeHeadingId = heading.id;
+            smallestDistance = distanceFromTop;
+          }
+          // For headings below the activation line, prefer the one closest to it
+          else if (
+            distanceFromTop <= 0 &&
+            Math.abs(distanceFromTop) < smallestDistance
+          ) {
+            activeHeadingId = heading.id;
+            smallestDistance = Math.abs(distanceFromTop);
+          }
+        }
+      }
+    });
+
+    // Update active heading if found and changed
+    if (activeHeadingId && activeIdRef.current !== activeHeadingId) {
+      setActiveId(activeHeadingId);
+      activeIdRef.current = activeHeadingId;
+    }
+  }, []);
+
   // Listen for audio state changes
   useEffect(() => {
     const cleanup = listenToAudioStateChange((state) => {
@@ -37,12 +108,25 @@ export default function TableOfContents() {
 
   // Handle scroll events
   useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
-      // Set hasScrolled to true once the user has scrolled down
-      if (window.scrollY > 200 && !hasScrolled) {
+      // Clear any existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+
+      // Get the H1 element position
+      const h1Element = document.querySelector(".main-content h1");
+      const h1Bottom = h1Element
+        ? h1Element.getBoundingClientRect().bottom + window.scrollY
+        : 0;
+
+      // Set hasScrolled to true only after passing the H1
+      if (window.scrollY > h1Bottom && !hasScrolled) {
         setHasScrolled(true);
         setIsExpanded(false);
-      } else if (window.scrollY < 150 && hasScrolled) {
+      } else if (window.scrollY < h1Bottom - 100 && hasScrolled) {
         setHasScrolled(false);
         setIsExpanded(true);
       }
@@ -52,14 +136,24 @@ export default function TableOfContents() {
         const tocTop = tocRef.current.getBoundingClientRect().top;
         setIsSticky(window.scrollY > 100);
       }
+
+      // Update active heading after a small delay to prevent too many updates
+      scrollTimeout = setTimeout(() => {
+        determineActiveHeading();
+      }, 50);
     };
 
     // Initial check
     handleScroll();
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasScrolled]);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [hasScrolled, determineActiveHeading]);
 
   // Expand TOC on hover or focus
   const expandTOC = useCallback(() => {
@@ -72,14 +166,6 @@ export default function TableOfContents() {
       setIsExpanded(false);
     }
   }, [hasScrolled]);
-
-  // Scroll to top
-  const scrollToTop = useCallback(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }, []);
 
   // Main effect for setting up heading detection
   useEffect(() => {
@@ -136,68 +222,15 @@ export default function TableOfContents() {
       document.documentElement.classList.remove("no-toc-headings");
     }
 
-    // Function to determine which heading is active based on scroll position
-    const determineActiveHeading = () => {
-      const scrollTop = window.scrollY;
-      const ACTIVATION_OFFSET = 150; // Distance from top to consider heading "active"
-
-      // Check if we're at the top of the page
-      if (scrollTop < 100 && h1Element?.id) {
-        setActiveId(h1Element.id);
-        return;
-      }
-
-      // Find the heading just above the activation line
-      let activeHeadingId = "";
-      let smallestDistance = Infinity;
-
-      // Iterate through all headings and find the one closest to the top
-      Array.from(headingElements).forEach((heading) => {
-        if (heading instanceof HTMLElement && heading.id) {
-          const headingTop = heading.offsetTop;
-          const positionFromTop = headingTop - scrollTop - ACTIVATION_OFFSET;
-
-          // If heading is above activation line but closest to it
-          if (positionFromTop <= 0 && positionFromTop > -smallestDistance) {
-            activeHeadingId = heading.id;
-            smallestDistance = Math.abs(positionFromTop);
-          }
-        }
-      });
-
-      // Update active heading if found
-      if (activeHeadingId) {
-        setActiveId(activeHeadingId);
-      }
-    };
-
-    // Throttle scroll handling for performance
-    let isScrolling = false;
-    const handleScroll = () => {
-      if (!isScrolling) {
-        window.requestAnimationFrame(() => {
-          determineActiveHeading();
-          isScrolling = false;
-        });
-        isScrolling = true;
-      }
-    };
-
     // Do an initial check after a short delay to ensure DOM is ready
-    setTimeout(determineActiveHeading, 100);
-
-    // Set up scroll listener
-    window.addEventListener("scroll", handleScroll);
+    const initialCheckTimeout = setTimeout(determineActiveHeading, 100);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-
-      // Clear any pending timeout on cleanup
-      if (activeIdTimeoutRef.current) {
-        clearTimeout(activeIdTimeoutRef.current);
+      if (initialCheckTimeout) {
+        clearTimeout(initialCheckTimeout);
       }
     };
-  }, []);
+  }, [determineActiveHeading]);
 
   // Find the parent H2 for a given heading ID
   const findParentH2Id = (headingId: string): string | null => {
@@ -348,22 +381,7 @@ export default function TableOfContents() {
         }
       }}
     >
-      <div className="toc-header">
-        {isSticky ? (
-          <button
-            onClick={scrollToTop}
-            className="toc-top-link text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1 text-sm font-medium transition-colors"
-            aria-label="Scroll to top"
-          >
-            <ArrowUp size={14} />
-            <span>TOP</span>
-          </button>
-        ) : (
-          <h2 className="toc-title text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
-            YOU ARE HERE
-          </h2>
-        )}
-      </div>
+      <div className="toc-header"></div>
 
       {/* Main TOC list - always exists but transforms between states */}
       <div
@@ -388,9 +406,7 @@ export default function TableOfContents() {
               tabIndex={0}
             >
               <span className="toc-line-indicator"></span>
-              <span className="toc-text font-semibold">
-                {pageTitle || "Article"}
-              </span>
+              <span className="toc-text font-semibold">Introduction</span>
             </Link>
           </li>
 

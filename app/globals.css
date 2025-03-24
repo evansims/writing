@@ -397,7 +397,7 @@ li {
 .toc-content {
   position: relative;
   transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  margin-top: 2rem;
+  /* margin-top: 2rem; */
 }
 
 .toc-content-collapsed .toc-list {
@@ -617,7 +617,6 @@ li {
 
   .layout-content {
     max-width: calc(var(--page-max-width) + 18rem);
-    padding-right: calc(var(--page-padding-right) + 2rem);
   }
 
   /* Reset grid when TOC is hidden */
@@ -711,7 +710,6 @@ li {
 
   .layout-content {
     max-width: calc(var(--page-max-width) + 18rem);
-    padding-right: calc(var(--page-padding-right) + 2rem);
   }
 
   /* Override for pages without TOC - uses html element for highest specificity */
@@ -727,7 +725,6 @@ li {
 
   html:has(.toc-container:has([data-has-headings="false"])) .layout-content {
     max-width: var(--page-max-width) !important;
-    padding-right: var(--page-padding-right) !important;
   }
 
   /* Use the class approach as a fallback/additional method */
@@ -743,7 +740,6 @@ li {
 
   html.no-toc-headings .layout-content {
     max-width: var(--page-max-width) !important;
-    padding-right: var(--page-padding-right) !important;
   }
 }
 
