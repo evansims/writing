@@ -794,10 +794,6 @@ li {
   animation: pulse-audio 2s infinite;
 }
 
-h2.audio-playing {
-  text-decoration: underline;
-}
-
 @keyframes pulse-audio {
   0% {
     color: color-mix(in srgb, var(--foreground) 50%, transparent);

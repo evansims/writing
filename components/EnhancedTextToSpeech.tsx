@@ -602,87 +602,65 @@ export default function EnhancedTextToSpeech({
 
     // Handle different types of chunks
     if (chunkId === "intro") {
-      // For intro section, highlight the title and first paragraphs (before any h2)
-      const h1 = document.querySelector(".main-content h1");
-      if (h1) {
-        h1.classList.add("audio-playing");
-        setHighlightedElementId("intro-title");
+      // For intro section, find the container div that wraps the title and intro content
+      const introContainer = document.querySelector(".intro-section");
+      if (introContainer) {
+        introContainer.classList.add("audio-playing");
+        setHighlightedElementId(".intro-section");
 
-        // Find all content elements before the first h2
-        const mainContent = document.querySelector(".main-content");
-        if (mainContent) {
-          let currentElem = h1.nextElementSibling;
-          const firstH2 = document.querySelector(".main-content h2");
-
-          // Add the class to all elements between h1 and first h2 (or end of content)
-          while (
-            currentElem &&
-            (!firstH2 || !currentElem.isSameNode(firstH2))
-          ) {
-            // Only add to paragraph-like content, not other headings
-            if (
-              currentElem.nodeName.match(/^(P|UL|OL|BLOCKQUOTE|PRE|FIGURE)$/i)
-            ) {
-              currentElem.classList.add("audio-playing");
-            }
-            currentElem = currentElem.nextElementSibling;
-
-            // Break if we've reached the end
-            if (!currentElem) break;
-          }
+        // Still highlight the title specifically for visual indication
+        const h1 = document.querySelector(".main-content h1");
+        if (h1) {
+          scrollToElement(h1 as HTMLElement);
         }
-
-        scrollToElement(h1 as HTMLElement);
       }
     } else if (chunkId.startsWith("section_")) {
-      // For sections, find the corresponding h2 and all its content
+      // For sections, find the section container div
       const sectionIndex = parseInt(chunkId.replace("section_", ""), 10);
       const h2Elements = document.querySelectorAll(".main-content h2");
 
       if (sectionIndex < h2Elements.length) {
         const sectionH2 = h2Elements[sectionIndex] as HTMLElement;
-        sectionH2.classList.add("audio-playing");
-        setHighlightedElementId(sectionH2.id || `section-h2-${sectionIndex}`);
 
-        // Find all content elements until the next h2 or end of content
-        let currentElem = sectionH2.nextElementSibling;
-        const nextH2 = h2Elements[sectionIndex + 1] || null;
+        // Find the container div that wraps this section
+        // This assumes each h2 and its content are wrapped in a section div
+        let sectionContainer = sectionH2.closest("div.content-section");
 
-        // Add the class to all elements between this h2 and the next h2 (or end of content)
-        while (currentElem && (!nextH2 || !currentElem.isSameNode(nextH2))) {
-          // Only add to paragraph-like content, not other headings
-          if (
-            currentElem.nodeName.match(/^(P|UL|OL|BLOCKQUOTE|PRE|FIGURE)$/i)
-          ) {
-            currentElem.classList.add("audio-playing");
-          }
-          currentElem = currentElem.nextElementSibling;
-
-          // Break if we've reached the end
-          if (!currentElem) break;
+        // If there's no explicit section container, we'll apply to the h2 and its siblings
+        if (sectionContainer) {
+          // Apply class to the entire container
+          sectionContainer.classList.add("audio-playing");
         }
 
+        setHighlightedElementId(`section-${sectionIndex}`);
         scrollToElement(sectionH2);
       }
     } else if (chunkId === "full_content") {
       // Handle case with no h2 headings - highlight all main content
-      const contentElements = document.querySelectorAll(
-        ".main-content > p, .main-content > ul, .main-content > ol, .main-content > blockquote, .main-content > pre, .main-content > figure",
-      );
-      if (contentElements.length > 0) {
-        contentElements.forEach((el) => el.classList.add("audio-playing"));
+      const contentContainer = document.querySelector(".main-content");
+      if (contentContainer) {
+        contentContainer.classList.add("audio-playing");
         setHighlightedElementId("full-content");
-        scrollToElement(contentElements[0] as HTMLElement);
+
+        // Scroll to the first visible content element
+        const firstContentElement = document.querySelector(
+          ".main-content > p, .main-content > ul, .main-content > ol, .main-content > blockquote, .main-content > pre, .main-content > figure",
+        );
+        if (firstContentElement) {
+          scrollToElement(firstContentElement as HTMLElement);
+        }
       }
     }
   };
 
   // Remove highlight from current elements
   const removeHighlight = () => {
-    // Remove all audio-playing classes
-    document.querySelectorAll(".audio-playing").forEach((el) => {
-      el.classList.remove("audio-playing");
-    });
+    // Remove all audio-playing classes from any elements
+    document
+      .querySelectorAll(".audio-playing, .audio-playing-title")
+      .forEach((el) => {
+        el.classList.remove("audio-playing", "audio-playing-title");
+      });
 
     setHighlightedElementId(null);
   };
