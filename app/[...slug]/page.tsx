@@ -451,8 +451,10 @@ export default async function ContentPage({ params }: ContentPageProps) {
             </div>
 
             {content.reading && content.reading.length > 0 && (
-              <div className="border-muted my-8 border-t pt-6">
-                <h3 className="mb-4 text-lg font-semibold">Further Reading</h3>
+              <footer className="border-muted my-8 border-t pt-6">
+                <h3 className="mb-4 text-lg font-semibold">
+                  Suggested Reading
+                </h3>
                 <ul className="space-y-3">
                   {content.reading.map((item, index) => (
                     <li key={index} className="flex flex-col">
@@ -470,24 +472,6 @@ export default async function ContentPage({ params }: ContentPageProps) {
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
-
-            {content.tags && content.tags.length > 0 && (
-              <footer>
-                <div
-                  className="mb-6 flex flex-wrap gap-2"
-                  aria-label="Article tags"
-                >
-                  {content.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-sm"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </footer>
             )}
           </article>

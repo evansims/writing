@@ -38,7 +38,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 
   --page-padding-inline: 1.5rem;
-  --page-max-width: 720px;
+  --page-max-width: 1024px;
   --page-padding-top: 1.5rem;
   --page-padding-bottom: 1.5rem;
   --page-padding-left: 1.5rem;
@@ -333,6 +333,9 @@ li {
   display: grid;
   grid-template-columns: 1fr;
   gap: 2rem;
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
 }
 
 .toc-container {
@@ -434,6 +437,7 @@ li {
 .toc-item-h1,
 .toc-item-h2 {
   position: relative;
+  @apply font-semibold;
 }
 
 .toc-item-nested {
@@ -478,7 +482,6 @@ li {
 }
 
 .toc-link-active {
-  @apply font-semibold;
   color: var(--foreground);
 }
 
@@ -488,6 +491,10 @@ li {
     transform 0.3s ease;
   display: inline-block;
   position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Progress indicator for collapsed state */
@@ -598,97 +605,9 @@ li {
 
 /* Media queries */
 @media (min-width: 1280px) {
-  .content-layout {
-    grid-template-columns: 16rem 1fr;
-    max-width: calc(var(--page-max-width) + 18rem);
-  }
-
-  .toc-container {
-    display: block;
-    order: 1;
-    border-left: none;
-    padding-left: 0;
-    border-right: 1px solid hsl(var(--muted));
-    padding-right: 1.5rem;
-  }
-
-  .main-content {
-    order: 2;
-  }
-
-  .layout-content {
-    max-width: calc(var(--page-max-width) + 18rem);
-  }
-
-  /* Reset grid when TOC is hidden */
-  .content-layout:has(.toc-container:has([data-has-headings="false"])) {
-    grid-template-columns: 1fr;
-    max-width: var(--page-max-width);
-  }
-
-  /* Reset main content styling when TOC is hidden */
-  .content-layout:has(.toc-container:has([data-has-headings="false"]))
-    .main-content {
-    width: 100%;
-  }
-
-  /* Reset layout content max-width when TOC is hidden */
-  .content-layout:has(.toc-container:has([data-has-headings="false"]))
-    + .layout-content {
-    max-width: var(--page-max-width);
-    padding-right: var(--page-padding-right);
-  }
-}
-
-/* These rules need to be outside the media query to ensure they have priority */
-/* They will still only apply at the same breakpoint because they depend on the TOC container being displayed */
-@media (min-width: 1280px) {
-  /* Higher specificity to override the media query rules */
-  .content-layout:has(.toc-container:has([data-has-headings="false"])) {
-    grid-template-columns: 1fr !important;
-    max-width: var(--page-max-width) !important;
-  }
-
-  /* Reset main content styling when TOC is hidden */
-  .content-layout:has(.toc-container:has([data-has-headings="false"]))
-    .main-content {
-    width: 100% !important;
-    order: 1 !important;
-  }
-
-  /* Reset layout content max-width when TOC is hidden */
-  .content-layout:has(.toc-container:has([data-has-headings="false"]))
-    + .layout-content {
-    max-width: var(--page-max-width) !important;
-    padding-right: var(--page-padding-right) !important;
-  }
-}
-
-/* Special class for pages with no table of contents */
-@media (min-width: 1280px) {
-  body:has(.toc-container:has([data-has-headings="false"])) .content-layout {
-    grid-template-columns: 1fr !important;
-    max-width: var(--page-max-width) !important;
-  }
-
-  body:has(.toc-container:has([data-has-headings="false"])) .main-content {
-    width: 100% !important;
-    order: 1 !important;
-  }
-
-  body:has(.toc-container:has([data-has-headings="false"])) .layout-content {
-    max-width: var(--page-max-width) !important;
-    padding-right: var(--page-padding-right) !important;
-  }
-}
-
-/* CLEAN IMPLEMENTATION */
-/* Media queries */
-@media (min-width: 1280px) {
   /* Default TOC styles */
   .content-layout {
     grid-template-columns: 16rem 1fr;
-    max-width: calc(var(--page-max-width) + 18rem);
   }
 
   .toc-container {
@@ -709,10 +628,6 @@ li {
     order: 2;
   }
 
-  .layout-content {
-    max-width: calc(var(--page-max-width) + 18rem);
-  }
-
   /* Override for pages without TOC - uses html element for highest specificity */
   html:has(.toc-container:has([data-has-headings="false"])) .content-layout {
     grid-template-columns: 1fr !important;
@@ -724,10 +639,6 @@ li {
     order: 1 !important;
   }
 
-  html:has(.toc-container:has([data-has-headings="false"])) .layout-content {
-    max-width: var(--page-max-width) !important;
-  }
-
   /* Use the class approach as a fallback/additional method */
   html.no-toc-headings .content-layout {
     grid-template-columns: 1fr !important;
@@ -737,10 +648,6 @@ li {
   html.no-toc-headings .main-content {
     width: 100% !important;
     order: 1 !important;
-  }
-
-  html.no-toc-headings .layout-content {
-    max-width: var(--page-max-width) !important;
   }
 }
 

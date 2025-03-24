@@ -837,15 +837,22 @@ export default function EnhancedTextToSpeech({
           )}
         >
           {/* Close button in top right corner */}
-          <Button
-            onClick={() => setIsVisible(false)}
-            variant="outline"
-            size="icon"
-            className="absolute top-0 right-3"
-            aria-label="Close audio player"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setIsVisible(false)}
+                  variant="outline"
+                  size="icon"
+                  className="absolute top-0 right-3"
+                  aria-label="Close audio player"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Close audio player</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* First row: Controls and progress slider combined */}
           <div className="flex items-center space-x-3">
