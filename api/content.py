@@ -12,7 +12,7 @@ from ._types import Page, ReadingItem
 from ._validation import is_valid_path, is_valid_slug, safe_path
 
 app = Sanic(
-    name=__name__,
+    name="content_api",
     strict_slashes=True,
 )
 
