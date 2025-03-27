@@ -1,13 +1,15 @@
-import os
 import json as json_lib
+import os
 from datetime import datetime
+
 from dotenv import load_dotenv
 from sanic import Sanic
-from sanic.response import json
 from sanic.request import Request
+from sanic.response import json
 
-from content import content_bp
-from audio import audio_bp
+from .audio import audio_bp
+from .content import content_bp
+
 # from api.sitemap import sitemap_bp
 # from api.llms import llms_bp
 # from api.rss import rss_bp
@@ -33,7 +35,7 @@ async def log_request(request):
             try:
                 body = request.json
                 print(f"  Body: {json_lib.dumps(body, indent=2)}")
-            except:
+            except Exception:
                 if len(request.body) > 1000:
                     print(f"  Body: [Binary data of length {len(request.body)}]")
                 else:
@@ -56,13 +58,13 @@ async def log_response(request, response):
                     data = json_lib.loads(body_str)
                     keys = ", ".join(data.keys())
                     print(f"  Content keys: {keys}")
-                except:
+                except Exception:
                     pass
             else:
                 try:
                     data = json_lib.loads(body_str)
                     print(f"  Body: {json_lib.dumps(data, indent=2)}")
-                except:
+                except Exception:
                     print(f"  Body: {body_str[:500]}...")
         print("\n" + "-" * 80)
 

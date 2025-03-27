@@ -3,19 +3,23 @@ import os
 import re
 
 import frontmatter
-from _filesystem import cached_file_read, get_content_dir, cached_file_exists
-from _types import Page
-
-# Import shared utilities
-from _validation import is_valid_path, is_valid_slug, safe_path
 from dotenv import load_dotenv
+from elevenlabs.client import ElevenLabs
+from sanic import Blueprint, Request, response
+from sanic.exceptions import NotFound, ServerError
+from sanic.response import JSONResponse
+from sanic.response import json as json_response
+
+from ._filesystem import cached_file_exists, cached_file_read, get_content_dir
+from ._types import Page
+from ._validation import is_valid_path, is_valid_slug, safe_path
+from .content import _page
 
 # Load environment variables for API key
 # Specify the path to the .env file to ensure it's loaded properly
 env_path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"
 )
-print(f"Loading .env file from: {env_path}")
 load_dotenv(dotenv_path=env_path, override=True)
 
 # Print the loaded environment variables for debugging
@@ -24,23 +28,6 @@ voice_id = os.getenv("ELEVENLABS_VOICE_ID")
 model_id = os.getenv("ELEVENLABS_MODEL_ID")
 API_DEBUG_LOGGING = os.getenv("API_DEBUG_LOGGING", "false").lower() == "true"
 
-print(f"Loaded environment variables:")
-print(f"  ELEVENLABS_API_KEY: {'*****' + api_key[-5:] if api_key else 'Not found'}")
-print(f"  ELEVENLABS_VOICE_ID: {voice_id or 'Not found'}")
-print(f"  ELEVENLABS_MODEL_ID: {model_id or 'Not found'}")
-print(f"  API_DEBUG_LOGGING: {API_DEBUG_LOGGING}")
-
-# Import Eleven Labs SDK
-import elevenlabs
-from elevenlabs import Voice, VoiceSettings
-from elevenlabs.client import ElevenLabs
-from sanic import Blueprint, Request, response
-from sanic.exceptions import NotFound, ServerError
-from sanic.response import JSONResponse
-from sanic.response import json as json_response
-
-from content import _page  # Import the page loading function
-
 # Initialize Eleven Labs client
 client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
@@ -48,16 +35,12 @@ client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 DEFAULT_VOICE_ID = "bIHbv24MWmeRgasZH58o"  # Always use Will's voice
 DEFAULT_MODEL_ID = model_id or "eleven_multilingual_v2"
 
-print(f"Using voice ID: {DEFAULT_VOICE_ID} (Will)")
-print(f"Using model ID: {DEFAULT_MODEL_ID}")
-
 
 # Verify API key on startup
 def verify_eleven_labs_api_key():
     """Verify that the Eleven Labs API key is valid by testing it."""
     try:
         # Try to get the list of available voices - this requires a valid API key
-        print("Verifying Eleven Labs API key...")
         available_voices = client.voices.get_all()
 
         # Determine how to access the voices based on returned structure
@@ -74,9 +57,6 @@ def verify_eleven_labs_api_key():
 
         # Check if the response is valid
         if voice_count > 0:
-            print(f"Eleven Labs API key is valid. Found {voice_count} voices.")
-            print(f"Default voice ID is set to: {DEFAULT_VOICE_ID}")
-
             # Check if the default voice exists
             default_voice_exists = False
 
@@ -316,7 +296,7 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
 
         # Check if we got data back
         if not audio_bytes or len(audio_bytes) == 0:
-            print(f"Error: Received empty audio data from Eleven Labs API")
+            print("Error: Received empty audio data from Eleven Labs API")
             raise ValueError("Received empty audio data from Eleven Labs API")
 
         print(f"Successfully generated {len(audio_bytes)} bytes of audio data")
@@ -426,16 +406,12 @@ async def get_chunk_audio(
         raise NotFound("Invalid slug")
 
     try:
-        # First, check if this might be a nested path situation where chunk_id is actually a page name
-        # and slug is the folder (e.g., /api/audio/mindset/downtime-as-self-care)
-        combined_slug = f"{slug}/{chunk_id}"
-
         # Try to see if this is actually a folder/page request without a chunk ID
         file_path = f"{slug}/{chunk_id}/{chunk_id}.md"
         full_path = safe_path(file_path)
 
         if API_DEBUG_LOGGING:
-            print(f"DEBUG: Checking if this is a nested path request without chunk ID")
+            print("DEBUG: Checking if this is a nested path request without chunk ID")
             print(f"DEBUG: Testing file path: {file_path}")
             print(f"DEBUG: Full path: {full_path}")
             print(f"DEBUG: File exists: {cached_file_exists(full_path)}")
@@ -452,8 +428,6 @@ async def get_chunk_audio(
             folder = "/".join(parts[:-1])  # "mindset"
             page_name = parts[-1]  # "downtime-as-self-care"
 
-            # Debug path information
-            content_dir = get_content_dir()
             file_path = f"{folder}/{page_name}/{page_name}.md"
             if API_DEBUG_LOGGING:
                 print(f"DEBUG: Looking for content at path: {file_path}")
@@ -627,7 +601,7 @@ async def get_nested_page_audio(
 
         # Log detailed path information for debugging
         if API_DEBUG_LOGGING:
-            print(f"AUDIO API DEBUG - Nested Content request details:")
+            print("AUDIO API DEBUG - Nested Content request details:")
             print(f"  Request URL: {request.url}")
             print(f"  Folder: {folder}")
             print(f"  Page: {page}")

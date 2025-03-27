@@ -1,7 +1,5 @@
 import os
 from datetime import datetime
-from functools import lru_cache
-from typing import List, Optional
 
 import frontmatter
 from sanic import Blueprint, Request
@@ -9,9 +7,9 @@ from sanic.exceptions import NotFound
 from sanic.response import JSONResponse
 from sanic.response import json
 
-from _filesystem import cached_file_exists, cached_file_read, get_content_dir
-from _types import Page, ReadingItem
-from _validation import is_valid_path, is_valid_slug, safe_path
+from ._filesystem import cached_file_exists, cached_file_read, get_content_dir
+from ._types import Page, ReadingItem
+from ._validation import is_valid_path, is_valid_slug, safe_path
 
 content_bp = Blueprint("content_routes", url_prefix="/api/content")
 
@@ -65,26 +63,6 @@ async def get_nested_content(
     if not is_valid_path(folder) or not is_valid_slug(page):
         raise NotFound()
 
-    # Debug path resolution
-    api_debug_logging = os.getenv("API_DEBUG_LOGGING", "false").lower() == "true"
-    if api_debug_logging:
-        print(f"GET_NESTED_CONTENT DEBUG:")
-        print(f"  Folder: {folder}")
-        print(f"  Page: {page}")
-
-        # Check various path combinations
-        test_paths = [
-            f"{folder}/{page}/{page}.md",
-            f"{folder}/{page}.md",
-            f"{folder}-{page}/{page}.md",
-        ]
-
-        for test_path in test_paths:
-            full_path = os.path.join(get_content_dir(), test_path)
-            print(f"  Testing path: {test_path}")
-            print(f"  Full path: {full_path}")
-            print(f"  Exists: {os.path.exists(full_path)}")
-
     # Use the correct path format
     f = safe_path(f"{folder}/{page}/{page}.md")
     p = await _page(f, page)
@@ -113,7 +91,6 @@ async def _pages(directory: str) -> list[Page]:
         return pages
 
     for item in os.listdir(directory):
-        print(item)
         item_path = os.path.join(directory, item)
 
         if os.path.isdir(item_path):
