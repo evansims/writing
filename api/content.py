@@ -2,19 +2,22 @@ import os
 from datetime import datetime
 
 import frontmatter
-from sanic import Blueprint, Request
+from sanic import Sanic
 from sanic.exceptions import NotFound
-from sanic.response import JSONResponse
-from sanic.response import json
+from sanic.request import Request
+from sanic.response import JSONResponse, json
 
 from ._filesystem import cached_file_exists, cached_file_read, get_content_dir
 from ._types import Page, ReadingItem
 from ._validation import is_valid_path, is_valid_slug, safe_path
 
-content_bp = Blueprint("content_routes", url_prefix="/api/content")
+app = Sanic(
+    name=__name__,
+    strict_slashes=True,
+)
 
 
-@content_bp.get("/")
+@app.get("/api/content/")
 async def list_pages(request: Request) -> JSONResponse:
     content_type = request.args.get("type")
     ps = await _pages(get_content_dir())
@@ -30,7 +33,7 @@ async def list_pages(request: Request) -> JSONResponse:
     )
 
 
-@content_bp.get("/<folder:path>/")
+@app.get("/api/content/<folder:path>/")
 async def list_nested_pages(request: Request, folder) -> JSONResponse:
     if not is_valid_path(folder):
         raise NotFound()
@@ -54,7 +57,7 @@ async def list_nested_pages(request: Request, folder) -> JSONResponse:
     )
 
 
-@content_bp.get("/<folder:path>/<page:slug>")
+@app.get("/api/content/<folder:path>/<page:slug>")
 async def get_nested_content(
     request: Request,
     folder: str,
@@ -70,7 +73,7 @@ async def get_nested_content(
     return json({"page": p.json()})
 
 
-@content_bp.get("/<page:slug>")
+@app.get("/api/content/<page:slug>")
 async def get_content(
     request: Request,
     page: str,
