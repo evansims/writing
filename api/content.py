@@ -7,14 +7,11 @@ from sanic.exceptions import NotFound
 from sanic.request import Request
 from sanic.response import JSONResponse, json
 
-from ._filesystem import cached_file_exists, cached_file_read, get_content_dir
-from ._types import Page, ReadingItem
-from ._validation import is_valid_path, is_valid_slug, safe_path
+from _filesystem import cached_file_exists, cached_file_read, get_content_dir
+from _types import Page, ReadingItem
+from _validation import is_valid_path, is_valid_slug, safe_path
 
-app = Sanic(
-    name="content_api",
-    strict_slashes=True,
-)
+app = Sanic(__name__, strict_slashes=True)
 
 
 @app.get("/api/content/")
@@ -208,3 +205,7 @@ async def _page(path: str, slug: str) -> Page:
         )
     except Exception:
         raise NotFound()
+
+
+if __name__ == "__main__":
+    app.run()
