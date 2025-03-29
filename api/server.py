@@ -2,7 +2,6 @@ import json as json_lib
 import os
 from datetime import datetime
 
-from dotenv import load_dotenv
 from sanic import Sanic
 from sanic.request import Request
 from sanic.response import json
@@ -14,13 +13,12 @@ from .content import content_bp
 # from api.llms import llms_bp
 # from api.rss import rss_bp
 
-# Load environment variables
-load_dotenv()
-API_DEBUG_LOGGING = os.getenv("API_DEBUG_LOGGING", "false").lower() == "true"
+API_DEBUG_LOGGING = True
 
 app = Sanic(
-    name=__name__,
+    name="evansims",
     strict_slashes=True,
+    env_prefix="EVANSIMS_",
 )
 
 
@@ -114,9 +112,4 @@ app.blueprint(audio_bp)
 # app.blueprint(rss_bp)
 
 if __name__ == "__main__":
-    debug_mode = os.getenv("API_DEBUG", "false").lower() == "true"
-    port = int(os.getenv("API_PORT", "5328"))
-    print(
-        f"🚀 Starting API server on port {port} with debug logging: {'ENABLED' if API_DEBUG_LOGGING else 'DISABLED'}"
-    )
-    app.run(host="0.0.0.0", port=port, access_log=False, dev=debug_mode)
+    app.run()

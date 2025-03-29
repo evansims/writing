@@ -3,7 +3,6 @@ import os
 import re
 
 import frontmatter
-from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from sanic import Blueprint, Request, response
 from sanic.exceptions import NotFound, ServerError
@@ -15,94 +14,13 @@ from ._types import Page
 from ._validation import is_valid_path, is_valid_slug, safe_path
 from .content import _page
 
-# Load environment variables for API key
-# Specify the path to the .env file to ensure it's loaded properly
-env_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"
-)
-load_dotenv(dotenv_path=env_path, override=True)
-
 # Print the loaded environment variables for debugging
-api_key = os.getenv("ELEVENLABS_API_KEY")
-voice_id = os.getenv("ELEVENLABS_VOICE_ID")
-model_id = os.getenv("ELEVENLABS_MODEL_ID")
-API_DEBUG_LOGGING = os.getenv("API_DEBUG_LOGGING", "false").lower() == "true"
+API_KEY = os.getenv("EVANSIMS_ELEVENLABS_API_KEY")
+VOICE_ID = os.getenv("EVANSIMS_ELEVENLABS_VOICE_ID") or "bIHbv24MWmeRgasZH58o"
+MODEL_ID = os.getenv("EVANSIMS_ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2"
 
 # Initialize Eleven Labs client
-client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
-
-# Default voice ID (can be configured)
-DEFAULT_VOICE_ID = "bIHbv24MWmeRgasZH58o"  # Always use Will's voice
-DEFAULT_MODEL_ID = model_id or "eleven_multilingual_v2"
-
-
-# Verify API key on startup
-def verify_eleven_labs_api_key():
-    """Verify that the Eleven Labs API key is valid by testing it."""
-    try:
-        # Try to get the list of available voices - this requires a valid API key
-        available_voices = client.voices.get_all()
-
-        # Determine how to access the voices based on returned structure
-        if hasattr(available_voices, "voices"):
-            voices_to_check = available_voices.voices
-            voice_count = len(voices_to_check)
-        elif isinstance(available_voices, (list, tuple)):
-            voices_to_check = available_voices
-            voice_count = len(voices_to_check)
-        else:
-            print(f"Unknown structure for available_voices: {type(available_voices)}")
-            voices_to_check = []
-            voice_count = 0
-
-        # Check if the response is valid
-        if voice_count > 0:
-            # Check if the default voice exists
-            default_voice_exists = False
-
-            for voice in voices_to_check:
-                # Handle tuple structure
-                if isinstance(voice, tuple) and len(voice) > 1:
-                    voice_id = voice[1]  # Assuming voice_id is the second element
-                else:
-                    voice_id = getattr(voice, "voice_id", None)
-
-                if voice_id == DEFAULT_VOICE_ID:
-                    default_voice_exists = True
-                    break
-
-            if default_voice_exists:
-                print(f"Default voice ID {DEFAULT_VOICE_ID} is valid.")
-            else:
-                print(
-                    f"Warning: Default voice ID {DEFAULT_VOICE_ID} not found in available voices."
-                )
-                print("Available voices:")
-
-                for voice in voices_to_check:
-                    if isinstance(voice, tuple):
-                        # Assuming format is (name, voice_id, ...)
-                        name = voice[0] if len(voice) > 0 else "Unknown"
-                        voice_id = voice[1] if len(voice) > 1 else "Unknown"
-                        print(f" - {name}: {voice_id}")
-                    else:
-                        name = getattr(voice, "name", "Unknown")
-                        voice_id = getattr(voice, "voice_id", "Unknown")
-                        print(f" - {name}: {voice_id}")
-        else:
-            print("Warning: No voices found. API key may have limited permissions.")
-
-        return True
-    except Exception as e:
-        print(f"Error verifying Eleven Labs API key: {str(e)}")
-        print(
-            "Audio generation will likely fail. Please check your API key and permissions."
-        )
-        return False
-
-
-# Verify the API key when the module is loaded
-API_KEY_VALID = verify_eleven_labs_api_key()
+client = ElevenLabs(api_key=API_KEY)
 
 # Create the audio blueprint
 audio_bp = Blueprint("audio_routes", url_prefix="/api/audio")
@@ -264,24 +182,18 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
             else:
                 return audio_data
 
-    # Check if API key is valid before attempting to generate audio
-    if not API_KEY_VALID:
-        error_msg = "Cannot generate audio: Eleven Labs API key is invalid or missing"
-        print(error_msg)
-        raise ServerError(error_msg)
-
     # Generate new audio
     try:
         print(
             f"Generating audio for text: '{chunk_text[:50]}...' using Eleven Labs API"
         )
-        print(f"Using voice_id={DEFAULT_VOICE_ID}, model_id={DEFAULT_MODEL_ID}")
+        print(f"Using voice_id={VOICE_ID}, model_id={MODEL_ID}")
 
         # Use the text_to_speech.convert method from the client
         audio_data = client.text_to_speech.convert(
             text=chunk_text,
-            voice_id=DEFAULT_VOICE_ID,
-            model_id=DEFAULT_MODEL_ID,
+            voice_id=VOICE_ID,
+            model_id=MODEL_ID,
             output_format="mp3_44100_128",
         )
 
@@ -340,24 +252,21 @@ async def audio_health_check(request: Request) -> JSONResponse:
     try:
         return json_response(
             {
-                "status": "OK" if api_key else "WARNING",
-                "api_key_valid": bool(api_key),
-                "voice_id": voice_id or "default",
-                "model_id": model_id or "default",
+                "status": "OK" if API_KEY else "WARNING",
+                "api_key_valid": bool(API_KEY),
+                "voice_id": VOICE_ID or "default",
+                "model_id": MODEL_ID or "default",
                 "message": "Audio API is running",
             }
         )
-    except Exception as e:
-        if API_DEBUG_LOGGING:
-            import traceback
+    except Exception:
+        import traceback
 
-            print(f"Error in health check: {str(e)}")
-            print(traceback.format_exc())
         return json_response(
             {
                 "status": "ERROR",
                 "message": "Audio API encountered an error during health check",
-                "error": str(e) if API_DEBUG_LOGGING else "See server logs for details",
+                "error": traceback.format_exc(),
             },
             status=500,
         )
@@ -393,8 +302,8 @@ async def get_audio_metadata(request: Request, slug: str) -> JSONResponse:
                 "chunks": chunks,
             }
         )
-    except Exception as e:
-        raise NotFound(f"Failed to get audio metadata: {str(e)}")
+    except Exception:
+        raise NotFound("Failed to get audio metadata")
 
 
 @audio_bp.get("/<slug:path>/<chunk_id:str>")
@@ -410,11 +319,10 @@ async def get_chunk_audio(
         file_path = f"{slug}/{chunk_id}/{chunk_id}.md"
         full_path = safe_path(file_path)
 
-        if API_DEBUG_LOGGING:
-            print("DEBUG: Checking if this is a nested path request without chunk ID")
-            print(f"DEBUG: Testing file path: {file_path}")
-            print(f"DEBUG: Full path: {full_path}")
-            print(f"DEBUG: File exists: {cached_file_exists(full_path)}")
+        print("DEBUG: Checking if this is a nested path request without chunk ID")
+        print(f"DEBUG: Testing file path: {file_path}")
+        print(f"DEBUG: Full path: {full_path}")
+        print(f"DEBUG: File exists: {cached_file_exists(full_path)}")
 
         if cached_file_exists(full_path):
             # This is actually a page request, not a chunk request
@@ -429,8 +337,7 @@ async def get_chunk_audio(
             page_name = parts[-1]  # "downtime-as-self-care"
 
             file_path = f"{folder}/{page_name}/{page_name}.md"
-            if API_DEBUG_LOGGING:
-                print(f"DEBUG: Looking for content at path: {file_path}")
+            print(f"DEBUG: Looking for content at path: {file_path}")
 
             full_path = safe_path(file_path)
             if not cached_file_exists(full_path):
@@ -464,11 +371,11 @@ async def get_chunk_audio(
         audio_data = await get_or_generate_audio(chunk["text"], audio_path)
         return response.raw(audio_data, content_type="audio/mpeg")
     except Exception as e:
-        if API_DEBUG_LOGGING:
-            import traceback
+        import traceback
 
-            print(f"Error in get_chunk_audio: {str(e)}")
-            print(traceback.format_exc())
+        print(f"Error in get_chunk_audio: {str(e)}")
+        print(traceback.format_exc())
+
         raise NotFound(f"Failed to get audio: {str(e)}")
 
 
@@ -488,11 +395,7 @@ async def get_page_audio(request: Request, slug: str) -> JSONResponse:
             folder = "/".join(parts[:-1])  # "mindset"
             page_name = parts[-1]  # "downtime-as-self-care"
 
-            # Debug path information
-            if API_DEBUG_LOGGING:
-                print(
-                    f"DEBUG: Processing nested path: folder={folder}, page={page_name}"
-                )
+            print(f"DEBUG: Processing nested path: folder={folder}, page={page_name}")
 
             file_path = f"{folder}/{page_name}/{page_name}.md"
             full_path = safe_path(file_path)
@@ -534,11 +437,11 @@ async def get_page_audio(request: Request, slug: str) -> JSONResponse:
             }
         )
     except Exception as e:
-        if API_DEBUG_LOGGING:
-            import traceback
+        import traceback
 
-            print(f"Error in get_page_audio: {str(e)}")
-            print(traceback.format_exc())
+        print(f"Error in get_page_audio: {str(e)}")
+        print(traceback.format_exc())
+
         raise NotFound(f"Failed to get audio metadata: {str(e)}")
 
 
@@ -600,32 +503,31 @@ async def get_nested_page_audio(
         file_exists = cached_file_exists(full_path)
 
         # Log detailed path information for debugging
-        if API_DEBUG_LOGGING:
-            print("AUDIO API DEBUG - Nested Content request details:")
-            print(f"  Request URL: {request.url}")
-            print(f"  Folder: {folder}")
-            print(f"  Page: {page}")
-            print(f"  Content directory: {content_dir}")
-            print(f"  Relative file path: {file_path}")
-            print(f"  Computed full path: {full_path}")
-            print(f"  File exists: {file_exists}")
+        print("AUDIO API DEBUG - Nested Content request details:")
+        print(f"  Request URL: {request.url}")
+        print(f"  Folder: {folder}")
+        print(f"  Page: {page}")
+        print(f"  Content directory: {content_dir}")
+        print(f"  Relative file path: {file_path}")
+        print(f"  Computed full path: {full_path}")
+        print(f"  File exists: {file_exists}")
 
-            # If file doesn't exist, try to help diagnose
-            if not file_exists:
-                parent_dir = os.path.dirname(full_path)
-                print(f"  Parent directory: {parent_dir}")
-                print(f"  Parent exists: {os.path.exists(parent_dir)}")
+        # If file doesn't exist, try to help diagnose
+        if not file_exists:
+            parent_dir = os.path.dirname(full_path)
+            print(f"  Parent directory: {parent_dir}")
+            print(f"  Parent exists: {os.path.exists(parent_dir)}")
 
-                if os.path.exists(parent_dir):
-                    print(f"  Files in parent dir: {os.listdir(parent_dir)}")
+            if os.path.exists(parent_dir):
+                print(f"  Files in parent dir: {os.listdir(parent_dir)}")
 
-                # Try alternative path patterns
-                alt_path1 = safe_path(f"{folder}/{page}.md")
-                alt_path2 = safe_path(f"{page}/{page}.md")
-                print(f"  Alternative path 1: {alt_path1}")
-                print(f"  Alternative path 1 exists: {cached_file_exists(alt_path1)}")
-                print(f"  Alternative path 2: {alt_path2}")
-                print(f"  Alternative path 2 exists: {cached_file_exists(alt_path2)}")
+            # Try alternative path patterns
+            alt_path1 = safe_path(f"{folder}/{page}.md")
+            alt_path2 = safe_path(f"{page}/{page}.md")
+            print(f"  Alternative path 1: {alt_path1}")
+            print(f"  Alternative path 1 exists: {cached_file_exists(alt_path1)}")
+            print(f"  Alternative path 2: {alt_path2}")
+            print(f"  Alternative path 2 exists: {cached_file_exists(alt_path2)}")
 
         if not file_exists:
             raise NotFound(f"Content file not found: {file_path}")
@@ -663,12 +565,11 @@ async def get_nested_page_audio(
             }
         )
     except Exception as e:
-        # More detailed error
         import traceback
 
-        if API_DEBUG_LOGGING:
-            print(f"Audio API Error: {str(e)}")
-            print(traceback.format_exc())
+        print(f"Audio API Error: {str(e)}")
+        print(traceback.format_exc())
+
         raise NotFound(f"Failed to get audio metadata: {str(e)}")
 
 
@@ -718,7 +619,6 @@ async def get_voices_endpoint(request: Request) -> JSONResponse:
         return json_response(
             {
                 "status": "success",
-                "api_key_valid": API_KEY_VALID,
                 "voice_count": len(voice_list),
                 "voices": voice_list,
             }
@@ -743,15 +643,6 @@ async def get_voices_endpoint(request: Request) -> JSONResponse:
 @audio_bp.get("/debug/test")
 async def test_audio_generation(request: Request) -> JSONResponse:
     """Test audio generation with a simple phrase."""
-    if not API_KEY_VALID:
-        return json_response(
-            {
-                "status": "error",
-                "message": "API key is invalid or missing. Please check your configuration.",
-                "api_key_valid": False,
-            },
-            status=400,
-        )
 
     try:
         test_text = "This is a test of the Eleven Labs text to speech API."
@@ -768,8 +659,8 @@ async def test_audio_generation(request: Request) -> JSONResponse:
         print(f"Testing audio generation with text: '{test_text}'")
         audio_data = client.text_to_speech.convert(
             text=test_text,
-            voice_id=DEFAULT_VOICE_ID,
-            model_id=DEFAULT_MODEL_ID,
+            voice_id=VOICE_ID,
+            model_id=MODEL_ID,
             output_format="mp3_44100_128",
         )
 
@@ -801,8 +692,8 @@ async def test_audio_generation(request: Request) -> JSONResponse:
                 "file_size": file_size,
                 "file_path": test_path,
                 "text": test_text,
-                "voice_id": DEFAULT_VOICE_ID,
-                "model_id": DEFAULT_MODEL_ID,
+                "voice_id": VOICE_ID,
+                "model_id": MODEL_ID,
             }
         )
     except Exception as e:

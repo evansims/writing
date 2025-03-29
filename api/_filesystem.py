@@ -15,8 +15,7 @@ def cached_file_read(path: str) -> str:
 
 @lru_cache(maxsize=1024)
 def get_content_dir(path: str | None = None) -> str:
-    # Get the parent directory (one level up from api/)
-    parent_dir = os.path.dirname(os.getcwd())
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     if path is None:
         # Return the content directory in the parent directory
