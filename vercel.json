@@ -1,13 +1,7 @@
 {
   "functions": {
-    "api/server.py": {
+    "api/index.py": {
       "runtime": "@vercel/python@4.7.1"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/server.py"
-    }
-  ]
+  }
 }
