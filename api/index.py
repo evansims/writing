@@ -1,6 +1,7 @@
 import json as json_lib
 import os
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler
 
 from sanic import Sanic
 from sanic.request import Request
@@ -112,10 +113,11 @@ app.blueprint(audio_bp)
 # app.blueprint(rss_bp)
 
 
-def handler(request, response):
-    return app.response_class(
-        app.router.get_supported_methods(request), request=request, response=response
-    )
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        return app.response_class(
+            app.router.get_supported_methods(self), request=self, response=self
+        )
 
 
 if __name__ == "__main__":
