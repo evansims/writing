@@ -3,7 +3,7 @@ from functools import lru_cache
 
 from sanic.exceptions import BadRequest
 
-from _filesystem import get_content_dir
+from ._filesystem import get_content_dir
 
 
 @lru_cache(maxsize=1024)
@@ -28,7 +28,7 @@ def safe_path(path: str, base_path: str | None = None) -> str:
     # Debug path resolution issues
     api_debug_logging = os.getenv("API_DEBUG_LOGGING", "false").lower() == "true"
     if api_debug_logging:
-        print(f"SAFE_PATH DEBUG:")
+        print("SAFE_PATH DEBUG:")
         print(f"  Input path: {path}")
         print(f"  Base path: {base_path}")
         print(f"  Target path: {target_path}")
