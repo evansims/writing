@@ -111,5 +111,12 @@ app.blueprint(audio_bp)
 # app.blueprint(llms_bp)
 # app.blueprint(rss_bp)
 
+
+def handler(request, response):
+    return app.response_class(
+        app.router.get_supported_methods(request), request=request, response=response
+    )
+
+
 if __name__ == "__main__":
     app.run()
