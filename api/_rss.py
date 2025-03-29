@@ -107,7 +107,7 @@ async def feed(request, slug):
                     try:
                         dt = datetime.datetime.strptime(pub_date, "%Y-%m-%d")
                         pub_date = dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
-                    except:
+                    except Exception:
                         pub_date = now
                 else:
                     pub_date = now
