@@ -19,7 +19,17 @@ export interface ContentItem {
   reading?: ReadingItem[];
 }
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5328";
+export const getPublicUrl = (): string => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  return "http://localhost";
+};
 
 export async function getContent(
   slug: string | string[],
@@ -27,7 +37,7 @@ export async function getContent(
   let s = Array.isArray(slug) ? slug.join("/") : String(slug);
   s = s.replace(/,/g, "/");
 
-  const r = await fetch(`${apiUrl}/api/content/${s}`, {
+  const r = await fetch(`${getPublicUrl()}/api/content/${s}`, {
     next: { revalidate: 60 },
   });
 
@@ -44,7 +54,7 @@ export async function getLatestContent(
   types: string[] = [],
 ): Promise<ContentItem[]> {
   const r = await fetch(
-    `${apiUrl}/api/content/?limit=${limit}&types=${types.join(",")}`,
+    `${getPublicUrl()}/api/content/?limit=${limit}&types=${types.join(",")}`,
     {
       next: { revalidate: 60 },
     },
