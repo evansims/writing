@@ -7,3 +7,9 @@ app = FastAPI()
 async def health() -> dict:
     """Health check."""
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

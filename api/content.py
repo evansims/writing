@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
-from ._content import _page, _pages
-from ._filesystem import get_content_dir
-from ._validation import is_valid_path, is_valid_slug, safe_path
+from _content import _page, _pages
+from _filesystem import get_content_dir
+from _validation import is_valid_path, is_valid_slug, safe_path
 
 app = FastAPI()
 
@@ -65,3 +65,9 @@ async def get_content(path: str, slug: str) -> dict:
     p = await _page(f, slug)
 
     return {"page": p.json()}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

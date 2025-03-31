@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from ._filesystem import get_content_dir
+from _filesystem import get_content_dir
 
 
 @dataclass

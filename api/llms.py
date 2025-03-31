@@ -4,10 +4,10 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from ._config import get_llms_config
-from ._content import _page, _pages
-from ._filesystem import get_content_dir
-from ._validation import get_content_path
+from _config import get_llms_config
+from _content import _page, _pages
+from _filesystem import get_content_dir
+from _validation import get_content_path
 
 app = FastAPI()
 
@@ -90,3 +90,9 @@ async def get_llms_full() -> StreamingResponse:
             print(f"Error processing {page.path}: {e}")
 
     return StreamingResponse("".join(entries), media_type="text/plain; charset=utf-8")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

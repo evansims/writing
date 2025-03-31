@@ -57,3 +57,9 @@ async def get_image(slug: str, w: int = 0, q: int = 85, f: str = "webp") -> Stre
     }
 
     return StreamingResponse(optimized_path.open("rb"), headers=headers, media_type=f"image/{f}")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

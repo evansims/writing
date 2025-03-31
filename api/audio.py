@@ -2,17 +2,20 @@ import hashlib
 import os
 import re
 
+import dotenv
 from elevenlabs.client import ElevenLabs
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from starlette.responses import ContentStream
 
-from ._content import _page
-from ._filesystem import cached_file_exists
-from ._types import Page
-from ._validation import is_valid_path, is_valid_slug, safe_path
+from _content import _page
+from _filesystem import cached_file_exists
+from _types import Page
+from _validation import is_valid_path, is_valid_slug, safe_path
 
 app = FastAPI()
+
+dotenv.load_dotenv()
 
 # Print the loaded environment variables for debugging
 API_KEY = os.getenv("EVANSIMS_ELEVENLABS_API_KEY")
@@ -512,3 +515,9 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
         print(traceback.format_exc())
 
         raise Exception(f"Failed to get audio metadata: {str(e)}") from e
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

@@ -3,8 +3,8 @@ from datetime import datetime
 
 import frontmatter
 
-from ._filesystem import cached_file_exists, cached_file_read, get_content_dir
-from ._types import Page, ReadingItem
+from _filesystem import cached_file_exists, cached_file_read, get_content_dir
+from _types import Page, ReadingItem
 
 
 async def _page(path: str, slug: str) -> Page:
@@ -73,17 +73,8 @@ async def _page(path: str, slug: str) -> Page:
 
         if type(_reading) is list:
             for item in _reading:
-                if (
-                    type(item) is dict
-                    and "title" in item
-                    and "author" in item
-                    and "url" in item
-                ):
-                    page_reading.append(
-                        ReadingItem(
-                            title=item["title"], author=item["author"], url=item["url"]
-                        )
-                    )
+                if type(item) is dict and "title" in item and "author" in item and "url" in item:
+                    page_reading.append(ReadingItem(title=item["title"], author=item["author"], url=item["url"]))
 
         return Page(
             slug=page_slug,

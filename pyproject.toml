@@ -22,6 +22,8 @@ dependencies = [
   "pyyaml>=6.0",
   "elevenlabs==1.54.0",
   "fastapi>=0.115",
+  "watchdog>=6.0.0",
+  "uvicorn>=0.34.0",
 ]
 
 [project.urls]
@@ -70,3 +72,8 @@ disallow_incomplete_defs = true
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+[dependency-groups]
+dev = [
+    "dotenv>=0.9.9",
+]

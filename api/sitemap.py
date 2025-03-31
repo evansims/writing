@@ -5,8 +5,8 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from ._config import get_site_config
-from ._validation import get_content_path
+from _config import get_site_config
+from _validation import get_content_path
 
 app = FastAPI()
 
@@ -67,3 +67,9 @@ async def sitemap() -> StreamingResponse:
 """
 
     return StreamingResponse(xml_content, media_type="application/xml")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

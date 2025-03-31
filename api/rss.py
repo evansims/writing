@@ -6,9 +6,9 @@ import re
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from ._config import get_rss_config, get_site_config
-from ._content import _pages
-from ._validation import get_content_path
+from _config import get_rss_config, get_site_config
+from _content import _pages
+from _validation import get_content_path
 
 app = FastAPI()
 
