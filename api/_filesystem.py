@@ -1,5 +1,5 @@
-from functools import lru_cache
 import os
+from functools import lru_cache
 
 
 @lru_cache(maxsize=1024)
@@ -9,7 +9,7 @@ def cached_file_exists(path: str) -> bool:
 
 @lru_cache(maxsize=1024)
 def cached_file_read(path: str) -> str:
-    with open(path, "r") as f:
+    with open(path) as f:
         return f.read()
 
 

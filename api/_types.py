@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from ._filesystem import get_content_dir
+
 
 @dataclass
 class ReadingItem:
@@ -29,8 +31,6 @@ class Page:
     reading: list[ReadingItem] = field(default_factory=list)
 
     def json(self) -> dict:
-        from _filesystem import get_content_dir
-
         base_path = get_content_dir()
         _url = self.path
         if _url.startswith(base_path):

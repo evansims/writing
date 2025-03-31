@@ -1,1 +1,4 @@
-# This file is intentionally kept blank to mark the 'api' directory as a Python package.
+"""API package for the writing application.
+
+This package provides FastAPI endpoints for content management, RSS feeds, and LLM integration.
+"""

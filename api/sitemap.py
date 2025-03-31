@@ -1,26 +1,19 @@
-from sanic import Blueprint
-from sanic.response import text
-import os
-import glob
-import yaml
 import datetime
+import glob
+import os
 
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+
+from ._config import get_site_config
 from ._validation import get_content_path
 
-sitemap_bp = Blueprint("sitemap_routes", url_prefix="/api")
+app = FastAPI()
 
 
-def get_site_config():
-    try:
-        config_path = os.path.join(os.getcwd(), "configuration", "site.yml")
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
-    except Exception:
-        return {"url": "https://evansims.com"}  # Default fallback
-
-
-@sitemap_bp.route("/sitemap.xml", methods=["GET"])
-async def sitemap(request):
+@app.get("/api/sitemap")
+async def sitemap() -> StreamingResponse:
+    """Generate sitemap XML."""
     site_config = get_site_config()
     base_url = site_config.get("url", "https://evansims.com")
 
@@ -73,4 +66,4 @@ async def sitemap(request):
 </urlset>
 """
 
-    return text(xml_content, content_type="application/xml")
+    return StreamingResponse(xml_content, media_type="application/xml")

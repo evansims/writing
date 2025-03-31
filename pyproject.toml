@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "writing"
+version = "0.1.0"
+description = "Writing project"
+authors = [{ name = "Evan Sims", email = "hello@evansims.com" }]
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "CC-BY-4.0" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Creative Commons Attribution License",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+  "python-frontmatter>=1.0",
+  "pyyaml>=6.0",
+  "elevenlabs==1.54.0",
+  "fastapi>=0.115",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/evansims/writing"
+"Bug Tracker" = "https://github.com/evansims/writing/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "ruff>=0.11", "pytest-cov>=4.1.0", "mypy>=1.5.1"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api*"]
+exclude = ["tests*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+select = ["E", "F", "I", "W", "N", "D", "UP", "ANN", "B", "C4", "SIM"]
+ignore = ["D100", "D107"]
+src = ["api"]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"] # Ignore unused imports in __init__.py
+"tests/**/*.py" = [
+  "D103",
+  "ANN",
+] # Ignore docstrings and type annotations in tests
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
