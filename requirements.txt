@@ -1,0 +1,4 @@
+python-frontmatter>=1.0
+pyyaml>=6.0
+elevenlabs==1.54.0
+fastapi>=0.115
