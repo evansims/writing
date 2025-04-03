@@ -10,20 +10,16 @@ authors = [{ name = "Evan Sims", email = "hello@evansims.com" }]
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "CC-BY-4.0" }
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",
-  "License :: OSI Approved :: Creative Commons Attribution License",
-  "Operating System :: OS Independent",
-  "Topic :: Text Processing :: Markup",
-]
 dependencies = [
   "python-frontmatter>=1.0",
   "pyyaml>=6.0",
   "elevenlabs==1.54.0",
   "fastapi>=0.115",
-  "watchdog>=6.0.0",
-  "uvicorn>=0.34.0",
+]
+classifiers = [
+  "License :: OSI Approved :: Creative Commons Attribution License",
+  "Operating System :: OS Independent",
+  "Topic :: Text Processing :: Markup",
 ]
 
 [project.urls]
@@ -31,7 +27,14 @@ dependencies = [
 "Bug Tracker" = "https://github.com/evansims/writing/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0.0", "ruff>=0.11", "pytest-cov>=4.1.0", "mypy>=1.5.1"]
+dev = [
+  "pytest>=7.0.0",
+  "ruff>=0.11",
+  "pytest-cov>=4.1.0",
+  "mypy>=1.5.1",
+  "watchdog>=6.0.0",
+  "uvicorn>=0.34.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -74,6 +77,4 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [dependency-groups]
-dev = [
-    "dotenv>=0.9.9",
-]
+dev = ["dotenv>=0.9.9"]
