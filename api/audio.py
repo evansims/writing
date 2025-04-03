@@ -238,22 +238,22 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
 
 
 @app.get("/api/audio/")
-async def audio_health_check() -> dict:
+async def audio_health_check() -> StreamingResponse:
     """Return API health status and configuration information."""
     try:
-        return {
+        return StreamingResponse({
             "status": "OK" if API_KEY else "WARNING",
             "api_key_valid": bool(API_KEY),
             "voice_id": VOICE_ID or "default",
             "model_id": MODEL_ID or "default",
             "message": "Audio API is running",
-        }
+        })
     except Exception as e:
         raise Exception(f"Failed to check audio API health: {str(e)}") from e
 
 
 @app.get("/api/audio/<slug>/metadata")
-async def get_audio_metadata(slug: str) -> dict:
+async def get_audio_metadata(slug: str) -> StreamingResponse:
     """Return metadata about available audio chunks for a page."""
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
@@ -277,19 +277,19 @@ async def get_audio_metadata(slug: str) -> dict:
             audio_path = get_audio_path(audio_dir, chunk["checksum"])
             chunk["has_audio"] = os.path.exists(audio_path)
 
-        return {
+        return StreamingResponse({
             "page": {
                 "slug": page.slug,
                 "title": page.title,
             },
             "chunks": chunks,
-        }
+        })
     except Exception as e:
         raise Exception(f"Failed to get audio metadata: {str(e)}") from e
 
 
 @app.get("/api/audio/<slug>/<chunk_id>")
-async def get_chunk_audio(slug: str, chunk_id: str) -> dict:
+async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
     """Return audio for a specific chunk of content."""
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
@@ -358,7 +358,7 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> dict:
 
 
 @app.get("/api/audio/{slug}")
-async def get_page_audio(slug: str, generate_all: bool | None = None) -> dict:
+async def get_page_audio(slug: str, generate_all: bool | None = None) -> StreamingResponse:
     """Return audio metadata for a page or generate all audio."""
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
@@ -407,13 +407,13 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> dict:
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return {
+        return StreamingResponse({
             "page": {
                 "slug": page.slug,
                 "title": page.title,
             },
             "chunks": chunks,
-        }
+        })
     except Exception as e:
         import traceback
 
@@ -424,7 +424,7 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> dict:
 
 
 @app.get("/api/audio/{path}/{slug}/{chunk_id}")
-async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> dict:
+async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> StreamingResponse:
     """Return audio for a specific chunk of content in a nested folder."""
     if not is_valid_path(path) or not is_valid_slug(slug):
         raise Exception("Invalid path or slug")
@@ -463,7 +463,7 @@ async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> dict:
 
 
 @app.get("/api/audio/{path}/{slug}")
-async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None = None) -> dict:
+async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None = None) -> StreamingResponse:
     """Return audio metadata for a nested page or generate all audio."""
     if not is_valid_path(path) or not is_valid_slug(slug):
         raise Exception("Invalid path or slug")
@@ -501,13 +501,13 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return {
+        return StreamingResponse({
             "page": {
                 "slug": page_obj.slug,
                 "title": page_obj.title,
             },
             "chunks": chunks,
-        }
+        })
     except Exception as e:
         import traceback
 
