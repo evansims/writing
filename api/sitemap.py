@@ -5,8 +5,8 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from _config import get_site_config
-from _validation import get_content_dir
+from api._config import get_site_config
+from api._validation import get_content_dir
 
 app = FastAPI()
 

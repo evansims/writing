@@ -3,7 +3,7 @@ from functools import lru_cache
 
 from fastapi import HTTPException
 
-from _filesystem import get_content_dir
+from api._filesystem import get_content_dir
 
 
 @lru_cache(maxsize=1024)

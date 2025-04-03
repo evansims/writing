@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
-from _content import _page, _pages
-from _filesystem import get_content_dir
-from _validation import is_valid_path, is_valid_slug, safe_path
+from api._content import _page, _pages
+from api._filesystem import get_content_dir
+from api._validation import is_valid_path, is_valid_slug, safe_path
 
 app = FastAPI()
 

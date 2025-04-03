@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 
-from audio import app as audio_routes
-from content import app as content_routes
-from health import app as health_routes
-from llms import app as llms_routes
+from api.audio import app as audio_routes
+from api.content import app as content_routes
+from api.health import app as health_routes
+from api.llms import app as llms_routes
 
 app = FastAPI()
 

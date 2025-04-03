@@ -16,14 +16,10 @@ def cached_file_read(path: str) -> str:
 
 @lru_cache(maxsize=1024)
 def get_content_dir(path: str | None = None) -> str:
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
     if path is None:
-        # Return the content directory in the parent directory
-        return os.path.abspath(os.path.join(parent_dir, "content"))
+        return os.path.abspath(os.path.join(get_project_root(), "content"))
     else:
-        # Return the content path in the parent directory
-        return os.path.abspath(os.path.join(parent_dir, "content", path))
+        return os.path.abspath(os.path.join(get_project_root(), "content", path))
 
 
 @lru_cache(maxsize=1024)
@@ -37,10 +33,23 @@ def get_config_path(config_name: str) -> str:
         The absolute path to the configuration file
 
     """
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.abspath(os.path.join(get_project_root(), "configuration", config_name))
 
-    return os.path.abspath(os.path.join(parent_dir, "configuration", config_name))
+@lru_cache(maxsize=1024)
+def get_project_root():
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    markers = ['.git', 'pyproject.toml']
 
+    while True:
+        if any(os.path.exists(os.path.join(current_dir, marker)) for marker in markers):
+            return current_dir
+
+        parent_dir = os.path.dirname(current_dir)
+
+        if parent_dir == current_dir:
+            raise FileNotFoundError("Project root not found.")
+
+        current_dir = parent_dir
 
 def get_sorted_content_files(max_files: int = None, file_extension: str = "md") -> list[str]:
     """Get content files sorted by modification time (newest first).

@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
-from _config import get_site_config
-from _content import _pages, ensure_heading_levels
-from _filesystem import get_content_dir
+from api._config import get_site_config
+from api._content import _pages, ensure_heading_levels
+from api._filesystem import get_content_dir
 
 app = FastAPI()
 
