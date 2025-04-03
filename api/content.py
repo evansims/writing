@@ -27,7 +27,7 @@ def get_content(
     path: str | None = None,
     type: str | None = None,
 ) -> JSONResponse:
-    return JSONResponse(get_content(path, type))
+    return JSONResponse(_get_content(path, type))
 
 
 # @app.get("/api/content/")
