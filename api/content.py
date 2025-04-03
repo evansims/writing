@@ -9,7 +9,7 @@ app = FastAPI()
 
 
 @lru_cache(maxsize=1024)
-def get_content(
+def _get_content(
     path: str | None = None,
     type: str | None = None,
 ):
@@ -22,8 +22,8 @@ def get_content(
     return {"pages": [p.json() for p in ps]}
 
 
-@app.get("/api/test/")
-def get_test(
+@app.get("/api/content")
+def get_content(
     path: str | None = None,
     type: str | None = None,
 ) -> JSONResponse:
