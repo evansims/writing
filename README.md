@@ -13,7 +13,25 @@ A personal writing collection exploring health,creativity, engineering, focus, m
 ELEVENLABS_API_KEY=your_api_key_here
 ```
 
+### Installing Tools
+
+You can install the required tools using [asdf](https://asdf.run/) and the provided [.tool-versions](.tool-versions) file.
+
+```bash
+asdf install
+```
+
 ### Running Backend
+
+Create a virtual environment and install dependencies:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Run the backend:
 
 ```bash
 npm run api
@@ -22,7 +40,7 @@ npm run api
 ### Running Frontend
 
 ```bash
-npm run dev
+vercel dev
 ```
 
 ### Content Management CLI
