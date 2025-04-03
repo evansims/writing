@@ -1,5 +1,6 @@
+from functools import lru_cache
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse
 
 from api._config import get_site_config
 from api._content import _pages, ensure_heading_levels
@@ -8,16 +9,15 @@ from api._filesystem import get_content_dir
 app = FastAPI()
 
 
-@app.get("/api/llms-full")
-async def get_llms_full() -> StreamingResponse:
-    """Serve a full version of content for LLMs."""
-    all_pages = await _pages(get_content_dir())
+@lru_cache(maxsize=1024)
+def _get_llms_full() -> str:
+    all_pages = _pages(get_content_dir())
 
     site_config = get_site_config()
 
     entries = []
 
-    entries.append(f"# {site_config.get('title')}\n> {site_config.get('description')}\n\n")
+    entries.append(f"# {site_config.get('title')}\n\n> {site_config.get('description')}\n\n")
 
     for page in all_pages:
         try:
@@ -41,7 +41,14 @@ async def get_llms_full() -> StreamingResponse:
         except Exception as e:
             print(f"Error processing {page.path}: {e}")
 
-    return StreamingResponse("---\n\n".join(entries), media_type="text/plain; charset=utf-8")
+    return "---\n\n".join(entries)
+
+
+@app.get("/api/llms_full")
+def get_llms_full() -> PlainTextResponse:
+    """Serve a full version of content for LLMs."""
+
+    return PlainTextResponse(_get_llms_full())
 
 
 if __name__ == "__main__":

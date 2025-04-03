@@ -1,24 +1,25 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse
+
+from functools import lru_cache
 
 from api._config import get_site_config
-from api._content import _pages, ensure_heading_levels
+from api._content import _pages
 from api._filesystem import get_content_dir
 
 app = FastAPI()
 
 
-@app.get("/api/llms")
-async def get_llms() -> StreamingResponse:
-    """Serve a condensed sitemap for LLMs."""
-    all_pages = await _pages(get_content_dir())
+@lru_cache(maxsize=1024)
+def _get_llms() -> str:
+    all_pages = _pages(get_content_dir())
 
     site_config = get_site_config()
     site_url = site_config.get("url").rstrip("/")
 
     entries = []
 
-    entries.append(f"# {site_config.get('title')}\n> {site_config.get('description')}\n")
+    entries.append(f"# {site_config.get('title')}\n\n> {site_config.get('description')}\n")
 
     for page in all_pages:
         try:
@@ -29,7 +30,13 @@ async def get_llms() -> StreamingResponse:
         except Exception as e:
             print(f"Error processing {page.path}: {e}")
 
-    return StreamingResponse("\n".join(entries), media_type="text/plain; charset=utf-8")
+    return "\n".join(entries)
+
+
+@app.get("/api/llms")
+def get_llms() -> PlainTextResponse:
+    """Serve a condensed sitemap for LLMs."""
+    return PlainTextResponse(_get_llms())
 
 
 if __name__ == "__main__":

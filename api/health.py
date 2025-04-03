@@ -1,13 +1,13 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
 
 @app.get("/api/health")
-async def health() -> StreamingResponse:
+def health() -> JSONResponse:
     """Health check."""
-    return StreamingResponse({"status": "ok"})
+    return JSONResponse({"status": "ok"})
 
 
 if __name__ == "__main__":

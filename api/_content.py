@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime
+from functools import lru_cache
 
 import frontmatter
 
@@ -8,7 +9,8 @@ from api._filesystem import cached_file_exists, cached_file_read, get_content_di
 from api._types import Page, ReadingItem
 
 
-async def _page(path: str, slug: str) -> Page:
+@lru_cache(maxsize=1024)
+def _page(path: str, slug: str) -> Page:
     """Get a page."""
     if not cached_file_exists(path):
         raise Exception("File not found")
@@ -97,7 +99,7 @@ async def _page(path: str, slug: str) -> Page:
         raise Exception("File not found") from None
 
 
-async def _pages(directory: str) -> list[Page]:
+def _pages(directory: str) -> list[Page]:
     """Get all pages in a directory."""
     pages: list[Page] = []
 
@@ -108,14 +110,14 @@ async def _pages(directory: str) -> list[Page]:
         item_path = os.path.join(directory, item)
 
         if os.path.isdir(item_path):
-            pages.extend(await _pages(item_path))
+            pages.extend(_pages(item_path))
 
         elif item.endswith(".md"):
             parent_dir_name = os.path.basename(directory)
             file_name_without_ext = item[:-3]
 
             if file_name_without_ext == parent_dir_name:
-                pages.append(await _page(item_path, file_name_without_ext))
+                pages.append(_page(item_path, file_name_without_ext))
 
     def get_sort_key(page: Page) -> datetime:
         return page.updated or page.created or datetime.min
@@ -123,6 +125,7 @@ async def _pages(directory: str) -> list[Page]:
     pages.sort(key=get_sort_key, reverse=True)
 
     return pages
+
 
 def ensure_heading_levels(markdown_text):
     # Replace # with ### and ## with ###
