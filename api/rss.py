@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from _config import get_rss_config, get_site_config
 from _content import _pages
-from _validation import get_content_path
+from _validation import get_content_dir
 
 app = FastAPI()
 
@@ -30,8 +30,8 @@ async def get_feed(slug: str) -> StreamingResponse:
     rss_config = get_rss_config()
     site_config = get_site_config()
 
-    base_url = site_config.get("url", "https://evansims.com")
-    site_title = site_config.get("title", "Evan Sims")
+    base_url = site_config.get("url", "https://example.dev")
+    site_title = site_config.get("title", "Some Site")
 
     # Validate that this is a configured feed
     feeds = rss_config.get("feeds", {})
@@ -44,7 +44,7 @@ async def get_feed(slug: str) -> StreamingResponse:
     feed_path = feed_config.get("path", slug)
 
     # Get content from the specified path
-    content_path = get_content_path(feed_path)
+    content_path = get_content_dir(feed_path)
 
     # Build RSS XML
     now = datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0000")
@@ -59,7 +59,7 @@ async def get_feed(slug: str) -> StreamingResponse:
             for page in pages:
                 try:
                     # Get relative path from content directory for URL
-                    rel_path = os.path.relpath(page.path, get_content_path())
+                    rel_path = os.path.relpath(page.path, get_content_dir())
                     # Remove .md extension
                     path = os.path.splitext(rel_path)[0]
                     # Convert to URL path

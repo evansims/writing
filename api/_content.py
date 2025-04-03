@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 import frontmatter
@@ -19,7 +20,7 @@ async def _page(path: str, slug: str) -> Page:
 
         page_slug: str = slug
         page_title: str = str(post.get("title", slug.replace("-", " ").title()))
-        page_description: str | None = str(post.get("description", None))
+        page_description: str | None = post.get("description", None)
         page_created: datetime | None = None
         page_updated: datetime | None = None
         page_tags: list[str] = []
@@ -122,3 +123,8 @@ async def _pages(directory: str) -> list[Page]:
     pages.sort(key=get_sort_key, reverse=True)
 
     return pages
+
+def ensure_heading_levels(markdown_text):
+    # Replace # with ### and ## with ###
+    pattern = r'^(#{1,2})(?!\#)'  # Match # or ## at start of line, not followed by another #
+    return re.sub(pattern, r'###', markdown_text, flags=re.MULTILINE)

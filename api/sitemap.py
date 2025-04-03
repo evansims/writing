@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from _config import get_site_config
-from _validation import get_content_path
+from _validation import get_content_dir
 
 app = FastAPI()
 
@@ -18,7 +18,7 @@ async def sitemap() -> StreamingResponse:
     base_url = site_config.get("url", "https://evansims.com")
 
     # Find all content files recursively
-    content_files = glob.glob(f"{get_content_path()}/**/*.md", recursive=True)
+    content_files = glob.glob(f"{get_content_dir()}/**/*.md", recursive=True)
 
     # Generate sitemap XML
     sitemap_items = []
@@ -37,7 +37,7 @@ async def sitemap() -> StreamingResponse:
     # Add content pages
     for content_file in content_files:
         # Get relative path from content directory
-        rel_path = os.path.relpath(content_file, get_content_path())
+        rel_path = os.path.relpath(content_file, get_content_dir())
         # Remove .md extension
         path = os.path.splitext(rel_path)[0]
         # Convert to URL path

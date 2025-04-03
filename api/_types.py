@@ -30,7 +30,7 @@ class Page:
     type: str | None = None
     reading: list[ReadingItem] = field(default_factory=list)
 
-    def json(self) -> dict:
+    def url(self) -> str:
         base_path = get_content_dir()
         _url = self.path
         if _url.startswith(base_path):
@@ -42,6 +42,9 @@ class Page:
         _url.pop()
         _url = "/".join(_url)
 
+        return f"/{_url}"
+
+    def json(self) -> dict:
         return {
             "slug": self.slug,
             "title": self.title,
@@ -50,7 +53,7 @@ class Page:
             "updated": self.updated.isoformat() if self.updated else None,
             "tags": self.tags,
             "banner": self.banner,
-            "url": f"/{_url}",
+            "url": self.url(),
             "topic": self.topic,
             "type": self.type,
             "body": self.body,

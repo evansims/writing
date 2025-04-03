@@ -1,24 +1,24 @@
-import os
-
 import yaml
+
+from api._filesystem import cached_file_read, get_config_path
 
 
 def get_site_config() -> dict:
     """Get the site config."""
     try:
-        config_path = os.path.join(os.getcwd(), "configuration", "site.yml")
-        with open(config_path) as f:
-            return yaml.safe_load(f)
+        config_path = get_config_path("site.yml")
+        config_content = cached_file_read(config_path)
+        return yaml.safe_load(config_content)
     except Exception:
-        return {"url": "https://evansims.com", "title": "Evan Sims"}
+        raise Exception(f"Failed to load site config: {config_path}") from None
 
 
 def get_rss_config() -> dict:
     """Get the RSS config."""
     try:
-        config_path = os.path.join(os.getcwd(), "configuration", "rss.yml")
-        with open(config_path) as f:
-            return yaml.safe_load(f)
+        config_path = get_config_path("rss.yml")
+        config_content = cached_file_read(config_path)
+        return yaml.safe_load(config_content)
     except Exception:
         return {}
 
@@ -26,8 +26,8 @@ def get_rss_config() -> dict:
 def get_llms_config() -> dict:
     """Get the llms config."""
     try:
-        config_path = os.path.join(os.getcwd(), "configuration", "llms.yml")
-        with open(config_path) as f:
-            return yaml.safe_load(f)
+        config_path = get_config_path("llms.yml")
+        config_content = cached_file_read(config_path)
+        return yaml.safe_load(config_content)
     except Exception:
         return {}
