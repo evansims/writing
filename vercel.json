@@ -1,5 +1,5 @@
 {
-  "installCommand": "pip3 install .",
+  "installCommand": "pip3 install -r requirements.",
   "functions": {
     "api/*.py": {
       "runtime": "@vercel/python@4.7.1"

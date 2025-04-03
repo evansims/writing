@@ -2,3 +2,9 @@ python-frontmatter>=1.0
 pyyaml>=6.0
 elevenlabs==1.54.0
 fastapi>=0.115
+pytest>=7.0.0
+ruff>=0.11
+pytest-cov>=4.1.0
+mypy>=1.5.1
+watchdog>=6.0.0
+uvicorn>=0.34.0
