@@ -5,8 +5,9 @@ import re
 import dotenv
 from elevenlabs.client import ElevenLabs
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from starlette.responses import ContentStream
+from collections.abc import AsyncGenerator
 
 from api._content import _page
 from api._filesystem import cached_file_exists
@@ -51,7 +52,7 @@ async def split_content_into_chunks(
         try:
             # Extract slug from the filename
             slug = os.path.basename(page_path).replace(".md", "")
-            page = await _page(page_path, slug)
+            page = _page(page_path, slug)
             content = page.body
             if title is None:
                 title = page.title
@@ -164,7 +165,7 @@ def get_audio_path(audio_dir: str, checksum: str) -> str:
     return os.path.join(audio_dir, f"{checksum}.mp3")
 
 
-async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
+async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenerator[bytes, None]:
     """Get existing audio file or generate new one using Eleven Labs."""
     if os.path.exists(audio_path):
         # Return cached audio
@@ -175,7 +176,7 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
                 print(f"Warning: Found empty audio file at {audio_path}, regenerating...")
                 # Fall through to regenerate
             else:
-                return audio_data
+                yield audio_data
 
     # Generate new audio
     try:
@@ -217,7 +218,7 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
             print(f"Error saving audio file: {str(file_error)}")
             # Continue even if saving fails
 
-        return audio_bytes
+        yield audio_bytes
     except Exception as e:
         print(f"Error generating audio: {str(e)}")
         import traceback
@@ -238,10 +239,10 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> bytes:
 
 
 @app.get("/api/audio/")
-async def audio_health_check() -> StreamingResponse:
+async def audio_health_check() -> JSONResponse:
     """Return API health status and configuration information."""
     try:
-        return StreamingResponse({
+        return JSONResponse({
             "status": "OK" if API_KEY else "WARNING",
             "api_key_valid": bool(API_KEY),
             "voice_id": VOICE_ID or "default",
@@ -253,7 +254,7 @@ async def audio_health_check() -> StreamingResponse:
 
 
 @app.get("/api/audio/<slug>/metadata")
-async def get_audio_metadata(slug: str) -> StreamingResponse:
+async def get_audio_metadata(slug: str) -> JSONResponse:
     """Return metadata about available audio chunks for a page."""
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
@@ -261,7 +262,7 @@ async def get_audio_metadata(slug: str) -> StreamingResponse:
     try:
         # Get the content page
         f = safe_path(f"{slug}/{slug}.md")
-        page: Page = await _page(f, slug)
+        page: Page = _page(f, slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -277,7 +278,7 @@ async def get_audio_metadata(slug: str) -> StreamingResponse:
             audio_path = get_audio_path(audio_dir, chunk["checksum"])
             chunk["has_audio"] = os.path.exists(audio_path)
 
-        return StreamingResponse({
+        return JSONResponse({
             "page": {
                 "slug": page.slug,
                 "title": page.title,
@@ -317,11 +318,11 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
             if not cached_file_exists(full_path):
                 raise Exception(f"Content file not found at {file_path}") from None
 
-            page: Page = await _page(full_path, page_name)
+            page: Page = _page(full_path, page_name)
         else:
             # For top-level content
             f = safe_path(f"{slug}/{slug}.md")
-            page: Page = await _page(f, slug)
+            page: Page = _page(f, slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -343,10 +344,7 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
         # Use default voice (Will)
         audio_data = await get_or_generate_audio(chunk["text"], audio_path)
 
-        # Convert audio_data into a ContentStream
-        content_stream = ContentStream.iterate(audio_data)
-
-        return StreamingResponse(content_stream, media_type="audio/mpeg")
+        return StreamingResponse(audio_data, media_type="audio/mpeg")
 
     except Exception as e:
         import traceback
@@ -358,7 +356,7 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
 
 
 @app.get("/api/audio/{slug}")
-async def get_page_audio(slug: str, generate_all: bool | None = None) -> StreamingResponse:
+async def get_page_audio(slug: str, generate_all: bool | None = None) -> JSONResponse:
     """Return audio metadata for a page or generate all audio."""
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
@@ -379,11 +377,11 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> Streami
             if not cached_file_exists(full_path):
                 raise Exception(f"Content file not found at {file_path}")
 
-            page: Page = await _page(full_path, page_name)
+            page: Page = _page(full_path, page_name)
         else:
             # For top-level content
             f = safe_path(f"{slug}/{slug}.md")
-            page: Page = await _page(f, slug)
+            page: Page = _page(f, slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -407,7 +405,7 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> Streami
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return StreamingResponse({
+        return JSONResponse({
             "page": {
                 "slug": page.slug,
                 "title": page.title,
@@ -432,7 +430,7 @@ async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> Streami
     try:
         # Get the content page
         f = safe_path(f"{path}/{slug}/{slug}.md")
-        page_obj: Page = await _page(f, slug)
+        page_obj: Page = _page(f, slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -452,18 +450,15 @@ async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> Streami
         audio_path = get_audio_path(audio_dir, chunk["checksum"])
 
         # Use default voice (Will)
-        audio_data = await get_or_generate_audio(chunk["text"], audio_path)
+        audio_data = get_or_generate_audio(chunk["text"], audio_path)
 
-        # Convert audio_data into a ContentStream
-        content_stream = ContentStream.iterate(audio_data)
-
-        return StreamingResponse(content_stream, media_type="audio/mpeg")
+        return StreamingResponse(audio_data, media_type="audio/mpeg")
     except Exception as e:
         raise Exception(f"Failed to get audio: {str(e)}") from e
 
 
 @app.get("/api/audio/{path}/{slug}")
-async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None = None) -> StreamingResponse:
+async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None = None) -> JSONResponse:
     """Return audio metadata for a nested page or generate all audio."""
     if not is_valid_path(path) or not is_valid_slug(slug):
         raise Exception("Invalid path or slug")
@@ -477,7 +472,7 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
             raise Exception(f"Content file not found: {file_path}")
 
         # Get the content page
-        page_obj: Page = await _page(full_path, slug)
+        page_obj: Page = _page(full_path, slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -493,7 +488,7 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
             # Generate audio for all chunks
             for chunk in chunks:
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
-                await get_or_generate_audio(chunk["text"], audio_path)
+                get_or_generate_audio(chunk["text"], audio_path)
                 chunk["has_audio"] = True
         else:
             # Just check which chunks have audio
@@ -501,7 +496,7 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return StreamingResponse({
+        return JSONResponse({
             "page": {
                 "slug": page_obj.slug,
                 "title": page_obj.title,

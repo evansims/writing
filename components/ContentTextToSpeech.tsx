@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-// Dynamically import the EnhancedTextToSpeech component with no SSR
 const EnhancedTextToSpeech = dynamic(
   () => import("@/components/EnhancedTextToSpeech"),
   {

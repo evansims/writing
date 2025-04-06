@@ -1,27 +1,9 @@
-import { NextRequest } from "next/server";
+import { getLLMs } from "@/lib/api";
 
-/**
- * Route handler for serving llms.txt content from the backend API
- * Uses Server Component for optimal performance and SEO
- */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Fetch content from the backend API
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || ""}/api/llms.txt`,
-      {
-        next: { revalidate: 3600 }, // Cache for 1 hour
-      }
-    );
+    const text = await getLLMs();
 
-    if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
-    }
-
-    // Get the text content
-    const text = await response.text();
-
-    // Return the content with the correct content type
     return new Response(text, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",

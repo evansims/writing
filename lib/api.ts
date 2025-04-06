@@ -28,7 +28,7 @@ export const getPublicUrl = (): string => {
     return process.env.NEXT_PUBLIC_API_URL;
   }
 
-  return "http://localhost";
+  return "http://localhost:3000";
 };
 
 export async function getContent(
@@ -37,7 +37,9 @@ export async function getContent(
   let s = Array.isArray(slug) ? slug.join("/") : String(slug);
   s = s.replace(/,/g, "/");
 
-  const r = await fetch(`${getPublicUrl()}/api/content/${s}`, {
+  console.log(`${getPublicUrl()}/api/content?path=${s}`);
+
+  const r = await fetch(`${getPublicUrl()}/api/content?path=${s}`, {
     next: { revalidate: 60 },
   });
 
@@ -46,7 +48,7 @@ export async function getContent(
   }
 
   const j = await r.json();
-  return j.page;
+  return j.pages[0];
 }
 
 export async function getLatestContent(
@@ -54,7 +56,7 @@ export async function getLatestContent(
   types: string[] = [],
 ): Promise<ContentItem[]> {
   const r = await fetch(
-    `${getPublicUrl()}/api/content/?limit=${limit}&types=${types.join(",")}`,
+    `${getPublicUrl()}/api/content?limit=${limit}&types=${types.join(",")}`,
     {
       next: { revalidate: 60 },
     },
@@ -66,4 +68,28 @@ export async function getLatestContent(
 
   const j = await r.json();
   return j.pages;
+}
+
+export async function getLLMs(): Promise<string> {
+  const r = await fetch(`${getPublicUrl()}/api/llms`, {
+    next: { revalidate: 60 },
+  });
+
+  if (!r.ok) {
+    throw new Error(`Failed to fetch content: ${r.statusText}`);
+  }
+
+  return await r.text();
+}
+
+export async function getLLMsFull(): Promise<string> {
+  const r = await fetch(`${getPublicUrl()}/api/llms_full`, {
+    next: { revalidate: 60 },
+  });
+
+  if (!r.ok) {
+    throw new Error(`Failed to fetch content: ${r.statusText}`);
+  }
+
+  return await r.text();
 }

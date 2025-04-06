@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "api": "pip install . && cd api && python server.py",
-    "startx": "next dev --turbopack",
+    "api": "uv sync && uv run api/server.py",
+    "dev": "next dev",
+    "dev-turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

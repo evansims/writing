@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
+import { getPublicUrl } from "@/lib/api";
 
 /**
  * Route handler for serving robots.txt
  * Uses Server Component for optimal performance and SEO
  */
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://evansims.com";
+  const baseUrl = getPublicUrl();
 
   // Create robots.txt content
   const robotsTxt = `# https://www.robotstxt.org/robotstxt.html
