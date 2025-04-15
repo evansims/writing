@@ -769,6 +769,7 @@ source = { editable = "." }
 dependencies = [
     { name = "elevenlabs" },
     { name = "fastapi", extra = ["standard"] },
+    { name = "httpx" },
     { name = "pillow" },
     { name = "python-frontmatter" },
     { name = "ruff" },
@@ -785,6 +786,7 @@ dev = [
 requires-dist = [
     { name = "elevenlabs", specifier = "==1.54.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pillow", specifier = "==11.2.1" },
     { name = "python-frontmatter", specifier = ">=1.0" },
     { name = "ruff", specifier = ">=0.11" },

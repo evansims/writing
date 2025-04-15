@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import time
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from typing import Any
 
 import dotenv
@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from api._content import _page
 from api._filesystem import cached_file_exists
+from api._storage import StorageError, storage
 from api._types import Page
 from api._validation import is_valid_slug, safe_path
 
@@ -128,22 +129,65 @@ async def file_lock(file_path: str) -> AsyncIterator[None]:
     if file_path not in file_locks:
         file_locks[file_path] = asyncio.Lock()
 
+    lock = file_locks[file_path]
     try:
-        await file_locks[file_path].acquire()
+        await lock.acquire()
         yield
     finally:
-        file_locks[file_path].release()
+        if lock.locked():
+            lock.release()
         # Clean up if no one is waiting
-        if not file_locks[file_path].locked():
+        if not lock.locked():
             file_locks.pop(file_path, None)
 
 
+def get_storage_path(file_path: str) -> str:
+    """Convert filesystem path to storage path.
+
+    This function ensures that audio files maintain their directory structure
+    relative to the content directory, preserving the audio subdirectory.
+
+    Args:
+        file_path: The path to convert to a storage path
+
+    Returns:
+        str: The storage path for the audio file
+    """
+    # Get the path relative to the content directory
+    content_dir = os.path.join(os.path.dirname(__file__), "..", "content")
+
+    try:
+        # Ensure the path is absolute before getting relative path
+        abs_path = os.path.abspath(file_path)
+        rel_path = os.path.relpath(abs_path, content_dir)
+
+        # Split the path into components
+        parts = rel_path.split(os.sep)
+
+        # For audio files, ensure they go in an audio subdirectory
+        if not any(p == "audio" for p in parts):
+            # If no audio directory in path, add it
+            parts.insert(-1, "audio")
+
+        # Normalize path separators for storage
+        return "/".join(parts).replace("\\", "/")
+
+    except ValueError:
+        # If the path is not under content_dir, ensure it still goes in audio dir
+        parts = file_path.split(os.sep)
+        if not any(p == "audio" for p in parts):
+            # Add audio directory before the filename
+            parts.insert(-1, "audio")
+        return "/".join(parts).replace("\\", "/")
+
+
 def get_audio_dir(content_path: str) -> str:
-    """Return the directory for storing audio files next to content."""
+    """Get the audio directory path for a given content path.
+
+    This is now used primarily for path construction, not filesystem operations.
+    """
     content_dir = os.path.dirname(content_path)
-    audio_dir = os.path.join(content_dir, "audio")
-    os.makedirs(audio_dir, exist_ok=True)
-    return audio_dir
+    return os.path.join(content_dir, "audio")
 
 
 async def split_content_into_chunks(
@@ -254,10 +298,10 @@ async def split_content_into_chunks(
 
 def clean_text_for_tts(text: str) -> str:
     """Clean text for TTS processing by removing markdown formatting."""
-    # Remove markdown headers but keep the text
-    clean_text = re.sub(r"^#+\s+", "", text, flags=re.MULTILINE)
+    # First, capture header text and add pauses after them
+    clean_text = re.sub(r"^(#+)\s+(.+)$", r"\2. . . .", text, flags=re.MULTILINE)
 
-    # Remove markdown formatting
+    # Remove any remaining markdown formatting
     clean_text = re.sub(r"\*\*|\*|__|\^", "", clean_text)
 
     # Convert links to just text
@@ -288,11 +332,16 @@ def get_full_audio_path(audio_dir: str, page_slug: str) -> str:
 async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenerator[bytes, None]:
     """Get existing audio file or generate new one using Eleven Labs."""
     async with file_lock(audio_path):
-        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
-            # Return cached audio
-            with open(audio_path, "rb") as f:
-                yield f.read()
+        try:
+            # Try to read from storage first
+            storage_path = get_storage_path(audio_path)
+            audio_bytes = await storage.read_file(storage_path)
+            if audio_bytes:
+                yield audio_bytes
                 return
+        except StorageError:
+            # File doesn't exist or is empty, continue to generation
+            pass
 
         # Generate new audio with rate limiting
         try:
@@ -355,23 +404,14 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenera
 
             logger.info(f"Successfully generated {len(audio_bytes)} bytes of audio data")
 
-            # Cache the generated audio
+            # Store the generated audio
             try:
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-
-                # Write to a temporary file first, then move it to avoid partial writes
-                temp_path = f"{audio_path}.tmp"
-                with open(temp_path, "wb") as f:
-                    f.write(audio_bytes)
-
-                # Atomic rename
-                os.replace(temp_path, audio_path)
-
-                logger.info(f"Saved audio file to {audio_path}")
-            except Exception as file_error:
+                storage_path = get_storage_path(audio_path)
+                await storage.write_file(storage_path, audio_bytes)
+                logger.info(f"Saved audio file to {storage_path}")
+            except StorageError as file_error:
                 logger.error(f"Error saving audio file: {str(file_error)}")
-                # Continue even if saving fails
+                # Continue even if saving fails - we still have the audio data
 
             yield audio_bytes
         except HTTPException:
@@ -382,17 +422,6 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenera
             import traceback
 
             logger.error(traceback.format_exc())
-
-            # Remove any empty file that might have been created
-            if os.path.exists(audio_path):
-                try:
-                    file_size = os.path.getsize(audio_path)
-                    if file_size == 0:
-                        logger.info(f"Removing empty audio file: {audio_path}")
-                        os.remove(audio_path)
-                except Exception as cleanup_error:
-                    logger.error(f"Error cleaning up empty file: {str(cleanup_error)}")
-
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate audio: {str(e)}"
             ) from e
@@ -414,9 +443,14 @@ async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[st
         full_audio_path = get_full_audio_path(audio_dir, page_slug)
 
         async with file_lock(full_audio_path):
-            # Check if full audio already exists
-            if os.path.exists(full_audio_path) and os.path.getsize(full_audio_path) > 0:
-                return full_audio_path, os.path.getsize(full_audio_path)
+            try:
+                # Check if full audio already exists
+                storage_path = get_storage_path(full_audio_path)
+                audio_data = await storage.read_file(storage_path)
+                return full_audio_path, len(audio_data)
+            except StorageError:
+                # File doesn't exist or is empty, continue to generation
+                pass
 
             # Get all chunks and generate audio for each one if needed
             chunks = await split_content_into_chunks(content="", page_path=page_path)
@@ -427,7 +461,10 @@ async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[st
 
             for chunk in chunks:
                 chunk_audio_path = get_audio_path(audio_dir, chunk.get("checksum", ""))
-                if not os.path.exists(chunk_audio_path) or os.path.getsize(chunk_audio_path) == 0:
+                try:
+                    storage_path = get_storage_path(chunk_audio_path)
+                    await storage.read_file(storage_path)
+                except StorageError:
                     # Schedule generation of missing audio
                     generation_tasks.append(generate_chunk_audio(chunk["text"], chunk_audio_path))
 
@@ -439,20 +476,28 @@ async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[st
 
             # Ensure all audio files exist
             for audio_path in audio_paths:
-                if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+                try:
+                    storage_path = get_storage_path(audio_path)
+                    await storage.read_file(storage_path)
+                except StorageError as e:
+                    logger.error(f"Error reading audio file: {str(e)}")
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Failed to generate all required audio chunks",
-                    )
+                    ) from e
 
-            # Concatenate audio files with proper MP3 handling
-            temp_output_path = f"{full_audio_path}.tmp"
-            await concatenate_mp3_files(audio_paths, temp_output_path)
+            # Concatenate audio files
+            all_audio = b""
+            for audio_path in audio_paths:
+                storage_path = get_storage_path(audio_path)
+                chunk_audio = await storage.read_file(storage_path)
+                all_audio += chunk_audio
 
-            # Atomic rename to avoid partial files
-            os.replace(temp_output_path, full_audio_path)
+            # Save the concatenated file
+            storage_path = get_storage_path(full_audio_path)
+            await storage.write_file(storage_path, all_audio)
 
-            return full_audio_path, os.path.getsize(full_audio_path)
+            return full_audio_path, len(all_audio)
 
     except HTTPException:
         raise
@@ -461,16 +506,66 @@ async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[st
         import traceback
 
         logger.error(traceback.format_exc())
-
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate full audio: {str(e)}"
         ) from e
 
 
-async def generate_chunk_audio(chunk_text: str, audio_path: str) -> None:
-    """Generate audio for a single chunk and save to disk."""
-    async for _ in get_or_generate_audio(chunk_text, audio_path):
-        pass  # Just consume the generator to generate and save the audio
+async def generate_chunk_audio(text: str, audio_path: str) -> None:
+    """Generate audio for a chunk of text.
+
+    Args:
+        text: The text to generate audio for
+        audio_path: The path to save the audio file to
+
+    Raises:
+        HTTPException: If there is an error generating the audio
+    """
+    try:
+        async with file_lock(audio_path):
+            try:
+                # Check if audio already exists in storage
+                storage_path = get_storage_path(audio_path)
+                await storage.read_file(storage_path)
+                return
+            except StorageError:
+                # File doesn't exist or is empty, continue to generation
+                pass
+
+            # Generate audio using ElevenLabs client
+            audio_data = client.text_to_speech.convert(
+                text=text,
+                voice_id=VOICE_ID,
+                model_id=MODEL_ID,
+                output_format="mp3_44100_128",
+            )
+
+            # Handle if audio_data is a generator
+            if hasattr(audio_data, "__iter__") and not isinstance(audio_data, bytes | bytearray):
+                logger.info("Converting generator to bytes")
+                audio_bytes = b"".join(chunk for chunk in audio_data)
+            else:
+                audio_bytes = audio_data
+
+            # Check if we got data back
+            if not audio_bytes or len(audio_bytes) == 0:
+                raise ValueError("Received empty audio data from Eleven Labs API")
+
+            # Save to storage
+            storage_path = get_storage_path(audio_path)
+            await storage.write_file(storage_path, audio_bytes)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating chunk audio: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate chunk audio: {str(e)}",
+        ) from e
 
 
 async def concatenate_mp3_files(audio_paths: list[str], output_path: str) -> None:
@@ -744,12 +839,9 @@ async def get_page_audio_impl(
             audio_path, audio_size = await generate_or_get_full_audio(page.path, page.slug)
 
             # Return streaming response with audio file
-            def iterfile() -> Iterator[bytes]:
-                with open(audio_path, "rb") as f:
-                    yield from f
-
+            audio_data = await storage.read_file(audio_path)
             return StreamingResponse(
-                iterfile(),
+                iter([audio_data]),
                 media_type="audio/mpeg",
                 headers={
                     "Content-Disposition": f'attachment; filename="{page.slug}.mp3"',
