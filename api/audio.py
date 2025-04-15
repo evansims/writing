@@ -1,7 +1,7 @@
 import hashlib
 import os
 import re
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator
 
 import dotenv
 from elevenlabs.client import ElevenLabs
@@ -164,6 +164,11 @@ def get_audio_path(audio_dir: str, checksum: str) -> str:
     return os.path.join(audio_dir, f"{checksum}.mp3")
 
 
+def get_full_audio_path(audio_dir: str, page_slug: str) -> str:
+    """Return the path to the full concatenated audio file for a page."""
+    return os.path.join(audio_dir, f"{page_slug}_full.mp3")
+
+
 async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenerator[bytes, None]:
     """Get existing audio file or generate new one using Eleven Labs."""
     if os.path.exists(audio_path):
@@ -235,6 +240,63 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenera
                 print(f"Error cleaning up empty file: {str(cleanup_error)}")
 
         raise Exception(f"Failed to generate audio: {str(e)}") from e
+
+
+async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[str, int]:
+    """Generate or get a full audio file from all chunks.
+
+    Returns:
+        tuple[str, int]: Path to the full audio file and its size in bytes
+
+    """
+    try:
+        # Get audio directory
+        audio_dir = get_audio_dir(page_path)
+        full_audio_path = get_full_audio_path(audio_dir, page_slug)
+
+        # Check if full audio already exists
+        if os.path.exists(full_audio_path):
+            return full_audio_path, os.path.getsize(full_audio_path)
+
+        # Get all chunks and generate audio for each one if needed
+        chunks = await split_content_into_chunks(content="", page_path=page_path)
+
+        # Check if all chunks have audio files
+        all_chunks_ready = True
+        audio_paths = []
+
+        for chunk in chunks:
+            chunk_audio_path = get_audio_path(audio_dir, chunk.get("checksum", ""))
+            if not os.path.exists(chunk_audio_path):
+                # Generate missing audio
+                print(f"Generating missing audio for chunk {chunk['id']}")
+                audio_data = b""
+                async for data in get_or_generate_audio(chunk["text"], chunk_audio_path):
+                    audio_data += data
+                all_chunks_ready = bool(audio_data) and all_chunks_ready
+
+            if os.path.exists(chunk_audio_path):
+                audio_paths.append(chunk_audio_path)
+
+        if not all_chunks_ready or not audio_paths:
+            raise Exception("Failed to generate all required audio chunks")
+
+        # Concatenate audio files
+        with open(full_audio_path, "wb") as outfile:
+            # For MP3 files, we need to be careful about concatenation
+            # This simple approach works for MP3s from the same source with the same settings
+            for audio_path in audio_paths:
+                with open(audio_path, "rb") as infile:
+                    outfile.write(infile.read())
+
+        return full_audio_path, os.path.getsize(full_audio_path)
+
+    except Exception as e:
+        print(f"Error generating full audio: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise Exception(f"Failed to generate full audio: {str(e)}") from e
 
 
 @app.get("/api/audio/")
@@ -358,13 +420,28 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
         raise Exception(f"Failed to get audio: {str(e)}") from e
 
 
-@app.get("/api/audio/{slug}")
-async def get_page_audio(slug: str, generate_all: bool | None = None) -> JSONResponse:
-    """Return audio metadata for a page or generate all audio."""
+@app.get("/api/audio/{slug}", response_model=None)
+async def get_page_audio(
+    slug: str, generate_all: bool | None = None, format: str | None = None
+) -> JSONResponse | StreamingResponse:
+    """Return audio metadata for a page or generate all audio.
+
+    Args:
+        slug: The slug of the page
+        generate_all: Whether to generate all audio chunks
+        format: If 'mp3', return a full audio file instead of metadata
+    """
+    # Check if the slug actually contains multiple path parts
+    if "/" in slug and format == "mp3":
+        # For URLs like /api/audio/mindset/downtime-as-self-care?format=mp3
+        parts = slug.split("/", 1)  # Split only on the first slash
+        return await get_nested_page_audio(parts[0], parts[1], format=format)
+
     if not is_valid_slug(slug):
         raise Exception("Invalid slug")
 
     generate_all = generate_all or False
+    format = format or "json"
 
     try:
         # Check if the slug contains a path separator and parse accordingly
@@ -386,6 +463,19 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> JSONRes
             f = safe_path(f"{slug}/{slug}.md")
             page: Page = _page(f, slug)
 
+        # If MP3 format requested, return full audio file
+        if format.lower() == "mp3":
+            # Generate or get full audio file
+            audio_path, audio_size = await generate_or_get_full_audio(page.path, page.slug)
+
+            # Return streaming response with audio file
+            def iterfile() -> Iterator[bytes]:
+                with open(audio_path, "rb") as f:
+                    yield from f
+
+            return StreamingResponse(iterfile(), media_type="audio/mpeg")
+
+        # Otherwise, return metadata JSON
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
             content="",  # Not needed when using page_path
@@ -427,8 +517,12 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> JSONRes
 
 
 @app.get("/api/audio/{path}/{slug}/{chunk_id}")
-async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> StreamingResponse:
+async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str, format: str | None = None) -> StreamingResponse:
     """Return audio for a specific chunk of content in a nested folder."""
+    # Special case: if chunk_id is the same as slug and format=mp3, treat as a full page request
+    if chunk_id == slug and format == "mp3":
+        return await get_nested_page_audio(path, slug, format=format)
+
     if not is_valid_path(path) or not is_valid_slug(slug):
         raise Exception("Invalid path or slug")
 
@@ -462,11 +556,24 @@ async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str) -> Streami
         raise Exception(f"Failed to get audio: {str(e)}") from e
 
 
-@app.get("/api/audio/{path}/{slug}")
-async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None = None) -> JSONResponse:
-    """Return audio metadata for a nested page or generate all audio."""
+@app.get("/api/audio/{path}/{slug}", response_model=None)
+async def get_nested_page_audio(
+    path: str, slug: str, generate_all: bool | None = None, format: str | None = None
+) -> JSONResponse | StreamingResponse:
+    """Return audio metadata for a nested page or generate all audio.
+
+    Args:
+        path: The folder path
+        slug: The slug of the page
+        generate_all: Whether to generate all audio chunks
+        format: If 'mp3', return a full audio file instead of metadata
+
+    """
     if not is_valid_path(path) or not is_valid_slug(slug):
         raise Exception("Invalid path or slug")
+
+    generate_all = generate_all or False
+    format = format or "json"
 
     try:
         file_path = f"{path}/{slug}/{slug}.md"
@@ -478,6 +585,18 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
 
         # Get the content page
         page_obj: Page = _page(full_path, slug)
+
+        # If MP3 format requested, return full audio file
+        if format.lower() == "mp3":
+            # Generate or get full audio file
+            audio_path, audio_size = await generate_or_get_full_audio(page_obj.path, page_obj.slug)
+
+            # Return streaming response with audio file
+            def iterfile() -> Iterator[bytes]:
+                with open(audio_path, "rb") as f:
+                    yield from f
+
+            return StreamingResponse(iterfile(), media_type="audio/mpeg")
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
