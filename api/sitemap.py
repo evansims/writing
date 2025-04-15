@@ -63,3 +63,9 @@ def _sitemap() -> Response:
 def sitemap() -> Response:
     """Generate sitemap XML."""
     return _sitemap()
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)

@@ -1,29 +1,141 @@
+import asyncio
+import contextlib
 import hashlib
+import logging
 import os
 import re
-from collections.abc import AsyncGenerator, Iterator
+import time
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterator
+from typing import Any
 
 import dotenv
 from elevenlabs.client import ElevenLabs
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 from api._content import _page
 from api._filesystem import cached_file_exists
 from api._types import Page
 from api._validation import is_valid_path, is_valid_slug, safe_path
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 dotenv.load_dotenv()
 
-# Print the loaded environment variables for debugging
+# Load environment variables
 API_KEY = os.getenv("EVANSIMS_ELEVENLABS_API_KEY")
 VOICE_ID = os.getenv("EVANSIMS_ELEVENLABS_VOICE_ID") or "bIHbv24MWmeRgasZH58o"
 MODEL_ID = os.getenv("EVANSIMS_ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2"
 
 # Initialize Eleven Labs client
 client = ElevenLabs(api_key=API_KEY)
+
+# File lock for preventing concurrent file operations on the same file
+file_locks: dict[str, asyncio.Lock] = {}
+
+# Rate limiting settings
+RATE_LIMIT_CALLS = int(os.getenv("RATE_LIMIT_CALLS", "60"))  # Calls per minute
+RATE_LIMIT_WINDOW = 60  # 1 minute window in seconds
+rate_limit_data: dict[str, float | int] = {"calls": 0, "window_start": time.time()}
+
+
+# Pydantic models for request/response validation
+class AudioMetadataResponse(BaseModel):
+    """Response model for audio metadata."""
+
+    page: dict[str, Any]
+    chunks: list[dict[str, Any]]
+
+
+class ChunkMetadata(BaseModel):
+    """Model for chunk metadata."""
+
+    id: str
+    text: str
+    checksum: str
+    has_audio: bool
+    title: str | None = None
+
+
+# Concurrency control with a semaphore to limit simultaneous API calls
+API_SEMAPHORE = asyncio.Semaphore(3)  # Limit to 3 concurrent API calls
+
+
+# Rate limiter middleware
+@app.middleware("http")
+async def rate_limiter(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Middleware to implement rate limiting."""
+    global rate_limit_data
+
+    # Reset counter if window has elapsed
+    current_time = time.time()
+    if current_time - rate_limit_data["window_start"] > RATE_LIMIT_WINDOW:
+        rate_limit_data = {"calls": 0, "window_start": current_time}
+
+    # Check if limit exceeded
+    if rate_limit_data["calls"] >= RATE_LIMIT_CALLS:
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"detail": "Rate limit exceeded. Please try again later."},
+        )
+
+    # Increment counter and process request
+    rate_limit_data["calls"] += 1
+    return await call_next(request)
+
+
+# Error handling middleware
+@app.middleware("http")
+async def error_handling_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Middleware to provide consistent error handling."""
+    try:
+        return await call_next(request)
+    except Exception as e:
+        logger.error(f"Unhandled exception: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+
+        if isinstance(e, HTTPException):
+            # Pass through HTTP exceptions
+            raise e
+
+        # Convert generic exceptions to HTTPException
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": f"An unexpected error occurred: {str(e)}"},
+        )
+
+
+@contextlib.asynccontextmanager
+async def file_lock(file_path: str) -> AsyncIterator[None]:
+    """Async context manager for file locks to prevent race conditions."""
+    if file_path not in file_locks:
+        file_locks[file_path] = asyncio.Lock()
+
+    try:
+        await file_locks[file_path].acquire()
+        yield
+    finally:
+        file_locks[file_path].release()
+        # Clean up if no one is waiting
+        if not file_locks[file_path].locked():
+            file_locks.pop(file_path, None)
 
 
 def get_audio_dir(content_path: str) -> str:
@@ -35,7 +147,7 @@ def get_audio_dir(content_path: str) -> str:
 
 
 async def split_content_into_chunks(
-    content: str, title: str = None, description: str = None, page_path: str = None
+    content: str = "", title: str | None = None, description: str | None = None, page_path: str | None = None
 ) -> list[dict]:
     """Split markdown content into logical chunks based on h2 headings.
 
@@ -58,7 +170,11 @@ async def split_content_into_chunks(
             if description is None and page.description:
                 description = page.description
         except Exception as e:
-            print(f"Error loading page from path {page_path}: {e}")
+            logger.error(f"Error loading page from path {page_path}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error loading page content: {str(e)}"
+            ) from e
+
     # Clean the content for better TTS processing
     content = re.sub(r"\n\n+", "\n\n", content)  # Normalize line breaks
 
@@ -171,75 +287,115 @@ def get_full_audio_path(audio_dir: str, page_slug: str) -> str:
 
 async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenerator[bytes, None]:
     """Get existing audio file or generate new one using Eleven Labs."""
-    if os.path.exists(audio_path):
-        # Return cached audio
-        with open(audio_path, "rb") as f:
-            audio_data = f.read()
-            # Check if file is empty
-            if not audio_data or len(audio_data) == 0:
-                print(f"Warning: Found empty audio file at {audio_path}, regenerating...")
-                # Fall through to regenerate
-            else:
-                yield audio_data
+    async with file_lock(audio_path):
+        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+            # Return cached audio
+            with open(audio_path, "rb") as f:
+                yield f.read()
+                return
 
-    # Generate new audio
-    try:
-        print(f"Generating audio for text: '{chunk_text[:50]}...' using Eleven Labs API")
-        print(f"Using voice_id={VOICE_ID}, model_id={MODEL_ID}")
-
-        # Use the text_to_speech.convert method from the client
-        audio_data = client.text_to_speech.convert(
-            text=chunk_text,
-            voice_id=VOICE_ID,
-            model_id=MODEL_ID,
-            output_format="mp3_44100_128",
-        )
-
-        # Handle if audio_data is a generator
-        if hasattr(audio_data, "__iter__") and not isinstance(audio_data, bytes | bytearray):
-            print("Converting generator to bytes")
-            audio_bytes = b"".join(chunk for chunk in audio_data)
-        else:
-            audio_bytes = audio_data
-
-        # Check if we got data back
-        if not audio_bytes or len(audio_bytes) == 0:
-            print("Error: Received empty audio data from Eleven Labs API")
-            raise ValueError("Received empty audio data from Eleven Labs API")
-
-        print(f"Successfully generated {len(audio_bytes)} bytes of audio data")
-
-        # Cache the generated audio
+        # Generate new audio with rate limiting
         try:
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+            logger.info(f"Generating audio for text: '{chunk_text[:50]}...' using Eleven Labs API")
+            logger.info(f"Using voice_id={VOICE_ID}, model_id={MODEL_ID}")
 
-            with open(audio_path, "wb") as f:
-                f.write(audio_bytes)
+            # Check if API key is available
+            if not API_KEY:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Text-to-speech service not configured. Missing API key.",
+                )
 
-            print(f"Saved audio file to {audio_path}")
-        except Exception as file_error:
-            print(f"Error saving audio file: {str(file_error)}")
-            # Continue even if saving fails
+            # Add exponential backoff retry logic for API calls
+            max_retries = 3
+            retry_delay = 1  # starting delay in seconds
 
-        yield audio_bytes
-    except Exception as e:
-        print(f"Error generating audio: {str(e)}")
-        import traceback
+            for attempt in range(max_retries):
+                try:
+                    async with API_SEMAPHORE:
+                        # Use the text_to_speech.convert method from the client
+                        audio_data = client.text_to_speech.convert(
+                            text=chunk_text,
+                            voice_id=VOICE_ID,
+                            model_id=MODEL_ID,
+                            output_format="mp3_44100_128",
+                        )
 
-        traceback.print_exc()
+                        # Handle if audio_data is a generator
+                        if hasattr(audio_data, "__iter__") and not isinstance(audio_data, bytes | bytearray):
+                            logger.info("Converting generator to bytes")
+                            audio_bytes = b"".join(chunk for chunk in audio_data)
+                        else:
+                            audio_bytes = audio_data
 
-        # Remove any empty file that might have been created
-        if os.path.exists(audio_path):
+                        # Check if we got data back
+                        if not audio_bytes or len(audio_bytes) == 0:
+                            raise ValueError("Received empty audio data from Eleven Labs API")
+
+                        # Success, break the retry loop
+                        break
+
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        # Log the error and retry
+                        logger.warning(
+                            f"API call attempt {attempt + 1} failed: {str(e)}. Retrying in {retry_delay}s..."
+                        )
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        # Last attempt failed, re-raise
+                        raise
+            else:
+                # If we get here, all retries failed
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"Text-to-speech service unavailable after {max_retries} attempts",
+                )
+
+            logger.info(f"Successfully generated {len(audio_bytes)} bytes of audio data")
+
+            # Cache the generated audio
             try:
-                file_size = os.path.getsize(audio_path)
-                if file_size == 0:
-                    print(f"Removing empty audio file: {audio_path}")
-                    os.remove(audio_path)
-            except Exception as cleanup_error:
-                print(f"Error cleaning up empty file: {str(cleanup_error)}")
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(audio_path), exist_ok=True)
 
-        raise Exception(f"Failed to generate audio: {str(e)}") from e
+                # Write to a temporary file first, then move it to avoid partial writes
+                temp_path = f"{audio_path}.tmp"
+                with open(temp_path, "wb") as f:
+                    f.write(audio_bytes)
+
+                # Atomic rename
+                os.replace(temp_path, audio_path)
+
+                logger.info(f"Saved audio file to {audio_path}")
+            except Exception as file_error:
+                logger.error(f"Error saving audio file: {str(file_error)}")
+                # Continue even if saving fails
+
+            yield audio_bytes
+        except HTTPException:
+            # Pass through HTTP exceptions
+            raise
+        except Exception as e:
+            logger.error(f"Error generating audio: {str(e)}")
+            import traceback
+
+            logger.error(traceback.format_exc())
+
+            # Remove any empty file that might have been created
+            if os.path.exists(audio_path):
+                try:
+                    file_size = os.path.getsize(audio_path)
+                    if file_size == 0:
+                        logger.info(f"Removing empty audio file: {audio_path}")
+                        os.remove(audio_path)
+                except Exception as cleanup_error:
+                    logger.error(f"Error cleaning up empty file: {str(cleanup_error)}")
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate audio: {str(e)}"
+            ) from e
 
 
 async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[str, int]:
@@ -248,55 +404,165 @@ async def generate_or_get_full_audio(page_path: str, page_slug: str) -> tuple[st
     Returns:
         tuple[str, int]: Path to the full audio file and its size in bytes
 
+    Raises:
+        HTTPException: If there is an error generating the full audio
+
     """
     try:
         # Get audio directory
         audio_dir = get_audio_dir(page_path)
         full_audio_path = get_full_audio_path(audio_dir, page_slug)
 
-        # Check if full audio already exists
-        if os.path.exists(full_audio_path):
-            return full_audio_path, os.path.getsize(full_audio_path)
+        async with file_lock(full_audio_path):
+            # Check if full audio already exists
+            if os.path.exists(full_audio_path) and os.path.getsize(full_audio_path) > 0:
+                return full_audio_path, os.path.getsize(full_audio_path)
 
-        # Get all chunks and generate audio for each one if needed
-        chunks = await split_content_into_chunks(content="", page_path=page_path)
+            # Get all chunks and generate audio for each one if needed
+            chunks = await split_content_into_chunks(content="", page_path=page_path)
 
-        # Check if all chunks have audio files
-        all_chunks_ready = True
-        audio_paths = []
+            # Check if all chunks have audio files and generate missing ones concurrently
+            audio_paths = []
+            generation_tasks = []
 
-        for chunk in chunks:
-            chunk_audio_path = get_audio_path(audio_dir, chunk.get("checksum", ""))
-            if not os.path.exists(chunk_audio_path):
-                # Generate missing audio
-                print(f"Generating missing audio for chunk {chunk['id']}")
-                audio_data = b""
-                async for data in get_or_generate_audio(chunk["text"], chunk_audio_path):
-                    audio_data += data
-                all_chunks_ready = bool(audio_data) and all_chunks_ready
+            for chunk in chunks:
+                chunk_audio_path = get_audio_path(audio_dir, chunk.get("checksum", ""))
+                if not os.path.exists(chunk_audio_path) or os.path.getsize(chunk_audio_path) == 0:
+                    # Schedule generation of missing audio
+                    generation_tasks.append(generate_chunk_audio(chunk["text"], chunk_audio_path))
 
-            if os.path.exists(chunk_audio_path):
                 audio_paths.append(chunk_audio_path)
 
-        if not all_chunks_ready or not audio_paths:
-            raise Exception("Failed to generate all required audio chunks")
+            # Wait for all audio generation tasks to complete if any
+            if generation_tasks:
+                await asyncio.gather(*generation_tasks)
 
-        # Concatenate audio files
-        with open(full_audio_path, "wb") as outfile:
-            # For MP3 files, we need to be careful about concatenation
-            # This simple approach works for MP3s from the same source with the same settings
+            # Ensure all audio files exist
+            for audio_path in audio_paths:
+                if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to generate all required audio chunks",
+                    )
+
+            # Concatenate audio files with proper MP3 handling
+            temp_output_path = f"{full_audio_path}.tmp"
+            await concatenate_mp3_files(audio_paths, temp_output_path)
+
+            # Atomic rename to avoid partial files
+            os.replace(temp_output_path, full_audio_path)
+
+            return full_audio_path, os.path.getsize(full_audio_path)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating full audio: {str(e)}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate full audio: {str(e)}"
+        ) from e
+
+
+async def generate_chunk_audio(chunk_text: str, audio_path: str) -> None:
+    """Generate audio for a single chunk and save to disk."""
+    async for _ in get_or_generate_audio(chunk_text, audio_path):
+        pass  # Just consume the generator to generate and save the audio
+
+
+async def concatenate_mp3_files(audio_paths: list[str], output_path: str) -> None:
+    """Concatenate MP3 files properly, handling headers and footers.
+
+    For MP3 files from the same source (like ElevenLabs), this approach works well.
+    For a more robust solution in the future, consider using pydub or another audio library.
+    """
+    try:
+        with open(output_path, "wb") as outfile:
             for audio_path in audio_paths:
                 with open(audio_path, "rb") as infile:
                     outfile.write(infile.read())
-
-        return full_audio_path, os.path.getsize(full_audio_path)
-
     except Exception as e:
-        print(f"Error generating full audio: {str(e)}")
-        import traceback
+        logger.error(f"Error concatenating MP3 files: {str(e)}")
+        # Clean up the partial file
+        if os.path.exists(output_path):
+            with contextlib.suppress(Exception):
+                os.remove(output_path)
+        raise
 
-        traceback.print_exc()
-        raise Exception(f"Failed to generate full audio: {str(e)}") from e
+
+async def get_content_page(path_or_slug: str, nested_slug: str | None = None) -> Page:
+    """Get content page from path or slug.
+
+    Args:
+        path_or_slug: Either a top-level slug or a path component
+        nested_slug: If provided, treat path_or_slug as a folder and nested_slug as the actual slug
+
+    Returns:
+        Page object for the content
+
+    Raises:
+        HTTPException: If there is an error getting the content page
+
+    """
+    try:
+        if nested_slug:
+            # Handle nested page
+            if not is_valid_path(path_or_slug) or not is_valid_slug(nested_slug):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid path or slug")
+
+            file_path = f"{path_or_slug}/{nested_slug}/{nested_slug}.md"
+            full_path = safe_path(file_path)
+
+            if not cached_file_exists(full_path):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
+                )
+
+            return _page(full_path, nested_slug)
+        else:
+            # Handle simple or compound slug
+            if "/" in path_or_slug:
+                # For nested paths like "mindset/downtime-as-self-care"
+                parts = path_or_slug.split("/")
+                folder = "/".join(parts[:-1])  # "mindset"
+                page_name = parts[-1]  # "downtime-as-self-care"
+
+                if not is_valid_path(folder) or not is_valid_slug(page_name):
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid path or slug")
+
+                file_path = f"{folder}/{page_name}/{page_name}.md"
+                full_path = safe_path(file_path)
+
+                if not cached_file_exists(full_path):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
+                    )
+
+                return _page(full_path, page_name)
+            else:
+                # For top-level content
+                if not is_valid_slug(path_or_slug):
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid slug")
+
+                file_path = f"{path_or_slug}/{path_or_slug}.md"
+                full_path = safe_path(file_path)
+
+                if not cached_file_exists(full_path):
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
+                    )
+
+                return _page(full_path, path_or_slug)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting content page: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error accessing content: {str(e)}"
+        ) from e
 
 
 @app.get("/api/audio/")
@@ -313,20 +579,18 @@ async def audio_health_check() -> JSONResponse:
             }
         )
     except Exception as e:
-        raise Exception(f"Failed to check audio API health: {str(e)}") from e
+        logger.error(f"Failed to check audio API health: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to check audio API health: {str(e)}"
+        ) from e
 
 
-@app.get("/api/audio/<slug>/metadata")
+@app.get("/api/audio/{slug}/metadata", response_model=AudioMetadataResponse)
 async def get_audio_metadata(slug: str) -> JSONResponse:
     """Return metadata about available audio chunks for a page."""
-    if not is_valid_slug(slug):
-        raise Exception("Invalid slug")
+    page = await get_content_page(slug)
 
     try:
-        # Get the content page
-        f = safe_path(f"{slug}/{slug}.md")
-        page: Page = _page(f, slug)
-
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
             content="",  # Not needed when using page_path
@@ -350,16 +614,18 @@ async def get_audio_metadata(slug: str) -> JSONResponse:
                 "chunks": chunks,
             }
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise Exception(f"Failed to get audio metadata: {str(e)}") from e
+        logger.error(f"Failed to get audio metadata: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get audio metadata: {str(e)}"
+        ) from e
 
 
-@app.get("/api/audio/<slug>/<chunk_id>")
+@app.get("/api/audio/{slug}/{chunk_id}")
 async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
     """Return audio for a specific chunk of content."""
-    if not is_valid_slug(slug):
-        raise Exception("Invalid slug")
-
     try:
         # Try to see if this is actually a folder/page request without a chunk ID
         file_path = f"{slug}/{chunk_id}/{chunk_id}.md"
@@ -370,24 +636,8 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
             # Redirect to the nested page endpoint
             return await get_nested_page_audio(slug, chunk_id)
 
-        # Check for actual chunk within a normal page
-        if "/" in slug:
-            # For nested paths like "mindset/downtime-as-self-care"
-            parts = slug.split("/")
-            folder = "/".join(parts[:-1])  # "mindset"
-            page_name = parts[-1]  # "downtime-as-self-care"
-
-            file_path = f"{folder}/{page_name}/{page_name}.md"
-
-            full_path = safe_path(file_path)
-            if not cached_file_exists(full_path):
-                raise Exception(f"Content file not found at {file_path}") from None
-
-            page: Page = _page(full_path, page_name)
-        else:
-            # For top-level content
-            f = safe_path(f"{slug}/{slug}.md")
-            page: Page = _page(f, slug)
+        # Get the page content
+        page = await get_content_page(slug)
 
         # Get content and split into chunks using page path directly
         chunks = await split_content_into_chunks(
@@ -400,29 +650,33 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
         # Find the requested chunk
         chunk = next((c for c in chunks if c["id"] == chunk_id), None)
         if not chunk:
-            raise Exception(f"Chunk {chunk_id} not found") from None
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Chunk {chunk_id} not found")
 
         # Generate audio path
         audio_dir = get_audio_dir(page.path)
         audio_path = get_audio_path(audio_dir, chunk["checksum"])
 
-        # Use default voice (Will)
-        audio_data = await get_or_generate_audio(chunk["text"], audio_path)
+        # Get or generate audio
+        audio_data = get_or_generate_audio(chunk["text"], audio_path)
 
         return StreamingResponse(audio_data, media_type="audio/mpeg")
 
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error in get_chunk_audio: {str(e)}")
         import traceback
 
-        print(f"Error in get_chunk_audio: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
 
-        raise Exception(f"Failed to get audio: {str(e)}") from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get audio: {str(e)}"
+        ) from e
 
 
 @app.get("/api/audio/{slug}", response_model=None)
 async def get_page_audio(
-    slug: str, generate_all: bool | None = None, format: str | None = None
+    slug: str, generate_all: bool = False, format: str = "json", background_tasks: BackgroundTasks = None
 ) -> JSONResponse | StreamingResponse:
     """Return audio metadata for a page or generate all audio.
 
@@ -430,38 +684,49 @@ async def get_page_audio(
         slug: The slug of the page
         generate_all: Whether to generate all audio chunks
         format: If 'mp3', return a full audio file instead of metadata
+        background_tasks: FastAPI background tasks for async processing
+
+    Returns:
+        JSONResponse or StreamingResponse
+
+    Raises:
+        HTTPException: If there is an error getting the page audio
     """
     # Check if the slug actually contains multiple path parts
     if "/" in slug and format == "mp3":
         # For URLs like /api/audio/mindset/downtime-as-self-care?format=mp3
         parts = slug.split("/", 1)  # Split only on the first slash
-        return await get_nested_page_audio(parts[0], parts[1], format=format)
+        return await get_page_audio_impl(parts[0], parts[1], generate_all, format, background_tasks)
 
-    if not is_valid_slug(slug):
-        raise Exception("Invalid slug")
+    return await get_page_audio_impl(slug, None, generate_all, format, background_tasks)
 
-    generate_all = generate_all or False
-    format = format or "json"
 
+async def get_page_audio_impl(
+    path_or_slug: str,
+    nested_slug: str | None = None,
+    generate_all: bool = False,
+    format: str = "json",
+    background_tasks: BackgroundTasks = None,
+) -> JSONResponse | StreamingResponse:
+    """Retrieve page audio for both nested and non-nested pages.
+
+    Args:
+        path_or_slug: The path or slug of the page
+        nested_slug: If provided, indicates this is a nested page
+        generate_all: Whether to generate all audio chunks
+        format: If 'mp3', return a full audio file instead of metadata
+        background_tasks: FastAPI background tasks for async processing
+
+    Returns:
+        JSONResponse or StreamingResponse
+
+    Raises:
+        HTTPException: If there is an error getting the page audio
+
+    """
     try:
-        # Check if the slug contains a path separator and parse accordingly
-        if "/" in slug:
-            # For nested paths like "mindset/downtime-as-self-care"
-            parts = slug.split("/")
-            folder = "/".join(parts[:-1])  # "mindset"
-            page_name = parts[-1]  # "downtime-as-self-care"
-
-            file_path = f"{folder}/{page_name}/{page_name}.md"
-            full_path = safe_path(file_path)
-
-            if not cached_file_exists(full_path):
-                raise Exception(f"Content file not found at {file_path}")
-
-            page: Page = _page(full_path, page_name)
-        else:
-            # For top-level content
-            f = safe_path(f"{slug}/{slug}.md")
-            page: Page = _page(f, slug)
+        # Get the content page
+        page = await get_content_page(path_or_slug, nested_slug)
 
         # If MP3 format requested, return full audio file
         if format.lower() == "mp3":
@@ -473,7 +738,14 @@ async def get_page_audio(
                 with open(audio_path, "rb") as f:
                     yield from f
 
-            return StreamingResponse(iterfile(), media_type="audio/mpeg")
+            return StreamingResponse(
+                iterfile(),
+                media_type="audio/mpeg",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{page.slug}.mp3"',
+                    "Content-Length": str(audio_size),
+                },
+            )
 
         # Otherwise, return metadata JSON
         # Get content and split into chunks using page path directly
@@ -488,15 +760,26 @@ async def get_page_audio(
 
         if generate_all:
             # Generate audio for all chunks
+            generation_tasks = []
             for chunk in chunks:
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
-                await get_or_generate_audio(chunk["text"], audio_path)
-                chunk["has_audio"] = True
+                # If we have background tasks, use them
+                if background_tasks:
+                    background_tasks.add_task(generate_chunk_audio, chunk["text"], audio_path)
+                    chunk["has_audio"] = "pending"  # Mark as pending generation
+                else:
+                    # Schedule generation (will complete before response)
+                    generation_tasks.append(generate_chunk_audio(chunk["text"], audio_path))
+                    chunk["has_audio"] = True
+
+            # If we're not using background tasks, wait for all to complete
+            if generation_tasks and not background_tasks:
+                await asyncio.gather(*generation_tasks)
         else:
             # Just check which chunks have audio
             for chunk in chunks:
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
-                chunk["has_audio"] = os.path.exists(audio_path)
+                chunk["has_audio"] = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
 
         return JSONResponse(
             {
@@ -507,135 +790,22 @@ async def get_page_audio(
                 "chunks": chunks,
             }
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error in get_page_audio: {str(e)}")
         import traceback
 
-        print(f"Error in get_page_audio: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(traceback.format_exc())
 
-        raise Exception(f"Failed to get audio metadata: {str(e)}") from e
-
-
-@app.get("/api/audio/{path}/{slug}/{chunk_id}")
-async def get_nested_chunk_audio(path: str, slug: str, chunk_id: str, format: str | None = None) -> StreamingResponse:
-    """Return audio for a specific chunk of content in a nested folder."""
-    # Special case: if chunk_id is the same as slug and format=mp3, treat as a full page request
-    if chunk_id == slug and format == "mp3":
-        return await get_nested_page_audio(path, slug, format=format)
-
-    if not is_valid_path(path) or not is_valid_slug(slug):
-        raise Exception("Invalid path or slug")
-
-    try:
-        # Get the content page
-        f = safe_path(f"{path}/{slug}/{slug}.md")
-        page_obj: Page = _page(f, slug)
-
-        # Get content and split into chunks using page path directly
-        chunks = await split_content_into_chunks(
-            content="",  # Not needed when using page_path
-            title=page_obj.title,
-            description=page_obj.description,
-            page_path=page_obj.path,
-        )
-
-        # Find the requested chunk
-        chunk = next((c for c in chunks if c["id"] == chunk_id), None)
-        if not chunk:
-            raise Exception(f"Chunk {chunk_id} not found")
-
-        # Generate audio path
-        audio_dir = get_audio_dir(page_obj.path)
-        audio_path = get_audio_path(audio_dir, chunk["checksum"])
-
-        # Use default voice (Will)
-        audio_data = get_or_generate_audio(chunk["text"], audio_path)
-
-        return StreamingResponse(audio_data, media_type="audio/mpeg")
-    except Exception as e:
-        raise Exception(f"Failed to get audio: {str(e)}") from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get audio metadata: {str(e)}"
+        ) from e
 
 
-@app.get("/api/audio/{path}/{slug}", response_model=None)
-async def get_nested_page_audio(
-    path: str, slug: str, generate_all: bool | None = None, format: str | None = None
-) -> JSONResponse | StreamingResponse:
-    """Return audio metadata for a nested page or generate all audio.
-
-    Args:
-        path: The folder path
-        slug: The slug of the page
-        generate_all: Whether to generate all audio chunks
-        format: If 'mp3', return a full audio file instead of metadata
-
-    """
-    if not is_valid_path(path) or not is_valid_slug(slug):
-        raise Exception("Invalid path or slug")
-
-    generate_all = generate_all or False
-    format = format or "json"
-
-    try:
-        file_path = f"{path}/{slug}/{slug}.md"
-        full_path = safe_path(file_path)
-        file_exists = cached_file_exists(full_path)
-
-        if not file_exists:
-            raise Exception(f"Content file not found: {file_path}")
-
-        # Get the content page
-        page_obj: Page = _page(full_path, slug)
-
-        # If MP3 format requested, return full audio file
-        if format.lower() == "mp3":
-            # Generate or get full audio file
-            audio_path, audio_size = await generate_or_get_full_audio(page_obj.path, page_obj.slug)
-
-            # Return streaming response with audio file
-            def iterfile() -> Iterator[bytes]:
-                with open(audio_path, "rb") as f:
-                    yield from f
-
-            return StreamingResponse(iterfile(), media_type="audio/mpeg")
-
-        # Get content and split into chunks using page path directly
-        chunks = await split_content_into_chunks(
-            content="",  # Not needed when using page_path
-            title=page_obj.title,
-            description=page_obj.description,
-            page_path=page_obj.path,
-        )
-
-        audio_dir = get_audio_dir(page_obj.path)
-
-        if generate_all:
-            # Generate audio for all chunks
-            for chunk in chunks:
-                audio_path = get_audio_path(audio_dir, chunk["checksum"])
-                get_or_generate_audio(chunk["text"], audio_path)
-                chunk["has_audio"] = True
-        else:
-            # Just check which chunks have audio
-            for chunk in chunks:
-                audio_path = get_audio_path(audio_dir, chunk["checksum"])
-                chunk["has_audio"] = os.path.exists(audio_path)
-
-        return JSONResponse(
-            {
-                "page": {
-                    "slug": page_obj.slug,
-                    "title": page_obj.title,
-                },
-                "chunks": chunks,
-            }
-        )
-    except Exception as e:
-        import traceback
-
-        print(f"Audio API Error: {str(e)}")
-        print(traceback.format_exc())
-
-        raise Exception(f"Failed to get audio metadata: {str(e)}") from e
+# Alias the nested page and chunk functions to the unified implementations
+get_nested_page_audio = get_page_audio_impl
+get_nested_chunk_audio = get_chunk_audio
 
 
 if __name__ == "__main__":

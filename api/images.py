@@ -66,3 +66,9 @@ def _get_image(slug: str, w: int = 0, q: int = 85, f: str = "webp") -> Streaming
 def get_image(slug: str, w: int = 0, q: int = 85, f: str = "webp") -> StreamingResponse:
     """Get an optimized image from the cache or generate a new one."""
     return _get_image(slug, w, q, f)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=5328, reload=True)
