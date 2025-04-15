@@ -1,7 +1,7 @@
+from functools import lru_cache
+
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
-
-from functools import lru_cache
 
 from api._config import get_site_config
 from api._content import _pages

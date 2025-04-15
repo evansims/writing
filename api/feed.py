@@ -2,11 +2,11 @@ import datetime
 import html
 import os
 import re
+from functools import lru_cache
 
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Response
 
-from api._config import get_rss_config, get_site_config
+from api._config import get_feeds_config, get_site_config
 from api._content import _pages
 from api._validation import get_content_dir
 
@@ -24,24 +24,30 @@ def strip_markdown(text: str) -> str:
     return text
 
 
-@app.get("/api/rss/{slug}")
-async def get_feed(slug: str) -> StreamingResponse:
+@lru_cache(maxsize=1024)
+def _get_feed(feed: str) -> Response:
     """Generate RSS feed for given slug."""
-    rss_config = get_rss_config()
+    feeds_config = get_feeds_config()
     site_config = get_site_config()
 
     base_url = site_config.get("url", "https://example.dev")
     site_title = site_config.get("title", "Some Site")
 
-    # Validate that this is a configured feed
-    feeds = rss_config.get("feeds", {})
-    if slug not in feeds:
-        raise Exception(f"RSS feed '{slug}' not found")
+    feeds = feeds_config.get("feeds", {})
 
-    feed_config = feeds[slug]
-    feed_title = feed_config.get("title", f"{site_title} - {slug.title()}")
-    feed_description = feed_config.get("description", f"Recent {slug} from {site_title}")
-    feed_path = feed_config.get("path", slug)
+    matching_feed = None
+    for feed_config in feeds:
+        if feed_config.get("feed") == feed:
+            matching_feed = feed_config
+            break
+
+    if not matching_feed:
+        raise HTTPException(status_code=404, detail=f"Feed `{feed}` not found")
+
+    feed_title = matching_feed.get("title", f"{site_title} - {feed.title()}")
+    feed_description = matching_feed.get("description", f"Recent {feed} from {site_title}")
+    feed_path = matching_feed.get("path", "")
+    feed_types = matching_feed.get("types", "")
 
     # Get content from the specified path
     content_path = get_content_dir(feed_path)
@@ -50,10 +56,15 @@ async def get_feed(slug: str) -> StreamingResponse:
     now = datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0000")
 
     rss_items = []
+
     # Use _pages to get all pages in the directory
     if os.path.exists(content_path):
         try:
-            pages = await _pages(content_path)
+            pages = _pages(content_path)
+
+            if feed_types:
+                types = feed_types.split(",")
+                pages = [p for p in pages if p.type in types]
 
             # Process each page
             for page in pages:
@@ -72,6 +83,7 @@ async def get_feed(slug: str) -> StreamingResponse:
 
                     # Create excerpt
                     excerpt = page.description if page.description else strip_markdown(page.body[:500])
+
                     if not page.description and len(page.body) > 500:
                         excerpt += "..."
 
@@ -88,12 +100,12 @@ async def get_feed(slug: str) -> StreamingResponse:
         </item>
                     """)
                 except Exception as e:
-                    print(f"Error processing {page.path}: {e}")
+                    raise HTTPException(status_code=500, detail=f"Error processing {page.path}: {e}") from e
         except Exception as e:
-            print(f"Error loading pages from {content_path}: {e}")
+            raise HTTPException(status_code=500, detail=f"Error loading pages from {content_path}: {e}") from e
 
     # Create RSS XML
-    rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
         <title>{html.escape(feed_title)}</title>
@@ -101,10 +113,19 @@ async def get_feed(slug: str) -> StreamingResponse:
         <description>{html.escape(feed_description)}</description>
         <language>en-us</language>
         <lastBuildDate>{now}</lastBuildDate>
-        <atom:link href="{base_url}/api/rss/{slug}" rel="self" type="application/rss+xml" />
+        <atom:link href="{base_url}/api/rss/{feed}" rel="self" type="application/rss+xml" />
 {"".join(rss_items)}
     </channel>
 </rss>
 """
 
-    return StreamingResponse(rss_xml, media_type="application/xml")
+    return Response(xml, media_type="application/rss+xml")
+
+
+@app.get("/api/feed")
+def get_feed(feed: str | None = None) -> Response:
+    """Get a specified feed."""
+    if not feed:
+        raise HTTPException(status_code=404, detail="Feed not found")
+
+    return _get_feed(feed)

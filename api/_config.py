@@ -13,10 +13,10 @@ def get_site_config() -> dict:
         raise Exception(f"Failed to load site config: {config_path}") from None
 
 
-def get_rss_config() -> dict:
-    """Get the RSS config."""
+def get_feeds_config() -> dict:
+    """Get the feeds config."""
     try:
-        config_path = get_config_path("rss.yml")
+        config_path = get_config_path("feeds.yml")
         config_content = cached_file_read(config_path)
         return yaml.safe_load(config_content)
     except Exception:

@@ -127,7 +127,7 @@ def _pages(directory: str) -> list[Page]:
     return pages
 
 
-def ensure_heading_levels(markdown_text):
-    # Replace # with ### and ## with ###
-    pattern = r'^(#{1,2})(?!\#)'  # Match # or ## at start of line, not followed by another #
-    return re.sub(pattern, r'###', markdown_text, flags=re.MULTILINE)
+def ensure_heading_levels(markdown_text: str) -> str:
+    """Ensure heading levels are consistent."""
+    pattern = r"^(#{1,2})(?!\#)"  # Match # or ## at start of line, not followed by another #
+    return re.sub(pattern, r"###", markdown_text, flags=re.MULTILINE)

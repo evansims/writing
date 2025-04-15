@@ -1,14 +1,16 @@
-default: brief
-
 feeds:
-  - slug: brief
+  - feed: brief
     title: The Essential Path
     description: "Clarity in Thought. Simplicity in Action. Engineering, Philosophy, Productivity, and the Art of Living by Evan Sims"
+    types: article
 
-  - slug: full
-    title: The Essential Path (Full)
+  - feed: full
+    title: The Essential Path (Full Text)
     description: "Clarity in Thought. Simplicity in Action. Engineering, Philosophy, Productivity, and the Art of Living by Evan Sims"
+    types: article
 
-  - slug: narrated
+  - feed: narrated
     title: The Essential Path (Narrated)
     description: "Clarity in Thought. Simplicity in Action. Engineering, Philosophy, Productivity, and the Art of Living by Evan Sims"
+    types: article
+    audio: true

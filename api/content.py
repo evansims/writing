@@ -1,6 +1,7 @@
+from functools import lru_cache
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from functools import lru_cache
 
 from api._content import _pages
 from api._filesystem import get_content_dir
@@ -13,7 +14,7 @@ app = FastAPI()
 def _get_content(
     path: str | None = None,
     type: str | None = None,
-):
+) -> JSONResponse:
     if path:
         if not is_valid_path(path):
             raise HTTPException(status_code=400, detail="Invalid path")
@@ -31,7 +32,7 @@ def _get_content(
         types = type.split(",")
         ps = [p for p in ps if p.type in types]
 
-    return {"pages": [p.json() for p in ps]}
+    return JSONResponse({"pages": [p.json() for p in ps]})
 
 
 @app.get("/api/content")
@@ -39,7 +40,8 @@ def get_content(
     path: str | None = None,
     type: str | None = None,
 ) -> JSONResponse:
-    return JSONResponse(_get_content(path, type))
+    """Get content from the content directory."""
+    return _get_content(path, type)
 
 
 if __name__ == "__main__":

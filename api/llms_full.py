@@ -1,4 +1,5 @@
 from functools import lru_cache
+
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 
@@ -10,7 +11,7 @@ app = FastAPI()
 
 
 @lru_cache(maxsize=1024)
-def _get_llms_full() -> str:
+def _get_llms_full() -> PlainTextResponse:
     all_pages = _pages(get_content_dir())
 
     site_config = get_site_config()
@@ -41,14 +42,13 @@ def _get_llms_full() -> str:
         except Exception as e:
             print(f"Error processing {page.path}: {e}")
 
-    return "---\n\n".join(entries)
+    return PlainTextResponse("---\n\n".join(entries))
 
 
 @app.get("/api/llms_full")
 def get_llms_full() -> PlainTextResponse:
     """Serve a full version of content for LLMs."""
-
-    return PlainTextResponse(_get_llms_full())
+    return _get_llms_full()
 
 
 if __name__ == "__main__":

@@ -1,13 +1,12 @@
 import hashlib
 import os
 import re
+from collections.abc import AsyncGenerator
 
 import dotenv
 from elevenlabs.client import ElevenLabs
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, JSONResponse
-from starlette.responses import ContentStream
-from collections.abc import AsyncGenerator
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from api._content import _page
 from api._filesystem import cached_file_exists
@@ -242,13 +241,15 @@ async def get_or_generate_audio(chunk_text: str, audio_path: str) -> AsyncGenera
 async def audio_health_check() -> JSONResponse:
     """Return API health status and configuration information."""
     try:
-        return JSONResponse({
-            "status": "OK" if API_KEY else "WARNING",
-            "api_key_valid": bool(API_KEY),
-            "voice_id": VOICE_ID or "default",
-            "model_id": MODEL_ID or "default",
-            "message": "Audio API is running",
-        })
+        return JSONResponse(
+            {
+                "status": "OK" if API_KEY else "WARNING",
+                "api_key_valid": bool(API_KEY),
+                "voice_id": VOICE_ID or "default",
+                "model_id": MODEL_ID or "default",
+                "message": "Audio API is running",
+            }
+        )
     except Exception as e:
         raise Exception(f"Failed to check audio API health: {str(e)}") from e
 
@@ -278,13 +279,15 @@ async def get_audio_metadata(slug: str) -> JSONResponse:
             audio_path = get_audio_path(audio_dir, chunk["checksum"])
             chunk["has_audio"] = os.path.exists(audio_path)
 
-        return JSONResponse({
-            "page": {
-                "slug": page.slug,
-                "title": page.title,
-            },
-            "chunks": chunks,
-        })
+        return JSONResponse(
+            {
+                "page": {
+                    "slug": page.slug,
+                    "title": page.title,
+                },
+                "chunks": chunks,
+            }
+        )
     except Exception as e:
         raise Exception(f"Failed to get audio metadata: {str(e)}") from e
 
@@ -405,13 +408,15 @@ async def get_page_audio(slug: str, generate_all: bool | None = None) -> JSONRes
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return JSONResponse({
-            "page": {
-                "slug": page.slug,
-                "title": page.title,
-            },
-            "chunks": chunks,
-        })
+        return JSONResponse(
+            {
+                "page": {
+                    "slug": page.slug,
+                    "title": page.title,
+                },
+                "chunks": chunks,
+            }
+        )
     except Exception as e:
         import traceback
 
@@ -496,13 +501,15 @@ async def get_nested_page_audio(path: str, slug: str, generate_all: bool | None 
                 audio_path = get_audio_path(audio_dir, chunk["checksum"])
                 chunk["has_audio"] = os.path.exists(audio_path)
 
-        return JSONResponse({
-            "page": {
-                "slug": page_obj.slug,
-                "title": page_obj.title,
-            },
-            "chunks": chunks,
-        })
+        return JSONResponse(
+            {
+                "page": {
+                    "slug": page_obj.slug,
+                    "title": page_obj.title,
+                },
+                "chunks": chunks,
+            }
+        )
     except Exception as e:
         import traceback
 
