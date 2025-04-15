@@ -19,13 +19,13 @@ created: "2025-02-16"
 reading:
   - title: "The Power of Positive Thinking"
     author: Norman Vincent Peale
-    url: "https://www.normanvincentpealeinstitute.org/books/the-power-of-positive-thinking/"
+    url: "https://www.amazon.com/dp/0091947456/?tag=evansims04-20"
   - title: "Learned Optimism: How to Change Your Mind and Your Life"
     author: Martin E.P. Seligman
-    url: "https://www.penguinrandomhouse.com/books/160539/learned-optimism-by-martin-ep-seligman/"
+    url: "https://www.amazon.com/dp/1400078393/?tag=evansims04-20"
   - title: "The Obstacle Is the Way: The Timeless Art of Turning Trials into Triumph"
     author: Ryan Holiday
-    url: "https://dailystoic.com/books/"
+    url: "https://www.amazon.com/dp/0593949099/?tag=evansims04-20"
 ---
 
 When I was young, I absorbed a worldview steeped in pessimism and cynicism—a mindset inherited from a culture that prized expecting the worst over daring to believe in the best. I learned early to dismiss anything that strayed from the norm and to assume that if something could go wrong, it would.

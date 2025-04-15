@@ -19,13 +19,13 @@ created: "2025-02-16"
 reading:
   - title: "Essentialism: The Disciplined Pursuit of Less"
     author: Greg McKeown
-    url: "https://gregmckeown.com/book/essentialism/"
+    url: "https://www.amazon.com/dp/0804137382/?tag=evansims04-20"
   - title: "Digital Minimalism: Choosing a Focused Life in a Noisy World"
     author: Cal Newport
-    url: "https://www.calnewport.com/books/digital-minimalism/"
+    url: "https://www.amazon.com/dp/0525536515/?tag=evansims04-20"
   - title: "The Life-Changing Magic of Tidying Up: The Japanese Art of Decluttering and Organizing"
     author: Marie Kondo
-    url: "https://konmari.com/products/the-life-changing-magic-of-tidying-up"
+    url: "https://www.amazon.com/dp/1607747308/?tag=evansims04-20"
 ---
 
 The human instinct is to add. We add features, rules, tasks, habits. It feels good—productive, even. Progress is often measured by how much we’ve created or accumulated. But here’s the truth: what we don’t do, what we don’t have, what we remove—those are the things that truly define us.

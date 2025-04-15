@@ -19,13 +19,13 @@ created: "2025-02-16"
 reading:
   - title: "The Daily Stoic: 366 Meditations on Wisdom, Perseverance, and the Art of Living"
     author: Ryan Holiday
-    url: https://dailystoic.com/daily-stoic-book/
+    url: "https://www.amazon.com/dp/0735211736/?tag=evansims04-20"
   - title: "Full Catastrophe Living: Using the Wisdom of Your Body and Mind to Face Stress, Pain, and Illness"
     author: Jon Kabat-Zinn
-    url: https://jonkabat-zinn.com/book/full-catastrophe-livingusing-the-wisdom-of-your-body-and-mind-to-face-stress-pain-and-illness-second-edition-revised-and-updated/
+    url: "https://www.amazon.com/dp/0345536932/?tag=evansims04-20"
   - title: "The Obstacle Is the Way: The Timeless Art of Turning Trials into Triumph"
     author: Ryan Holiday
-    url: https://dailystoic.com/books/
+    url: "https://www.amazon.com/dp/0593949099/?tag=evansims04-20"
 ---
 
 Evenings are not a waste of time; they're the crucible where our day's work meets our inner life. Most of us dream about free time during the workday, yet when night falls, we often find ourselves aimlessly scrolling or sinking into exhaustion. I've been there. But what if you could transform those precious hours into a time of growth, calm, and even a bit of humor? Let's explore a way to reclaim your evenings with the wisdom of Stoicism, the simplicity of minimalism, and a mindful nod to life's small pleasures.
