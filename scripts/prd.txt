@@ -1,0 +1,79 @@
+# Writing Platform PRD
+
+## Overview
+A personal writing platform that combines blog content, podcast episodes, and efficient content management using Rust-based tooling. The platform will be built with modern web technologies and hosted on Vercel.
+
+## Core Requirements
+
+### Content Management
+1. Store all blog articles in MDX format within the /content directory
+   - Support both published and draft states
+   - Implement proper metadata handling
+
+2. Store pages in MDX format within the /pages directory
+   - Support static and dynamic pages
+   - Enable rich content formatting
+
+3. Support podcast production with episode notes
+   - Store episode notes in MDX format in /podcast directory
+   - Include metadata for episode tracking
+
+### Tooling
+1. Implement Rust-based content management tools in /tools directory
+   - Create interactive CLI ("write" tool) for content management
+   - Split functionality into individual, reusable tools
+   - Ensure all tools can be used independently or through main CLI
+
+### Build System
+1. Frontend (Next.js)
+   - Build with Next.js v15
+   - Integrate shadcn and Tailwind v4
+   - Implement dynamic content loading from Vercel Fluid Compute backend
+   - Ensure full accessibility compliance
+   - Create lightweight, efficient components
+
+2. Backend (Python)
+   - Deploy on Vercel Fluid Compute
+   - Support Python 3.10+ features
+   - Implement ruff for code quality
+   - Create minimal, efficient data storage solution
+   - Follow DRY principles
+
+3. Content Distribution
+   - Generate Google Sitemaps (sitemap.xml)
+   - Create RSS feed for blog articles (feed.xml)
+   - Provide podcast RSS feed (podcast.xml)
+   - Generate LLVM-friendly text representations (llms.txt, llms-full.txt)
+
+### Documentation
+1. Maintain essential documentation in /docs
+   - Create concise README.md with overview and quick start
+   - Update CHANGELOG.md following keep-a-changelog format
+   - Maintain GAMEPLAN.md for task tracking
+   - Focus on clarity and brevity
+
+## Technical Requirements
+1. Frontend:
+   - Next.js v15
+   - Tailwind v4
+   - shadcn components
+   - TypeScript
+   - Accessibility compliance
+
+2. Backend:
+   - Python 3.10+
+   - Vercel Fluid Compute
+   - ruff for code quality
+   - Minimal dependencies
+
+3. Content:
+   - MDX format
+   - Rust-based tooling
+   - Automated build process
+
+## Success Criteria
+1. Content is easily manageable through CLI tools
+2. Build process is automated and reliable
+3. Frontend is fast, accessible, and modern
+4. Backend is lightweight and efficient
+5. Documentation is clear and concise
