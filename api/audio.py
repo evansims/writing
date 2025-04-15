@@ -494,26 +494,50 @@ async def concatenate_mp3_files(audio_paths: list[str], output_path: str) -> Non
 
 
 async def get_content_page(path_or_slug: str, nested_slug: str | None = None) -> Page:
-    """Get content page from path or slug.
-
-    Args:
-        path_or_slug: Either a top-level slug or a path component
-        nested_slug: If provided, treat path_or_slug as a folder and nested_slug as the actual slug
-
-    Returns:
-        Page object for the content
-
-    Raises:
-        HTTPException: If there is an error getting the content page
-
-    """
+    """Get content page from path or slug."""
     try:
+        # If nested_slug contains slashes, it's likely a mistake in path handling
+        if nested_slug and "/" in nested_slug:
+            logger.warning(f"Potential path handling issue - nested_slug contains slashes: {nested_slug}")
+            # Handle this case by splitting nested_slug and using only the last part
+            nested_slug = nested_slug.split("/")[-1]
+
+        # Handle multi-level paths
+        if "/" in path_or_slug and not nested_slug:
+            parts = path_or_slug.split("/")
+            # For paths like "strategy/tiny-changes/tiny-changes"
+            if len(parts) >= 3 and parts[-1] == parts[-2]:
+                # Handle the special case where the last segment is repeated
+                top_level = parts[0]
+                middle = parts[-1]
+                file_path = f"{top_level}/{middle}/{middle}.md"
+                logger.info(f"Looking for file at path: {file_path}")
+                full_path = safe_path(file_path)
+
+                if cached_file_exists(full_path):
+                    return _page(full_path, middle)
+
+            # For paths like "strategy/tiny-changes"
+            if len(parts) == 2:
+                # Simple nested case
+                top_level = parts[0]
+                page_name = parts[1]
+                file_path = f"{top_level}/{page_name}/{page_name}.md"
+                logger.info(f"Looking for file at path: {file_path}")
+                full_path = safe_path(file_path)
+
+                if cached_file_exists(full_path):
+                    return _page(full_path, page_name)
+
+            # If we couldn't resolve a special case, throw 404
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found for path: {path_or_slug}"
+            )
+
         if nested_slug:
             # Handle nested page
-            if not is_valid_path(path_or_slug) or not is_valid_slug(nested_slug):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid path or slug")
-
             file_path = f"{path_or_slug}/{nested_slug}/{nested_slug}.md"
+            logger.info(f"Looking for nested file at path: {file_path}")
             full_path = safe_path(file_path)
 
             if not cached_file_exists(full_path):
@@ -523,39 +547,20 @@ async def get_content_page(path_or_slug: str, nested_slug: str | None = None) ->
 
             return _page(full_path, nested_slug)
         else:
-            # Handle simple or compound slug
-            if "/" in path_or_slug:
-                # For nested paths like "mindset/downtime-as-self-care"
-                parts = path_or_slug.split("/")
-                folder = "/".join(parts[:-1])  # "mindset"
-                page_name = parts[-1]  # "downtime-as-self-care"
+            # Handle simple slug
+            if not is_valid_slug(path_or_slug):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid slug")
 
-                if not is_valid_path(folder) or not is_valid_slug(page_name):
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid path or slug")
+            file_path = f"{path_or_slug}/{path_or_slug}.md"
+            logger.info(f"Looking for simple file at path: {file_path}")
+            full_path = safe_path(file_path)
 
-                file_path = f"{folder}/{page_name}/{page_name}.md"
-                full_path = safe_path(file_path)
+            if not cached_file_exists(full_path):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
+                )
 
-                if not cached_file_exists(full_path):
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
-                    )
-
-                return _page(full_path, page_name)
-            else:
-                # For top-level content
-                if not is_valid_slug(path_or_slug):
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid slug")
-
-                file_path = f"{path_or_slug}/{path_or_slug}.md"
-                full_path = safe_path(file_path)
-
-                if not cached_file_exists(full_path):
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND, detail=f"Content file not found: {file_path}"
-                    )
-
-                return _page(full_path, path_or_slug)
+            return _page(full_path, path_or_slug)
     except HTTPException:
         raise
     except Exception as e:
@@ -674,31 +679,36 @@ async def get_chunk_audio(slug: str, chunk_id: str) -> StreamingResponse:
         ) from e
 
 
-@app.get("/api/audio/{slug}", response_model=None)
+@app.get("/api/audio/{path:path}", response_model=None)
 async def get_page_audio(
-    slug: str, generate_all: bool = False, format: str = "json", background_tasks: BackgroundTasks = None
+    path: str, generate_all: bool = False, format: str = "json", background_tasks: BackgroundTasks = None
 ) -> JSONResponse | StreamingResponse:
-    """Return audio metadata for a page or generate all audio.
+    """Retrieve page audio for both nested and non-nested pages."""
+    # Extract the components from the path
+    path_parts = path.split("/")
 
-    Args:
-        slug: The slug of the page
-        generate_all: Whether to generate all audio chunks
-        format: If 'mp3', return a full audio file instead of metadata
-        background_tasks: FastAPI background tasks for async processing
+    # Special case for the triple segment pattern "strategy/tiny-changes/tiny-changes"
+    if len(path_parts) >= 3 and path_parts[-1] == path_parts[-2]:
+        # Direct route to handle the common pattern
+        directory = path_parts[0]
+        page = path_parts[-1]
+        logger.info(f"Special case handling for repeated segments: {directory}/{page}")
+        return await get_page_audio_impl(directory, page, generate_all, format, background_tasks)
 
-    Returns:
-        JSONResponse or StreamingResponse
-
-    Raises:
-        HTTPException: If there is an error getting the page audio
-    """
-    # Check if the slug actually contains multiple path parts
-    if "/" in slug and format == "mp3":
-        # For URLs like /api/audio/mindset/downtime-as-self-care?format=mp3
-        parts = slug.split("/", 1)  # Split only on the first slash
-        return await get_page_audio_impl(parts[0], parts[1], generate_all, format, background_tasks)
-
-    return await get_page_audio_impl(slug, None, generate_all, format, background_tasks)
+    # Handle different path structures
+    if len(path_parts) == 1:
+        # Single segment (slug only)
+        return await get_page_audio_impl(path_parts[0], None, generate_all, format, background_tasks)
+    elif len(path_parts) == 2:
+        # Two segments (directory/slug)
+        return await get_page_audio_impl(path_parts[0], path_parts[1], generate_all, format, background_tasks)
+    elif len(path_parts) >= 3:
+        # For other multi-level paths, use only first and last segments
+        # This avoids passing complex nested paths that confuse the file resolution
+        directory = path_parts[0]
+        page = path_parts[-1]
+        logger.info(f"Multi-level path handling: using {directory}/{page}")
+        return await get_page_audio_impl(directory, page, generate_all, format, background_tasks)
 
 
 async def get_page_audio_impl(
