@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from api._content import _page
 from api._filesystem import cached_file_exists
 from api._types import Page
-from api._validation import is_valid_path, is_valid_slug, safe_path
+from api._validation import is_valid_slug, safe_path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
