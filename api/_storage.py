@@ -6,14 +6,14 @@ from Vercel's blog storage system.
 
 import asyncio
 import os
-from typing import Union
 from urllib.parse import quote, urljoin
 
 import dotenv
 import httpx
 
 # Constants for Vercel Blob API
-API_VERSION = "4"
+BLOB_API_BASE_URL = "https://blob.vercel-storage.com"
+API_VERSION = "7"
 DEFAULT_RETRY_ATTEMPTS = 3
 DEFAULT_RETRY_DELAY = 1  # seconds
 DEFAULT_CACHE_AGE = "31536000"  # 1 year in seconds
@@ -38,7 +38,7 @@ class StorageClient:
         """
         dotenv.load_dotenv()
 
-        self.base_url = base_url or os.getenv("BLOB_BASE_URL")
+        self.base_url = base_url or os.getenv("BLOB_READ_BASE_URL")
         if not self.base_url:
             raise StorageError("No storage URL provided or found in environment")
 
@@ -80,6 +80,7 @@ class StorageClient:
 
         Raises:
             StorageError: If the file cannot be read
+
         """
         path = self._clean_path(path)
         url = urljoin(self.base_url, path)
@@ -104,10 +105,9 @@ class StorageClient:
 
                     if response.status_code == 200:
                         return response.content
-                    elif response.status_code == 503:
-                        if attempt < DEFAULT_RETRY_ATTEMPTS - 1:
-                            await asyncio.sleep(DEFAULT_RETRY_DELAY * (2**attempt))
-                            continue
+                    elif response.status_code == 503 and attempt < DEFAULT_RETRY_ATTEMPTS - 1:
+                        await asyncio.sleep(DEFAULT_RETRY_DELAY * (2**attempt))
+                        continue
 
                     # Handle specific error cases
                     if response.status_code == 400:
@@ -127,7 +127,7 @@ class StorageClient:
 
         raise StorageError("Max retry attempts reached")
 
-    async def write_file(self, path: str, data: Union[str, bytes]) -> None:
+    async def write_file(self, path: str, data: str | bytes) -> None:
         """Write data to a file in storage.
 
         Args:
@@ -136,6 +136,7 @@ class StorageClient:
 
         Raises:
             StorageError: If there is an error writing to storage
+
         """
         # Clean and prepare the path
         path = self._clean_path(path)
@@ -151,6 +152,7 @@ class StorageClient:
             "x-api-version": API_VERSION,
             "x-content-type": self._guess_mime_type(path),
             "x-cache-control-max-age": DEFAULT_CACHE_AGE,
+            "x-add-random-suffix": "0",
         }
 
         # Attempt the upload with retries
@@ -158,7 +160,7 @@ class StorageClient:
             try:
                 async with httpx.AsyncClient() as client:
                     # PUT directly to the path, NOT to /store
-                    url = f"{self.base_url}/{path}"
+                    url = f"{BLOB_API_BASE_URL}/{path}"
                     response = await client.put(url, headers=headers, content=data)
 
                     # Try to get detailed error information
@@ -171,10 +173,9 @@ class StorageClient:
 
                     if response.status_code == 200:
                         return
-                    elif response.status_code == 503:
-                        if attempt < DEFAULT_RETRY_ATTEMPTS - 1:
-                            await asyncio.sleep(DEFAULT_RETRY_DELAY * (2**attempt))
-                            continue
+                    elif response.status_code == 503 and attempt < DEFAULT_RETRY_ATTEMPTS - 1:
+                        await asyncio.sleep(DEFAULT_RETRY_DELAY * (2**attempt))
+                        continue
 
                     # Handle specific error cases
                     if response.status_code == 400:
@@ -202,15 +203,16 @@ class StorageClient:
 
         Raises:
             StorageError: If the file cannot be deleted.
+
         """
         clean_path = self._clean_path(path)
-        file_url = urljoin(self.base_url + "/", clean_path)
+        file_url = urljoin(BLOB_API_BASE_URL + "/", clean_path)
 
         async with httpx.AsyncClient() as client:
             try:
                 # Use POST with urls array as specified in Vercel Blob API
                 response = await client.post(
-                    f"{self.base_url}/delete",
+                    f"{BLOB_API_BASE_URL}/delete",
                     headers=self.base_headers,
                     json={"urls": [file_url]},
                 )

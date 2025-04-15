@@ -39,9 +39,9 @@ app.add_middleware(
 dotenv.load_dotenv()
 
 # Load environment variables
-API_KEY = os.getenv("EVANSIMS_ELEVENLABS_API_KEY")
-VOICE_ID = os.getenv("EVANSIMS_ELEVENLABS_VOICE_ID") or "bIHbv24MWmeRgasZH58o"
-MODEL_ID = os.getenv("EVANSIMS_ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2"
+API_KEY = os.getenv("ELEVENLABS_API_KEY")
+VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID") or "bIHbv24MWmeRgasZH58o"
+MODEL_ID = os.getenv("ELEVENLABS_MODEL_ID") or "eleven_multilingual_v2"
 
 # Initialize Eleven Labs client
 client = ElevenLabs(api_key=API_KEY)
@@ -152,6 +152,7 @@ def get_storage_path(file_path: str) -> str:
 
     Returns:
         str: The storage path for the audio file
+
     """
     # Get the path relative to the content directory
     content_dir = os.path.join(os.path.dirname(__file__), "..", "content")
@@ -520,6 +521,7 @@ async def generate_chunk_audio(text: str, audio_path: str) -> None:
 
     Raises:
         HTTPException: If there is an error generating the audio
+
     """
     try:
         async with file_lock(audio_path):
